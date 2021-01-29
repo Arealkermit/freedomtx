@@ -32,8 +32,13 @@ uint8_t  g_trimState = 0;
 #define POT_3POS_SWITCH_POS2_ADC  1024
 #define POT_3POS_SWITCH_POS3_ADC  2048
 
-#define TRIM_ADC_OFFSET             20
-#define IS_TRIM_PRESSED_STATE(x)    ((x - TRIM_ADC_OFFSET) < trimValue && trimValue < (x + TRIM_ADC_OFFSET))
+const uint16_t trimAdcValue[] = {4095/2, 4095/3, 4095/4, 4095/5, 4095/6, 4095/7, 4095/8, 4095/9};
+const int trimAdcBoundary[] = {(4095 + trimAdcValue[0]) >> 1,            (trimAdcValue[0] + trimAdcValue[1]) >> 1, 
+                               (trimAdcValue[1] + trimAdcValue[2]) >> 1, (trimAdcValue[2] + trimAdcValue[3]) >> 1, 
+                               (trimAdcValue[3] + trimAdcValue[4]) >> 1, (trimAdcValue[4] + trimAdcValue[5]) >> 1, 
+                               (trimAdcValue[5] + trimAdcValue[6]) >> 1, (trimAdcValue[6] + trimAdcValue[7]) >> 1, 
+                               (trimAdcValue[7] + 0) >> 1};
+#define IS_TRIM_PRESSED_STATE(x)  (trimAdcBoundary[x] > trimValue && trimValue > trimAdcBoundary[x + 1])
 #endif
 uint32_t readKeys()
 {
@@ -85,28 +90,20 @@ uint32_t readTrims()
   result = g_trimState;
   g_trimState = 0;
 #elif defined(PCBMAMBO)
-  #if !defined(SIMU) && !defined (BOOT)
-  uint16_t trimValue = anaIn(TX_TRIM);
-  if (trimValue < 1024) {
-    if (IS_TRIM_PRESSED_STATE(991))
-      result |= 0x01;
-    if (IS_TRIM_PRESSED_STATE(719))
-      result |= 0x02;
-    if (IS_TRIM_PRESSED_STATE(587))
-      result |= 0x04;
-    if (IS_TRIM_PRESSED_STATE(504))
-      result |= 0x08;
-
-    if (IS_TRIM_PRESSED_STATE(387))
-      result |= 0x10;
-    if (IS_TRIM_PRESSED_STATE(445))
-      result |= 0x20;
-    if (IS_TRIM_PRESSED_STATE(320))
-      result |= 0x40;
-    if (IS_TRIM_PRESSED_STATE(245))
-      result |= 0x80;
+  uint16_t trimValue = getAnalogValue(SWITCH_TRIM);
+  uint8_t x;
+  for (x = 0; x < TRM_LAST - TRM_BASE + 1; x++) {
+    if (IS_TRIM_PRESSED_STATE(x)) {
+      if (x == 4)
+        result |= 1<<5;
+      else if (x == 5)
+        result |= 1<<4;
+      else
+        result |= 1<<x;
+      break;
+    }
   }
-  #endif
+  return result;
 #endif
 
   return result;

@@ -272,7 +272,7 @@ void menuModelSelect(event_t event) {
         setCurrentCategory(categoriesVerticalPosition);
         menuVerticalPosition = 0;
       }
-      if (selectMode == MODE_MOVE_MODEL && categoriesVerticalPosition < cats.size()) {
+      if (selectMode == MODE_MOVE_MODEL) {
         ModelsCategory * previous_category = currentCategory;
         ModelCell * model = currentModel;
         setCurrentCategory(categoriesVerticalPosition);
@@ -296,7 +296,7 @@ void menuModelSelect(event_t event) {
         setCurrentCategory(categoriesVerticalPosition);
         menuVerticalPosition = 0;
       }
-      if (selectMode == MODE_MOVE_MODEL && categoriesVerticalPosition > 0) {
+      if (selectMode == MODE_MOVE_MODEL) {
         ModelsCategory * previous_category = currentCategory;
         ModelCell * model = currentModel;
         setCurrentCategory(categoriesVerticalPosition);
@@ -311,19 +311,19 @@ void menuModelSelect(event_t event) {
     case EVT_KEY_LONG(KEY_ENTER):
       if (selectMode == MODE_SELECT_MODEL) {
         killEvents(event);
-        if (!model_selected) {
-          POPUP_MENU_ADD_ITEM(STR_SELECT_MODEL);
+        if (!model_selected && !currentCategory->empty()) {
+            POPUP_MENU_ADD_ITEM(STR_SELECT_MODEL);
         }
         POPUP_MENU_ADD_ITEM(STR_CREATE_MODEL);
-        if (currentModel) {
-          POPUP_MENU_ADD_ITEM(STR_DUPLICATE_MODEL);
-          POPUP_MENU_ADD_ITEM(STR_MOVE_MODEL);
+        if (!currentCategory->empty()) {
+          if (currentModel) {
+            POPUP_MENU_ADD_ITEM(STR_DUPLICATE_MODEL);
+            POPUP_MENU_ADD_ITEM(STR_MOVE_MODEL);
+          }
+          if (!model_selected) {
+            POPUP_MENU_ADD_ITEM(STR_DELETE_MODEL);
+          }
         }
-        // POPUP_MENU_ADD_SD_ITEM(STR_BACKUP_MODEL);
-        if (!model_selected) {
-          POPUP_MENU_ADD_ITEM(STR_DELETE_MODEL);
-        }
-        // POPUP_MENU_ADD_ITEM(STR_RESTORE_MODEL);
         POPUP_MENU_ADD_ITEM(STR_CREATE_CATEGORY);
         POPUP_MENU_ADD_ITEM(STR_RENAME_CATEGORY);
         if (cats.size() > 1) {

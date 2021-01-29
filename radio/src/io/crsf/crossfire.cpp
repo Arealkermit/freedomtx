@@ -267,14 +267,9 @@ void boardSetSkipWarning()
   bkregSetStatusFlag( DEVICE_RESTART_WITHOUT_WARN_FLAG );
 }
 
-bool isCrossfirePowerOn()
-{
-  return !get_crsf_flag(CRSF_FLAG_RF_OFF);
-}
-
 void crossfirePowerOff(){
   volatile uint32_t off_timeout;
-  if(isCrossfirePowerOn()) {
+  if(isCrossfireRfOn()) {
     set_crsf_flag(CRSF_FLAG_POWER_OFF);
     off_timeout = get_tmr10ms();
     while (get_crsf_flag(CRSF_FLAG_POWER_OFF)) {
@@ -283,6 +278,11 @@ void crossfirePowerOff(){
         break;
     }
   }
+}
+
+bool isCrossfireRfOn()
+{
+  return !get_crsf_flag(CRSF_FLAG_RF_OFF);
 }
 
 void crossfireTurnOffRf(bool ask)

@@ -51,7 +51,7 @@
 #elif defined(PCBTANGO)
   const int8_t adcDirection[NUM_ANALOGS] = {1,1,1,1,  1,1};
 #elif defined(PCBMAMBO)
-  const int8_t adcDirection[NUM_ANALOGS] = {1,1,1,1,  1,1,  1,1,1,1,  1,1,1};
+  const int8_t adcDirection[NUM_ANALOGS] = {1,1,1,1,  1,1,  1,1,1,1,1,  1,1};
 #endif
 
 #if NUM_PWMSTICKS > 0
@@ -142,10 +142,10 @@ void adcInit()
   ADC_MAIN->SQR3 = (ADC_CHANNEL_STICK_LH << 0) + (ADC_CHANNEL_STICK_LV << 5) + (ADC_CHANNEL_STICK_RV << 10) + (ADC_CHANNEL_STICK_RH << 15) + (ADC_CHANNEL_POT1 << 20) + (ADC_CHANNEL_POT2 << 25);
 #elif defined(PCBTANGO)
   ADC_MAIN->SQR2 = 0;
-  ADC_MAIN->SQR3 = (ADC_CHANNEL_BATT<<0) + (ADC_CHANNEL_RTC<<5); // conversion 1 to 2
+  ADC_MAIN->SQR3 = (ADC_CHANNEL_BATT<<0) + (ADC_Channel_Vbat<<5);
 #elif defined(PCBMAMBO)
-  ADC_MAIN->SQR2 = (ADC_CHANNEL_TRIM << 0) + (ADC_CHANNEL_BATT << 5) + (ADC_Channel_Vbat << 10);
-  ADC_MAIN->SQR3 = (ADC_CHANNEL_POT1 << 0) + (ADC_CHANNEL_POT2 << 5) + (ADC_CHANNEL_SWITCH_B << 10) + (ADC_CHANNEL_SWITCH_C << 15) + (ADC_CHANNEL_SWITCH_D << 20) + (ADC_CHANNEL_SWITCH_E << 25);
+  ADC_MAIN->SQR2 = (ADC_CHANNEL_SWITCH_E << 0) + (ADC_CHANNEL_BATT << 5) + (ADC_Channel_Vbat << 10);
+  ADC_MAIN->SQR3 = (ADC_CHANNEL_POT1 << 0) + (ADC_CHANNEL_POT2 << 5) + (ADC_CHANNEL_TRIM << 10) + (ADC_CHANNEL_SWITCH_B << 15) + (ADC_CHANNEL_SWITCH_C << 20) + (ADC_CHANNEL_SWITCH_D << 25);
 #endif
 
   ADC_MAIN->SMPR1 = (ADC_SAMPTIME << 0) + (ADC_SAMPTIME << 3) + (ADC_SAMPTIME << 6) + (ADC_SAMPTIME << 9) + (ADC_SAMPTIME << 12) + (ADC_SAMPTIME << 15) + (ADC_SAMPTIME << 18) + (ADC_SAMPTIME << 21) + (ADC_SAMPTIME << 24);

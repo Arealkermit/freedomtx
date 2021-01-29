@@ -72,9 +72,6 @@ extern "C" void MIXER_SCHEDULER_TIMER_IRQHandler(void)
     // trigger mixer start
     mixerSchedulerISRTrigger();
   }
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-  INTERRUPT_TIM13_IRQHandler();
-#endif
 }
 
 #endif

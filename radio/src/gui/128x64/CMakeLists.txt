@@ -32,7 +32,6 @@ if(PCB STREQUAL TANGO)
     lcd_4bits.cpp
     radio_calibration_hall.cpp
     model_select_tango.cpp
-    model_crossfire_setup.cpp
     )
 elseif(PCB STREQUAL MAMBO)
   list(REMOVE_ITEM GUI_SRC 
@@ -42,7 +41,6 @@ elseif(PCB STREQUAL MAMBO)
     ${GUI_SRC}
     radio_calibration_hall.cpp
     model_select_tango.cpp
-    model_crossfire_setup.cpp
     )
 endif()
 

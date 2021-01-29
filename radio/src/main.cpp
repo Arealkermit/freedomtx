@@ -37,6 +37,9 @@ void onUSBConnectMenu(const char *result)
   else if (result == STR_USB_AGENT) {
     setSelectedUsbMode(USB_AGENT_MODE);
   }
+  else if (result == STR_USB_CHARGE) {
+    setSelectedUsbMode(USB_CHARGING_MODE);
+  }
 #endif
   else if (result == STR_USB_SERIAL) {
     setSelectedUsbMode(USB_SERIAL_MODE);
@@ -61,6 +64,7 @@ void handleUsbConnection()
         POPUP_MENU_ADD_ITEM(STR_USB_JOYSTICK);
 #if defined(AGENT)
         POPUP_MENU_ADD_ITEM(STR_USB_AGENT);
+        POPUP_MENU_ADD_ITEM(STR_USB_CHARGE);
 #endif
         POPUP_MENU_ADD_ITEM(STR_USB_MASS_STORAGE);
 #if defined(DEBUG)

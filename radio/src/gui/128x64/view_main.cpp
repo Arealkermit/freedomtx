@@ -511,7 +511,7 @@ void menuMainView(event_t event)
 
     case EVT_KEY_MODEL_MENU:
 #if defined(PCBTANGO) || defined(PCBMAMBO)
-      pushMenu(menuCrossfireSetup);
+      pushMenu(menuModelSetup);
 #else
       pushMenu(menuModelSelect);
 #endif

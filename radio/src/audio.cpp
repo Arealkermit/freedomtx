@@ -324,7 +324,7 @@ void getSwitchAudioFile(char * filename, swsrc_t index)
 {
   char * str = getModelAudioPath(filename);
 
-#if defined(PCBTARANIS) || defined(PCBHORUS)
+#if defined(PCBTARANIS) || defined(PCBHORUS) || defined(PCBTANGO) || defined(PCBMAMBO)
   if (index <= SWSRC_LAST_SWITCH) {
     div_t swinfo = switchInfo(index);
     *str++ = 'S';
@@ -332,6 +332,7 @@ void getSwitchAudioFile(char * filename, swsrc_t index)
     const char * positions[] = { "-up", "-mid", "-down" };
     strcpy(str, positions[swinfo.rem]);
   }
+  #if defined(SWSRC_FIRST_MULTIPOS_SWITCH)
   else {
     div_t swinfo = div(int(index - SWSRC_FIRST_MULTIPOS_SWITCH), XPOTS_MULTIPOS_COUNT);
     *str++ = 'S';
@@ -339,6 +340,7 @@ void getSwitchAudioFile(char * filename, swsrc_t index)
     *str++ = '1' + swinfo.rem;
     *str = '\0';
   }
+  #endif
 #else
   int len = STR_VSWITCHES[0];
   strncpy(str, &STR_VSWITCHES[1+(len*index)], len);
@@ -352,7 +354,7 @@ void getLogicalSwitchAudioFile(char * filename, int index, unsigned int event)
 {
   char * str = getModelAudioPath(filename);
 
-#if defined(PCBTARANIS) || defined(PCBHORUS)
+#if defined(PCBTARANIS) || defined(PCBHORUS) || defined(PCBTANGO) || defined(PCBMAMBO)
   *str++ = 'L';
   if (index >= 9) {
     div_t qr = div(index+1, 10);

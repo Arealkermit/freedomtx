@@ -276,14 +276,15 @@ bool setupPulsesExternalModule(uint8_t protocol)
     case PROTOCOL_CHANNELS_CROSSFIRE:
     {
       ModuleSyncStatus& status = getModuleSyncStatus(EXTERNAL_MODULE);
-      if (status.isValid())
+      if (status.isValid()) {
 #if defined(PCBTANGO)
-       if (!IS_PCBREV_01() && IS_EXTERNAL_MODULE_ENABLED()) {
+        if (!IS_PCBREV_01() && IS_EXTERNAL_MODULE_ENABLED()) {
 #endif
         mixerSchedulerSetPeriod(EXTERNAL_MODULE, status.getAdjustedRefreshRate());
 #if defined(PCBTANGO)
         }
 #endif
+      }
       else
         mixerSchedulerSetPeriod(EXTERNAL_MODULE, CROSSFIRE_PERIOD);
       setupPulsesCrossfire();

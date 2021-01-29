@@ -152,8 +152,36 @@ TASK_FUNCTION(mixerTask)
     bluetooth.wakeup();
 #endif
 
+#if defined(CROSSFIRE_TASK)
+    __attribute__((unused)) bool timeout = 0;
+    switch (g_model.moduleData[EXTERNAL_MODULE].type) {
+      case MODULE_TYPE_NONE:
+        timeout = mixerSchedulerWaitForTrigger(1);
+        break;
+      case MODULE_TYPE_PPM:
+        timeout = mixerSchedulerWaitForTrigger(PPM_PERIOD(EXTERNAL_MODULE) / 1000);
+        break;
+      case MODULE_TYPE_DSM2:
+        timeout = mixerSchedulerWaitForTrigger(DSM2_PERIOD / 1000);
+        break;
+      case MODULE_TYPE_MULTIMODULE:
+        timeout = mixerSchedulerWaitForTrigger(MULTIMODULE_PERIOD / 1000);
+        break;
+      case MODULE_TYPE_R9M_PXX1:
+        timeout = mixerSchedulerWaitForTrigger(PXX_PULSES_PERIOD / 1000);
+        break;
+      case MODULE_TYPE_SBUS:
+        timeout = mixerSchedulerWaitForTrigger(SBUS_PERIOD / 1000);
+        break;
+      case MODULE_TYPE_CROSSFIRE: // unlbock by crsfshot
+      default:
+        timeout = mixerSchedulerWaitForTrigger(30);
+        break;
+    }
+#else
     // run mixer at least every 30ms
-    bool timeout = mixerSchedulerWaitForTrigger(30);
+    __attribute__((unused)) bool timeout = mixerSchedulerWaitForTrigger(30);
+#endif
 
 #if defined(DEBUG_MIXER_SCHEDULER)
     GPIO_SetBits(EXTMODULE_TX_GPIO, EXTMODULE_TX_GPIO_PIN);
@@ -352,8 +380,7 @@ TASK_FUNCTION(systemTask)
         NVIC_SystemReset();
       }
     }
-    if (isCrossfirePowerOn())
-      crsfSharedFifoHandler();
+    crsfSharedFifoHandler();
 #if defined(AGENT)
     AgentHandler();
 #endif

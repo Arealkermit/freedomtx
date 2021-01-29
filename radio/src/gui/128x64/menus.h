@@ -93,9 +93,7 @@ static const MenuHandlerFunc menuTabGeneral[MENU_RADIO_PAGES_COUNT]  = {
 };
 
 enum MenuModelIndexes {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-  MENU_MODEL_CROSSFIRE,
-#else
+#if !defined(PCBTANGO) && !defined(PCBMAMBO)
   MENU_MODEL_SELECT,
 #endif
   MENU_MODEL_SETUP,
@@ -116,9 +114,6 @@ enum MenuModelIndexes {
 };
 
 void menuModelSelect(event_t event);
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-void menuCrossfireSetup(event_t event);
-#endif
 void menuModelSetup(event_t event);
 void menuModelFailsafe(event_t event);
 void menuModelModuleOptions(event_t event);
@@ -143,9 +138,7 @@ void menuModelTemplates(event_t event);
 void menuModelGVarOne(event_t event);
 
 static const MenuHandlerFunc menuTabModel[]  = {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-  menuCrossfireSetup,
-#else
+#if !defined(PCBTANGO) && !defined(PCBMAMBO)
   menuModelSelect,
 #endif
   menuModelSetup,

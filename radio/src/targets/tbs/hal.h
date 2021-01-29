@@ -155,7 +155,6 @@
     #define ADC_SET_DMA_FLAGS()             ADC_DMA->HIFCR = (DMA_HIFCR_CTCIF4 | DMA_HIFCR_CHTIF4 | DMA_HIFCR_CTEIF4 | DMA_HIFCR_CDMEIF4 | DMA_HIFCR_CFEIF4)
     #define ADC_TRANSFER_COMPLETE()         (ADC_DMA->HISR & DMA_HISR_TCIF4)
     #define ADC_SAMPTIME                    2   // sample time = 28 cycles
-    #define ADC_CHANNEL_RTC                 ADC_Channel_18 // ADC1_IN18
     #define ADC_RCC_AHB1Periph              (RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_DMA2)
     #define ADC_RCC_APB2Periph              RCC_APB2Periph_ADC1
     #define ADC_GPIO_PIN_BATT               GPIO_Pin_1  // PB.01
@@ -170,12 +169,11 @@
     #define ADC_SET_DMA_FLAGS()             ADC_DMA->HIFCR = (DMA_HIFCR_CTCIF4 | DMA_HIFCR_CHTIF4 | DMA_HIFCR_CTEIF4 | DMA_HIFCR_CDMEIF4 | DMA_HIFCR_CFEIF4)
     #define ADC_TRANSFER_COMPLETE()         (ADC_DMA->HISR & DMA_HISR_TCIF4)
     #define ADC_SAMPTIME                    2   // sample time = 28 cycles
-    #define ADC_CHANNEL_RTC                 ADC_Channel_18 // ADC1_IN18
     #define ADC_VREF_PREC2                  330
 
     #define HARDWARE_POT1
     #define HARDWARE_POT2
-    #define ADC_RCC_AHB1Periph              (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOF | RCC_AHB1Periph_DMA2)
+    #define ADC_RCC_AHB1Periph              (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_DMA2)
     #define ADC_RCC_APB2Periph              RCC_APB2Periph_ADC1
 
     #define ADC_GPIO_PIN_SWITCH_B           GPIO_Pin_6  // PA.06
@@ -506,19 +504,15 @@
 
   // Mixer scheduler timer
   #define MIXER_SCHEDULER_TIMER_RCC_APB1Periph RCC_APB1Periph_TIM12
-  #define MIXER_SCHEDULER_TIMER                TIM12
-  #define MIXER_SCHEDULER_TIMER_FREQ           (PERI1_FREQUENCY * TIMER_MULT_APB1)
-  #define MIXER_SCHEDULER_TIMER_IRQn           TIM8_UP_TIM13_IRQn
-  #define MIXER_SCHEDULER_TIMER_IRQHandler     TIM8_UP_TIM13_IRQHandler
+  #define MIXER_SCHEDULER_TIMER             TIM12
+  #define MIXER_SCHEDULER_TIMER_FREQ        (PERI1_FREQUENCY * TIMER_MULT_APB1)
+  #define MIXER_SCHEDULER_TIMER_IRQn        TIM8_BRK_TIM12_IRQn
+  #define MIXER_SCHEDULER_TIMER_IRQHandler  TIM8_BRK_TIM12_IRQHandler
 
   // crossfire Interrupt
   #define INTERRUPT_NOT_TIMER               TIM13
   #define INTERRUPT_NOT_TIMER_IRQn          TIM8_UP_TIM13_IRQn  
-  #if defined MIXER_SCHEDULER_TIMER_IRQHandler
-    #define INTERRUPT_TIM13_IRQHandler        TIM8_UP_TIM13_IRQHandlerCallback
-  #else
-    #define INTERRUPT_TIM13_IRQHandler        TIM8_UP_TIM13_IRQHandler
-  #endif
+  #define INTERRUPT_TIM13_IRQHandler        TIM8_UP_TIM13_IRQHandler
   #define INTERRUPT_EXTI_IRQn               EXTI15_10_IRQn
   #define INTERRUPT_EXTI_IRQHandler         EXTI15_10_IRQHandler
 

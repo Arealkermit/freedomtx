@@ -81,13 +81,18 @@ static void chargerInit(void)
   GPIO_Init(CHARGER_STATE_GPIO, &GPIO_InitStructure);
 }
 
-#define PWR_PRESSED_CNT     3
+#define PWR_PRESSED_CNT               3
+#define WIFI_PWR_CHARGING_TIMEOUT     6000
 static void detectChargingMode(void)
 {
   tmr10ms_t tm10ms = g_tmr10ms;
   tmr10ms_t tm100ms = g_tmr10ms;
   uint8_t  wt_cnt = PWR_PRESSED_CNT;
   uint8_t pwrPressedCnt = 0;
+#if defined(CHARGING_LEDS)
+  bool isLedCharging = false;
+  bool isLedCharged = false;
+#endif
 
   while (wt_cnt > 0) {
     if ((g_tmr10ms- tm100ms) > 0) {
@@ -113,6 +118,12 @@ static void detectChargingMode(void)
       // clear reset status if it's not pressed
       RCC_ClearFlag();
     }
+#if defined(CHARGING_LEDS)
+    if (isLedCharging == false) {
+      isLedCharging = true;
+      LED_CHARGING_IN_PROGRESS();
+    }
+#endif
     if ((g_tmr10ms - tm10ms) > 9) {
       getADC();
       tm10ms = g_tmr10ms;
@@ -124,11 +135,12 @@ static void detectChargingMode(void)
       lcdRefresh();
 #endif
       checkBattery();
-#if defined(CHARGING_LEDS)
-      LED_CHARGING_IN_PROGRESS();
-#endif
       tm100ms = g_tmr10ms;
     }
+#if defined(ESP_SERIAL)
+    if (g_tmr10ms >= WIFI_PWR_CHARGING_TIMEOUT && WIFI_IS_ON())
+      WIFI_OFF();
+#endif
   }
 
   wt_cnt = PWR_PRESSED_CNT;
@@ -144,6 +156,12 @@ static void detectChargingMode(void)
   }
 
   while (!IS_CHARGING_STATE() && usbPlugged() && !pwrPressed() && g_vbat100mV >= 40) {
+#if defined(CHARGING_LEDS)
+    if (isLedCharged == false) {
+      isLedCharged = true;
+      LED_CHARGING_DONE();
+    }
+#endif
     if ((g_tmr10ms - tm10ms) > 9) {
       getADC();
       tm10ms = g_tmr10ms;
@@ -155,11 +173,12 @@ static void detectChargingMode(void)
       lcdRefresh();
 #endif
       checkBattery();
-#if defined(CHARGING_LEDS)
-      LED_CHARGING_DONE();
-#endif
       tm100ms = g_tmr10ms;
     }
+#if defined(ESP_SERIAL)
+    if (g_tmr10ms >= WIFI_PWR_CHARGING_TIMEOUT && WIFI_IS_ON())
+      WIFI_OFF();
+#endif
   }
 }
 
@@ -173,8 +192,7 @@ void boardInit()
                            ENABLE);
 
     RCC_APB1PeriphClockCmd(LCD_RCC_APB1Periph | AUDIO_RCC_APB1Periph | INTERRUPT_xMS_RCC_APB1Periph | 
-                           TIMER_2MHz_RCC_APB1Periph | LED_RCC_APB1Periph | TELEMETRY_RCC_APB1Periph |
-                           MIXER_SCHEDULER_TIMER_RCC_APB1Periph,
+                           TIMER_2MHz_RCC_APB1Periph | LED_RCC_APB1Periph | TELEMETRY_RCC_APB1Periph,
                            ENABLE);
 
     RCC_APB2PeriphClockCmd(ADC_RCC_APB2Periph | ROTARY_ENCODER_RCC_APB2Periph, ENABLE);
@@ -202,7 +220,7 @@ void boardInit()
 
   RCC_APB1PeriphClockCmd(LCD_RCC_APB1Periph | AUDIO_RCC_APB1Periph | BACKLIGHT_RCC_APB1Periph | 
                          INTERRUPT_xMS_RCC_APB1Periph |TIMER_2MHz_RCC_APB1Periph | TELEMETRY_RCC_APB1Periph |
-                         AUX_SERIAL_RCC_APB1Periph, 
+                         AUX_SERIAL_RCC_APB1Periph | MIXER_SCHEDULER_TIMER_RCC_APB1Periph,
                          ENABLE);
 
   RCC_APB2PeriphClockCmd(ADC_RCC_APB2Periph | EXTMODULE_RCC_APB2Periph | ROTARY_ENCODER_RCC_APB2Periph,
@@ -215,11 +233,6 @@ void boardInit()
   // we need to initialize g_FATFS_Obj here, because it is in .ram section (because of DMA access)
   // and this section is un-initialized
   memset(&g_FATFS_Obj, 0, sizeof(g_FATFS_Obj));
-
-#if defined(ESP_SERIAL)
-  if (WIFI_IS_ON())
-    WIFI_OFF();
-#endif
 
 #if defined(ROTARY_ENCODER_NAVIGATION)
   rotaryEncoderInit();

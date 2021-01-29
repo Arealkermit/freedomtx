@@ -244,6 +244,7 @@ void menuCommonCalib(event_t event)
       crossfireSharedData.stick_state = reusableBuffer.calib.state;
       g_eeGeneral.chkSum = evalChkSum();
       storageDirty(EE_GENERAL);
+      storageCheck(true);
       reusableBuffer.calib.state = CALIB_FINISHED;
       break;
 
@@ -390,6 +391,7 @@ void menuCommonCalibPots(event_t event)
       }
       g_eeGeneral.chkSum = evalChkSum();
       storageDirty(EE_GENERAL);
+      storageCheck(true);
       reusableBuffer.calib.state = CALIB_FINISHED;
       break;
 

@@ -2018,7 +2018,7 @@ void opentxInit()
     if(bkregGetStatusFlag(STORAGE_ERASE_STATUS))
       bkregClrStatusFlag(STORAGE_ERASE_STATUS);
     pwrOn();
-    g_eeGeneral.backlightMode = e_backlight_mode_on;
+    g_eeGeneral.backlightMode = e_backlight_mode_all;
   }
   else {
     runStartupAnimation();

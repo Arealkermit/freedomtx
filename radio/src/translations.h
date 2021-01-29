@@ -519,6 +519,7 @@ extern const char STR_ABOUT_US[];
 extern const char STR_USB_JOYSTICK[];
 #if defined(AGENT)
 extern const char STR_USB_AGENT[];
+extern const char STR_USB_CHARGE[];
 #endif
 extern const char STR_USB_MASS_STORAGE[];
 extern const char STR_USB_SERIAL[];

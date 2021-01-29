@@ -27,6 +27,7 @@ enum usbMode {
   USB_JOYSTICK_MODE,
 #if defined(AGENT)
   USB_AGENT_MODE,
+  USB_CHARGING_MODE,
 #endif
   USB_MASS_STORAGE_MODE,
   USB_SERIAL_MODE,

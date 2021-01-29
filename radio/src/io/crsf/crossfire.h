@@ -104,7 +104,7 @@ typedef enum {
   void crossfirePowerOff();
   void crossfireTurnOffRf(bool ask);
   void crossfireTurnOnRf();
-  bool isCrossfirePowerOn();
+  bool isCrossfireRfOn();
 #endif
 
 #define RTOS_API_VERSION                0x103

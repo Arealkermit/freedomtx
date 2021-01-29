@@ -294,7 +294,11 @@ const char * MultiFirmwareUpdateDriver::flashFirmware(FIL* file, const char* lab
   const char* result = nullptr;
   moduleOn();
 
+#if defined(PCBTANGO) || defined(PCBMAMBO)
+  bool inverted = false;
+#else
   bool inverted = true; //false; // true
+#endif
   init(inverted);
 
   /* wait 500ms for power on */
@@ -521,7 +525,7 @@ bool multiFlashFirmware(uint8_t moduleIdx, const char * filename)
   pausePulses();
 
 #if (defined(PCBTANGO) || defined(PCBMAMBO)) && !defined(SIMU)
-  uint8_t intPwr = isCrossfirePowerOn();
+  uint8_t intPwr = isCrossfireRfOn();
   if (intPwr)
     crossfireTurnOffRf(false);
 #endif

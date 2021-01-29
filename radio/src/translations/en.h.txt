@@ -926,6 +926,7 @@
 #define TR_USB_JOYSTICK                "USB Joystick (HID)"
 #if defined(PCBTANGO) || defined(PCBMAMBO)
 #define TR_USB_AGENT                   "USB Agent (HID)"
+#define TR_USB_CHARGE                  "USB Charging"
 #endif
 #define TR_USB_MASS_STORAGE            "USB Storage (SD)"
 #define TR_USB_SERIAL                  "USB Serial (Debug)"

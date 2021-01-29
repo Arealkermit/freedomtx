@@ -139,11 +139,12 @@ DRESULT disk_read_dma(BYTE drv, BYTE * buff, DWORD sector, UINT count)
     }
     if (Status == SD_OK) {
       Status = SD_WaitReadOperation(200*count); // Check if the Transfer is finished
+#if defined(DISK_OPERATION_TIMEOUT)
       tmr = g_tmr10ms;
+#endif
       do
       {
         State = SD_GetStatus(); // BUSY, OK (DONE), ERROR (FAIL)
-        delay_ms(1);
 #if defined(DISK_OPERATION_TIMEOUT)
         if (g_tmr10ms - tmr >= DISK_OPERATION_TIMEOUT)
           State = SD_TRANSFER_ERROR;

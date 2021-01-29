@@ -335,6 +335,7 @@ const char STR_ABOUT_US[] = TR_ABOUT_US;
 const char STR_USB_JOYSTICK[] = TR_USB_JOYSTICK;
 #if defined(AGENT)
 const char STR_USB_AGENT[]  = TR_USB_AGENT;
+const char STR_USB_CHARGE[] = TR_USB_CHARGE;
 #endif
 const char STR_USB_MASS_STORAGE[] = TR_USB_MASS_STORAGE;
 const char STR_USB_SERIAL[] = TR_USB_SERIAL;

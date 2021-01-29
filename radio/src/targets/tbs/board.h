@@ -113,7 +113,7 @@ DRESULT __disk_write(BYTE drv, const BYTE * buff, DWORD sector, UINT count);
 #else
 #define __disk_read                     disk_read
 #define __disk_write                    disk_write
-#define DISK_OPERATION_TIMEOUT          5
+#define DISK_OPERATION_TIMEOUT          10
 #define SD_MAX_VOLT_TRIAL               ((uint32_t)0x000000FF)
 #endif
 
@@ -272,11 +272,11 @@ enum Analogs {
   POT_FIRST = POT1,
   POT2,
   POT_LAST = POT2,
+  SWITCH_TRIM,
   SWITCH_B,
   SWITCH_C,
   SWITCH_D,
   SWITCH_E,
-  TX_TRIM,
 #endif
   TX_VOLTAGE,
   TX_RTC_VOLTAGE,
@@ -298,11 +298,10 @@ enum Analogs {
 #define STICKS_PWM_ENABLED()            false
 #elif defined(PCBMAMBO)
 #define NUM_POTS                        (POT_LAST-POT_FIRST+1)
-#define NUM_XPOTS                       2
+#define NUM_XPOTS                       STORAGE_NUM_POTS
 #define NUM_SLIDERS                     0
 #define NUM_TRIMS                       4
 #define NUM_MOUSE_ANALOGS               0
-#define NUM_DUMMY_ANAS                  0
 
 #define STORAGE_NUM_POTS                2
 #define STORAGE_NUM_SLIDERS             0
@@ -336,7 +335,11 @@ enum CalibratedAnalogs {
   NUM_CALIBRATED_ANALOGS
 };
 
-#define IS_POT(x)                     (false)
+#if defined(PCBMAMBO)
+  #define IS_POT(x)                   ((x)>=POT_FIRST && (x)<=POT_LAST) 
+#else
+  #define IS_POT(x)                   (false)
+#endif
 #define IS_SLIDER(x)                  (false)
 
 extern uint16_t adcValues[NUM_ANALOGS];
@@ -354,7 +357,7 @@ uint16_t getBatteryVoltage();   // returns current battery voltage in 10mV steps
 #define BATT_SCALE                    (4.446f)
 #define BATT_SCALE2                   (4.162f)
 #elif defined(PCBMAMBO)
-#define BATT_SCALE                    (4.136f)
+#define BATT_SCALE                    (4.55f)
 #endif
 // BATT_SCALE = 12-bit max value * pd / ANALOG_MULTIPLIER / vref / multiplication
 //            = 4095 * 2/3 / 2 / vref / 100
@@ -457,16 +460,11 @@ void telemetryPortSetDirectionOutput();
 void sportSendBuffer(const uint8_t * buffer, uint32_t count);
 bool telemetryGetByte(uint8_t * byte);
 extern uint32_t telemetryErrors;
-void telemetryPortInit(uint32_t baudrate, uint8_t mode);
 void telemetryPortSetDirectionInput();
-void telemetryPortSetDirectionOutput();
 void sportSendByte(uint8_t byte);
 void sportSendByteLoop(uint8_t byte);
 void sportStopSendByteLoop();
-void sportSendBuffer(const uint8_t * buffer, uint32_t count);
-bool telemetryGetByte(uint8_t * byte);
 void telemetryClearFifo();
-extern uint32_t telemetryErrors;
 // soft-serial
 void telemetryPortInvertedInit(uint32_t baudrate);
 

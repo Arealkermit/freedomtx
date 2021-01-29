@@ -29,7 +29,7 @@
 #define AUDIO_STACK_SIZE       400
 #define CLI_STACK_SIZE         1000  // only consumed with CLI build option
 #define CROSSFIRE_STACK_SIZE   64
-#define SYSTEM_STACK_SIZE      500
+#define SYSTEM_STACK_SIZE      504
 
 #define MIXER_TASK_PRIO        5
 #define AUDIO_TASK_PRIO        7

@@ -82,103 +82,126 @@ static void chargerInit(void)
 }
 
 #define PWR_PRESSED_CNT               3
+#define INITIAL_STATE_UPDATE_CNT      2000
 #define WIFI_PWR_CHARGING_TIMEOUT     6000
-static void detectChargingMode(void)
+#define BACKLIGHT_TIMEOUT             500
+#define BATT_ADC_SAMPLING_TIME        10
+#define ANIMATION_UPDATE_TIME         50
+#define KEY_PRESS_UPDATE_TIME         10
+#define CHARGING_TO_CHARGED_DELAY     500
+#define NUM_OF_KEY_GROUPS             6
+static void runPwrOffCharging(void)
 {
-  tmr10ms_t tm10ms = g_tmr10ms;
-  tmr10ms_t tm100ms = g_tmr10ms;
-  uint8_t  wt_cnt = PWR_PRESSED_CNT;
+  tmr10ms_t tmrAdc = 0;
+  tmr10ms_t tmrWait = 0;
+  tmr10ms_t tmrPressed = 0;
   uint8_t pwrPressedCnt = 0;
+  uint16_t updateCnt = 0;
+  uint32_t lastChargingTimestamp;
+#if defined(CHARGING_ANIMATION)
+  tmr10ms_t tmrBacklight = 0;
+  uint16_t keysState[NUM_OF_KEY_GROUPS];
+  GPIO_TypeDef * keysPort[NUM_OF_KEY_GROUPS] = {GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF};
+  uint16_t keysPin[NUM_OF_KEY_GROUPS] = {KEYS_GPIOA_PINS, KEYS_GPIOB_PINS, KEYS_GPIOC_PINS, KEYS_GPIOD_PINS, KEYS_GPIOE_PINS, KEYS_GPIOF_PINS};
+#endif
 #if defined(CHARGING_LEDS)
   bool isLedCharging = false;
   bool isLedCharged = false;
 #endif
 
-  while (wt_cnt > 0) {
-    if ((g_tmr10ms- tm100ms) > 0) {
-      usbPlugged(); //call several times continuously for debouncing and ensure stable connection
-      wt_cnt--;
-      tm100ms = g_tmr10ms;
-      if(pwrPressed())
+  // initialize usb state & voltage adc
+  tmrWait = getTmr2MHz();
+  while (1) {
+    if (getTmr2MHz() - tmrWait >= 200) { //100us
+      usbPlugged();
+      getADC();
+      checkBattery();
+      tmrWait = getTmr2MHz();
+      if (updateCnt++ >= INITIAL_STATE_UPDATE_CNT)
+        break;
+    }
+  }
+
+  while (1) {    
+    // update battery voltage
+    if (g_tmr10ms - tmrAdc >= BATT_ADC_SAMPLING_TIME) {
+      getADC();
+      checkBattery();
+      tmrAdc = g_tmr10ms;
+    }
+
+    // check if there is a power on event 
+    if (g_tmr10ms - tmrPressed >= KEY_PRESS_UPDATE_TIME) {
+      tmrPressed = g_tmr10ms;
+      if (pwrPressed())
         pwrPressedCnt++;
+      else
+        pwrPressedCnt = 0;
     }
-  }
 
-  if(pwrPressedCnt == PWR_PRESSED_CNT)
-    return;
+    // quit the power off charging loop
+    if (!usbPlugged() || pwrPressedCnt >= PWR_PRESSED_CNT)
+      break;
+    else if (pwrPressedCnt)
+      continue;
 
-  if (usbPlugged() && !pwrPressed()) {
-    if (!rambackupRestore()) {
-      g_eeGeneral.txVoltageCalibration = BATT_CALIB_OFFSET; //ram backup failed, use the default calibration value for battery voltage
-    }
-  }
-
-  while (IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged() && !pwrPressed()) {
-    if(WAS_RESET_BY_SOFTWARE()) {
-      // clear reset status if it's not pressed
-      RCC_ClearFlag();
-    }
-#if defined(CHARGING_LEDS)
-    if (isLedCharging == false) {
-      isLedCharging = true;
-      LED_CHARGING_IN_PROGRESS();
-    }
-#endif
-    if ((g_tmr10ms - tm10ms) > 9) {
-      getADC();
-      tm10ms = g_tmr10ms;
-    }
-    if ((g_tmr10ms- tm100ms) > 49) {
-#if defined(PCBMAMBO)
-      lcdClear();
-      drawChargingState();
-      lcdRefresh();
-#endif
-      checkBattery();
-      tm100ms = g_tmr10ms;
-    }
+    // turn off ESP power if it's a long charging process
 #if defined(ESP_SERIAL)
     if (g_tmr10ms >= WIFI_PWR_CHARGING_TIMEOUT && WIFI_IS_ON())
       WIFI_OFF();
 #endif
-  }
 
-  wt_cnt = PWR_PRESSED_CNT;
-  while (wt_cnt > 0) {
-    if ((g_tmr10ms - tm10ms) > 9) {
-      getADC();
-      tm10ms = g_tmr10ms;
+    // backlight
+#if defined(CHARGING_ANIMATION)
+    for (uint8_t i = 0; i < NUM_OF_KEY_GROUPS; i++) {
+      if (keysState[i] ^ (GPIO_ReadInputData(keysPort[i]) & keysPin[i])) {
+        keysState[i] = GPIO_ReadInputData(keysPort[i]) & keysPin[i];
+        tmrBacklight = g_tmr10ms;
+      }
     }
-    if ((g_tmr10ms- tm100ms) > 49) {
-      checkBattery();
-      wt_cnt--;
-    }
-  }
+    if (g_tmr10ms - tmrBacklight < BACKLIGHT_TIMEOUT || 0)
+      BACKLIGHT_ENABLE();
+    else 
+      BACKLIGHT_DISABLE();
+#endif
 
-  while (!IS_CHARGING_STATE() && usbPlugged() && !pwrPressed() && g_vbat100mV >= 40) {
+    // charging 
+    if (IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged()) {
+      lastChargingTimestamp = g_tmr10ms;
 #if defined(CHARGING_LEDS)
-    if (isLedCharged == false) {
-      isLedCharged = true;
-      LED_CHARGING_DONE();
-    }
+      if (isLedCharging == false) {
+        isLedCharging = true;
+        LED_CHARGING_IN_PROGRESS();
+      }
 #endif
-    if ((g_tmr10ms - tm10ms) > 9) {
-      getADC();
-      tm10ms = g_tmr10ms;
-    }
-    if ((g_tmr10ms- tm100ms) > 49) {
-#if defined(PCBMAMBO)
-      lcdClear();
-      drawFullyCharged();
-      lcdRefresh();
+      if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
+#if defined(CHARGING_ANIMATION)
+        lcdClear();
+        drawChargingState();
+        lcdRefresh();
 #endif
-      checkBattery();
-      tm100ms = g_tmr10ms;
+        TRACE("state: charging  vbatt: %.1fV", (float)g_vbat100mV/10);
+        tmrWait = g_tmr10ms;
+      }
     }
-#if defined(ESP_SERIAL)
-    if (g_tmr10ms >= WIFI_PWR_CHARGING_TIMEOUT && WIFI_IS_ON())
-      WIFI_OFF();
+    // charged 
+    else if (!IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged() && g_tmr10ms - lastChargingTimestamp >= CHARGING_TO_CHARGED_DELAY) {
+#if defined(CHARGING_LEDS)
+      if (isLedCharged == false) {
+        isLedCharged = true;
+        LED_CHARGING_DONE();
+      }
 #endif
+      if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
+#if defined(CHARGING_ANIMATION)
+        lcdClear();
+        drawFullyCharged();
+        lcdRefresh();
+#endif
+        TRACE("state: charged  vbatt: %.1fV", (float)g_vbat100mV/10);
+        tmrWait = g_tmr10ms;
+      }
+    }
   }
 }
 
@@ -267,7 +290,11 @@ void boardInit()
 #endif
 
   if(!isDisableBoardOff() && !WAS_RESET_BY_WATCHDOG()){
-    detectChargingMode();
+    // clear software reset mark
+    if(WAS_RESET_BY_SOFTWARE()) {
+      RCC_ClearFlag();
+    }
+    runPwrOffCharging();
   }
 
 #if defined(HAPTIC)
@@ -297,6 +324,7 @@ void boardOff()
 #endif
 
   crossfirePowerOff();
+  crossfireTasksStop();
 
 #if defined(HAPTIC)
   if (haptic.busy())

@@ -208,7 +208,7 @@ void enablePulsesExternalModule(uint8_t protocol)
 
 #if defined(MULTIMODULE)
     case PROTOCOL_CHANNELS_MULTIMODULE:
-#if defined(PCBTANGO)
+#if defined(PCBMAMBO)
       extmoduleSerialStart(MULTIMODULE_BAUDRATE, false);
 #else
       extmoduleSerialStart(MULTIMODULE_BAUDRATE, true);
@@ -432,7 +432,7 @@ bool setupPulsesInternalModule(uint8_t protocol)
 #endif
 
     default:
-      return false;
+      return true;
   }
 }
 
@@ -461,17 +461,14 @@ bool setupPulsesExternalModule()
   heartbeat |= (HEART_TIMER_PULSES << EXTERNAL_MODULE);
 
   if (moduleState[EXTERNAL_MODULE].protocol != protocol) {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-    if (telemetryProtocol != 0xFF)
-      telemetryProtocol = 0xFF;
-#endif
     extmoduleStop();
     moduleState[EXTERNAL_MODULE].protocol = protocol;
     enablePulsesExternalModule(protocol);
     return false;
   }
   else {
-    return setupPulsesExternalModule(protocol);
+    setupPulsesExternalModule(protocol);
+    return true;
   }
 }
 

@@ -62,34 +62,9 @@ void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev)
   RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_OTG_FS, ENABLE) ; 
 }
 
-void USB_OTG_Disconnect(){
-    GPIO_InitTypeDef GPIO_InitStructure;
-
-    RCC_AHB1PeriphClockCmd(USB_RCC_AHB1Periph_GPIO, ENABLE);
-    GPIO_InitStructure.GPIO_Pin = USB_GPIO_PIN_DP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(USB_GPIO, &GPIO_InitStructure);
-    GPIO_ResetBits(USB_GPIO, USB_GPIO_PIN_DP);
-    USB_OTG_BSP_mDelay(50);
-}
-
 void USB_OTG_BSP_Deinit(USB_OTG_CORE_HANDLE *pdev)
 {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-  if(usbStarted()){
-    pdev->regs.GREGS->GOTGCTL = 0;
-    pdev->regs.GREGS->GCCFG = 0;
-    pdev->regs.GREGS->GRSTCTL = 0;
-    pdev->regs.GREGS->GAHBCFG = 0;
-    pdev->regs.GREGS->GUSBCFG = 0;
-    USB_OTG_Disconnect();
-  }
-#else
   //nothing to do  
-#endif
 }
 
 /**

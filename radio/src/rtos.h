@@ -250,11 +250,15 @@ template<int SIZE>
 
   static inline void RTOS_ISR_SET_FLAG(RTOS_FLAG_HANDLE flag)
   {
+  #if !defined(CROSSFIRE_TASK) 
     CoEnterISR();
     CoSchedLock();
+  #endif
     isr_SetFlag(flag);
+  #if !defined(CROSSFIRE_TASK) 
     CoSchedUnlock();
     CoExitISR();
+  #endif
   }
   
 #ifdef __cplusplus

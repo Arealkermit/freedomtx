@@ -314,7 +314,7 @@ void lcdRefresh(bool wait)
 }
 #elif defined(PCBMAMBO)
 
-#define LCD_CONTRAST_OFFSET            10
+#define LCD_CONTRAST_OFFSET            127
 #define RESET_WAIT_DELAY_MS            300 // Wait time after LCD reset before first command
 #define WAIT_FOR_DMA_END()             do { } while (lcd_busy)
 
@@ -391,21 +391,22 @@ void lcdHardwareInit()
 
 void lcdStart()
 {
-  lcdWriteCommand(0xAE);	//Display OFF
-  lcdWriteCommand(0xA2);	//1/64 Duty 1/9 Bias
-  lcdWriteCommand(0xA0);	//ADC select S0->S131(S1-S128)
-  lcdWriteCommand(0xC8);	//com1 --> com64
-  lcdWriteCommand(0x24);	//Rb/Ra
-  lcdWriteCommand(0x81);	//Sets V0
-  lcdWriteCommand(32);
-  lcdWriteCommand(0x2F);	//voltage follower ON  regulator ON  booster ON
-  lcdWriteCommand(0xA6);	//Normal Display (not reverse dispplay)
-  lcdWriteCommand(0xA4);	//Entire Display Disable
-  lcdWriteCommand(0x40);	//Set Display Start Line = com0
-  lcdWriteCommand(0xB0);	//Set Page Address = 0
-  lcdWriteCommand(0x10);	//Set Column Address 4 higher bits = 0
-  lcdWriteCommand(0x01);	//Set Column Address 4 lower bits = 1 , from IC SEG1 -> SEG128
-  lcdWriteCommand(0xAF);	//Display ON
+  lcdWriteCommand(0xAE);  // Display OFF
+  lcdWriteCommand(0xA2);  // 1/64 Duty 1/9 Bias
+  lcdWriteCommand(0xA0);  // ADC select S0->S131(S1-S128)
+  lcdWriteCommand(0xC8);  // com1 --> com64
+  lcdWriteCommand(0x24);  // Rb/Ra
+  lcdWriteCommand(0x81);  // Sets V0
+  lcdWriteCommand(0x1F);  // EV of V0, range：0x00-0x3f
+  lcdWriteCommand(0x24);  // Ratio of V0, range：0x20-0x27
+  lcdWriteCommand(0x2F);  // voltage follower ON  regulator ON  booster ON
+  lcdWriteCommand(0xA6);  // Normal Display (not reverse display)
+  lcdWriteCommand(0xA4);  // Entire Display Disable
+  lcdWriteCommand(0x40);  // Set Display Start Line = com0
+  lcdWriteCommand(0xB0);  // Set Page Address = 0
+  lcdWriteCommand(0x10);  // Set Column Address 4 higher bits = 0
+  lcdWriteCommand(0x01);  // Set Column Address 4 lower bits = 1 , from IC SEG1 -> SEG128
+  lcdWriteCommand(0xAF);  // Display ON
 }
 
 volatile bool lcd_busy;
@@ -428,7 +429,6 @@ void lcdRefresh(bool wait)
     lcdWriteCommand(0x10); // Column addr 0
     lcdWriteCommand(0x00);
     lcdWriteCommand(0xB0 | y); // Page addr y
-    //lcdWriteCommand(0x04);
 
     LCD_NCS_LOW();
     LCD_A0_HIGH();
@@ -548,9 +548,10 @@ void lcdSetRefVolt(uint8_t val)
   if (!lcdInitFinished) {
     lcdInitFinish();
   }
-
+  uint16_t setVal = val + LCD_CONTRAST_OFFSET;
   lcdWriteCommand(0x81); // Set Vop
-  lcdWriteCommand(val+LCD_CONTRAST_OFFSET); // 0-255
+  lcdWriteCommand(setVal & 0x3F); // the lower 6 bits for EV
+  lcdWriteCommand(0x20 | (setVal >> 6)); // and the higher 3 bits for ratio
 }
 
 #endif

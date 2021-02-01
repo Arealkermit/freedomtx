@@ -1061,7 +1061,8 @@ void drawChargingState(void)
   static uint8_t blink_count = 0;
   static uint32_t charging_time = g_tmr10ms;
 
-  putsVBat(VBATT_X + 54, VBATT_Y - 13, RIGHT|MIDSIZE);
+  lcdDrawText(VBATT_X - 5, VBATT_Y - 13, "CHARGING: ", MIDSIZE);
+  putsVBat(VBATT_X + 90, VBATT_Y - 13, RIGHT|MIDSIZE);
   lcdDrawSolidFilledRect(VBATT_X - 4, VBATT_Y, VBATT_W + 4, VBATT_H);
   uint8_t count = GET_BAT_BARS();
 
@@ -1087,7 +1088,8 @@ void drawChargingState(void)
 
 void drawFullyCharged(void)
 {
-  putsVolts(VBATT_X + 54, VBATT_Y - 13, 42, RIGHT|MIDSIZE);
+  lcdDrawText(VBATT_X , VBATT_Y - 13, "CHARGED: ", MIDSIZE);
+  putsVolts(VBATT_X + 70, VBATT_Y - 13, 42, MIDSIZE);
 
   lcdDrawSolidFilledRect(VBATT_X - 4, VBATT_Y, VBATT_W + 4, VBATT_H);
 
@@ -1095,8 +1097,6 @@ void drawFullyCharged(void)
     lcdDrawSolidFilledRect(VBATT_X + 2  + (VBATT_W / (MAX_BARS() - 1) * (i )), VBATT_Y + 7,  VBATT_W / MAX_BARS() + 1, VBATT_H - 14);
   }
   lcdDrawSolidFilledRect(VBATT_X + VBATT_W , VBATT_Y + 10, 9, VBATT_H - 10 * 2);
-
-  lcdDrawText(VBATT_X - 8 , VBATT_Y + VBATT_H + 3, "FULLY CHARGED", MIDSIZE);
 }
 
 void runFatalErrorScreen(const char * message)

@@ -336,6 +336,9 @@ void generalDefault()
   g_eeGeneral.speakerPitch      = 2;
   g_eeGeneral.hapticLength      = -1;
   g_eeGeneral.hapticMode        = 1;
+#if defined(PCBMAMBO)
+  g_eeGeneral.hapticStrength    = -1;
+#endif
   g_eeGeneral.lightAutoOff      = 12;
   g_eeGeneral.templateSetup     = 17; /* TAER */
   g_eeGeneral.jitterFilter      = 0;
@@ -1816,12 +1819,12 @@ void copyMinMaxToOutputs(uint8_t ch)
 
 inline uint32_t PWR_PRESS_DURATION_MIN()
 {
-  if (g_eeGeneral.version != EEPROM_VER)
-    return 200;
-
 #if defined(PCBTANGO) || defined(PCBMAMBO)
   return (1 + g_eeGeneral.pwrOnSpeed) * 100;
 #else
+  if (g_eeGeneral.version != EEPROM_VER)
+    return 200;
+
   return (2 - g_eeGeneral.pwrOnSpeed) * 100;
 #endif
 }

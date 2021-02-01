@@ -90,22 +90,29 @@ bool isForcePowerOffRequested()
   return false;
 }
 
-bool isModuleSynchronous(uint8_t moduleIdx)
+bool isModuleSynchronous(uint8_t module)
 {
-  uint8_t protocol = moduleState[moduleIdx].protocol;
-#if defined(PCBTANGO)
-  if (IS_PCBREV_01() || !IS_EXTERNAL_MODULE_ENABLED())
-    return true;
-#elif defined(PCBMAMBO)
-  if (!IS_EXTERNAL_MODULE_ENABLED())
-    return true;
+  switch(moduleState[module].protocol) {
+
+    case PROTOCOL_CHANNELS_PXX2_HIGHSPEED:
+    case PROTOCOL_CHANNELS_PXX2_LOWSPEED:
+    case PROTOCOL_CHANNELS_CROSSFIRE:
+    case PROTOCOL_CHANNELS_NONE:
+
+#if defined(MULTIMODULE)
+    case PROTOCOL_CHANNELS_MULTIMODULE:
 #endif
-  if (protocol == PROTOCOL_CHANNELS_PXX2_HIGHSPEED || protocol == PROTOCOL_CHANNELS_PXX2_LOWSPEED || protocol == PROTOCOL_CHANNELS_CROSSFIRE || protocol == PROTOCOL_CHANNELS_NONE)
-    return true;
 #if defined(INTMODULE_USART) || defined(EXTMODULE_USART)
-  if (protocol == PROTOCOL_CHANNELS_PXX1_SERIAL)
-    return true;
+    case PROTOCOL_CHANNELS_PXX1_SERIAL:
 #endif
+#if defined(DSM2)
+    case PROTOCOL_CHANNELS_SBUS:
+    case PROTOCOL_CHANNELS_DSM2_LP45:
+    case PROTOCOL_CHANNELS_DSM2_DSM2:
+    case PROTOCOL_CHANNELS_DSM2_DSMX:
+#endif
+      return true;
+  }
   return false;
 }
 
@@ -155,9 +162,6 @@ TASK_FUNCTION(mixerTask)
 #if defined(CROSSFIRE_TASK)
     __attribute__((unused)) bool timeout = 0;
     switch (g_model.moduleData[EXTERNAL_MODULE].type) {
-      case MODULE_TYPE_NONE:
-        timeout = mixerSchedulerWaitForTrigger(1);
-        break;
       case MODULE_TYPE_PPM:
         timeout = mixerSchedulerWaitForTrigger(PPM_PERIOD(EXTERNAL_MODULE) / 1000);
         break;
@@ -174,6 +178,7 @@ TASK_FUNCTION(mixerTask)
         timeout = mixerSchedulerWaitForTrigger(SBUS_PERIOD / 1000);
         break;
       case MODULE_TYPE_CROSSFIRE: // unlbock by crsfshot
+      case MODULE_TYPE_NONE:
       default:
         timeout = mixerSchedulerWaitForTrigger(30);
         break;
@@ -203,13 +208,6 @@ TASK_FUNCTION(mixerTask)
 
     uint32_t now = RTOS_GET_MS();
     uint8_t runMask = 0;
-
-#if defined(CROSSFIRE_TASK) && !defined(SIMU)
-    if (isMixerTaskScheduled()) {
-      clearMixerTaskSchedule();
-      runMask |= (1 << 0);
-    }
-#endif
 
     if (now >= nextMixerTime[0]) {
       runMask |= (1 << 0);
@@ -391,6 +389,12 @@ TASK_FUNCTION(systemTask)
         set_model_id_needed = false;
       get_modelid_delay = get_tmr10ms();
     }
+#if defined(CROSSFIRE_TASK)
+    if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_NONE && isMixerTaskScheduled()) {
+      clearMixerTaskSchedule();
+      mixerSchedulerISRTrigger();
+    }
+#endif
   }
   TASK_RETURN();
 }

@@ -121,6 +121,10 @@ void usbStart()
 
 void usbStop()
 {
+#if defined(AGENT)
+  // facilitate switching usb mode in runtime
+  USB_OTG_WRITE_REG32(&USB_OTG_dev.regs.GREGS->GCCFG, 0);
+#endif
   usbDriverStarted = false;
   USBD_DeInit(&USB_OTG_dev);
 }

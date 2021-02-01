@@ -35,14 +35,14 @@ void extmoduleStop()
   EXTMODULE_USART_TX_DMA_STREAM->CR &= ~DMA_SxCR_EN; // Disable DMA
 
   GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = EXTMODULE_TX_GPIO_PIN | EXTMODULE_RX_GPIO_PIN;
+  GPIO_InitStructure.GPIO_Pin = EXTMODULE_TX_GPIO_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
   GPIO_Init(EXTMODULE_USART_GPIO, &GPIO_InitStructure);
 
-  GPIO_ResetBits(EXTMODULE_USART_GPIO, EXTMODULE_TX_GPIO_PIN | EXTMODULE_RX_GPIO_PIN);
+  GPIO_ResetBits(EXTMODULE_USART_GPIO, EXTMODULE_TX_GPIO_PIN);
 #endif
 
   EXTMODULE_TIMER->DIER &= ~(TIM_DIER_CC2IE | TIM_DIER_UDE);
@@ -111,7 +111,7 @@ void extmoduleSerialStart(uint32_t baudrate, bool inverted)
   EXTMODULE_TIMER->CCMR1 = TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_0;
   EXTMODULE_TIMER->ARR = 40000; // dummy value until the DMA request kicks in
   EXTMODULE_TIMER->SR &= ~TIM_SR_CC2IF; // Clear flag
-  EXTMODULE_TIMER->DIER |= TIM_DIER_UDE | TIM_DIER_CC2IE;
+  EXTMODULE_TIMER->DIER |= TIM_DIER_UDE;
   EXTMODULE_TIMER->CR1 |= TIM_CR1_CEN;
 
   NVIC_EnableIRQ(EXTMODULE_TIMER_DMA_STREAM_IRQn);
@@ -382,8 +382,13 @@ extern "C" void EXTMODULE_TIMER_DMA_STREAM_IRQHandler()
 
   DMA_ClearITPendingBit(EXTMODULE_TIMER_DMA_STREAM, EXTMODULE_TIMER_DMA_FLAG_TC);
 
-  EXTMODULE_TIMER->SR &= ~TIM_SR_CC2IF; // Clear flag
-  EXTMODULE_TIMER->DIER |= TIM_DIER_CC2IE; // Enable this interrupt
+  switch (moduleState[EXTERNAL_MODULE].protocol) {
+    case PROTOCOL_CHANNELS_PXX1_PULSES:
+    case PROTOCOL_CHANNELS_PPM:
+      EXTMODULE_TIMER->SR &= ~TIM_SR_CC2IF; // Clear flag
+      EXTMODULE_TIMER->DIER |= TIM_DIER_CC2IE; // Enable this interrupt
+      break;
+  }
 }
 
 extern "C" void EXTMODULE_TIMER_CC_IRQHandler()

@@ -118,9 +118,11 @@
 
     #define KEYS_RCC_AHB1Periph             (RCC_AHB1Periph_GPIOA|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOD|RCC_AHB1Periph_GPIOE|RCC_AHB1Periph_GPIOF|RCC_AHB1Periph_GPIOG)
     #define KEYS_GPIOA_PINS                 (SWITCHES_GPIO_PIN_F | SWITCHES_GPIO_PIN_B_H | SWITCHES_GPIO_PIN_B_L | ENC_GPIO_PIN_A | ENC_GPIO_PIN_B)
-    #define KEYS_GPIOC_PINS                 SWITCHES_GPIO_PIN_A
+    #define KEYS_GPIOB_PINS                 (0)
+    #define KEYS_GPIOC_PINS                 (SWITCHES_GPIO_PIN_A)
     #define KEYS_GPIOD_PINS                 (KEYS_GPIO_PIN_ENTER | KEYS_GPIO_PIN_MENU | KEYS_GPIO_PIN_PAGE | KEYS_GPIO_PIN_EXIT)
     #define KEYS_GPIOE_PINS                 (SWITCHES_GPIO_PIN_C_H | SWITCHES_GPIO_PIN_C_L | SWITCHES_GPIO_PIN_D | SWITCHES_GPIO_PIN_E)
+    #define KEYS_GPIOF_PINS                 (0)
   #elif defined(PCBMAMBO)
     #define HARDWARE_SWITCH_A
     #define SWITCHES_GPIO_REG_A             GPIOE->IDR
@@ -141,6 +143,7 @@
     #define KEYS_RCC_AHB1Periph             (RCC_AHB1Periph_GPIOA|RCC_AHB1Periph_GPIOB|RCC_AHB1Periph_GPIOC|RCC_AHB1Periph_GPIOD|RCC_AHB1Periph_GPIOE|RCC_AHB1Periph_GPIOF|RCC_AHB1Periph_GPIOG)
     #define KEYS_GPIOA_PINS                 (ENC_GPIO_PIN_A | ENC_GPIO_PIN_B)
     #define KEYS_GPIOB_PINS                 (0)
+    #define KEYS_GPIOC_PINS                 (0)
     #define KEYS_GPIOD_PINS                 (KEYS_GPIO_PIN_ENTER | KEYS_GPIO_PIN_MENU | KEYS_GPIO_PIN_PAGE | KEYS_GPIO_PIN_EXIT)
     #define KEYS_GPIOE_PINS                 (SWITCHES_GPIO_PIN_A | SWITCHES_GPIO_PIN_F)
     #define KEYS_GPIOF_PINS                 (0)
@@ -169,7 +172,7 @@
     #define ADC_SET_DMA_FLAGS()             ADC_DMA->HIFCR = (DMA_HIFCR_CTCIF4 | DMA_HIFCR_CHTIF4 | DMA_HIFCR_CTEIF4 | DMA_HIFCR_CDMEIF4 | DMA_HIFCR_CFEIF4)
     #define ADC_TRANSFER_COMPLETE()         (ADC_DMA->HISR & DMA_HISR_TCIF4)
     #define ADC_SAMPTIME                    2   // sample time = 28 cycles
-    #define ADC_VREF_PREC2                  330
+    #define ADC_VREF_PREC2                  300
 
     #define HARDWARE_POT1
     #define HARDWARE_POT2
@@ -260,7 +263,6 @@
 
   // Led
   #if defined(PCBTANGO)
-    #define CHARGING_LEDS
     #define LED_RCC_AHB1Periph              (RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_DMA1)
     #define LED_RCC_APB1Periph              RCC_APB1Periph_TIM2
     #define LED_GPIO                        GPIOB

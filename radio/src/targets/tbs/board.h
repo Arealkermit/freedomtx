@@ -314,7 +314,7 @@ enum Analogs {
 #endif
 
 PACK(typedef struct {
-  uint8_t pcbrev:2;
+  uint8_t pcbrev:4;
   uint8_t sticksPwmDisabled:1;
   uint8_t pxx2Enabled:1;
 }) HardwareOptions;

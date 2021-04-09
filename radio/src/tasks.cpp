@@ -180,7 +180,7 @@ TASK_FUNCTION(mixerTask)
       case MODULE_TYPE_CROSSFIRE: // unlbock by crsfshot
       case MODULE_TYPE_NONE:
       default:
-        timeout = mixerSchedulerWaitForTrigger(30);
+        timeout = mixerSchedulerWaitForTrigger(4);
         break;
     }
 #else

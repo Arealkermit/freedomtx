@@ -193,20 +193,19 @@ uint32_t switchState(uint8_t index)
   uint32_t xxx = 0;
 
   switch (index) {
-    ADD_2POS_CASE(A);
 #if defined(PCBTANGO)
+    ADD_2POS_CASE(A);
     ADD_3POS_CASE(B, 1);
     ADD_3POS_CASE(C, 2);
     ADD_2POS_CASE(D);
-    ADD_2POS_CASE(E);
-    ADD_2POS_CASE(F);
 #elif defined(PCBMAMBO)
+    ADD_3POS_CASE(A);
     ADD_3POS_CASE(B);
     ADD_3POS_CASE(C);
     ADD_3POS_CASE(D);
-    ADD_3POS_CASE(E);
-    ADD_2POS_CASE(F);
 #endif
+    ADD_2POS_CASE(E);
+    ADD_2POS_CASE(F);
 
     default:
       break;

@@ -594,6 +594,7 @@ void USART_Init(USART_TypeDef* USARTx, USART_InitTypeDef* USART_InitStruct) { }
 void USART_Cmd(USART_TypeDef* USARTx, FunctionalState NewState) { }
 void USART_ClearITPendingBit(USART_TypeDef*, unsigned short) { }
 void USART_SendData(USART_TypeDef* USARTx, uint16_t Data) { }
+void USART_OverSampling8Cmd(USART_TypeDef* USARTx, FunctionalState NewState) { }
 uint16_t USART_ReceiveData(USART_TypeDef*) { return 0; }
 void USART_DMACmd(USART_TypeDef* USARTx, uint16_t USART_DMAReq, FunctionalState NewState) { }
 void USART_ITConfig(USART_TypeDef* USARTx, uint16_t USART_IT, FunctionalState NewState) { }

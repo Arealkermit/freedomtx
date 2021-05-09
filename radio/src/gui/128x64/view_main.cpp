@@ -741,15 +741,22 @@ void menuMainView(event_t event)
         }
       }
 #elif defined(PCBMAMBO)
-        for (int i=0; i<NUM_SWITCHES; ++i) {
+      int sw_i;
+      for (int i=0; i<NUM_SWITCHES; ++i) {
         if (SWITCH_EXISTS(i)) {
           uint8_t x = 2*FW-2, y = 4*FH+i*FH+1;
           if (i >= NUM_SWITCHES/2) {
             x = 16*FW+6;
             y -= (NUM_SWITCHES/2)*FH;
           }
-          getvalue_t val = getValue(MIXSRC_FIRST_SWITCH+i);
-          getvalue_t sw = ((val < 0) ? 3*i+1 : ((val == 0) ? 3*i+2 : 3*i+3));
+          if(i == 0)      sw_i = 1;
+          else if(i == 1) sw_i = 0;
+          else if(i == 2) sw_i = 4;
+          else if(i == 3) sw_i = 2;
+          else if(i == 4) sw_i = 3;
+          else if(i == 5) sw_i = 5;
+          getvalue_t val = getValue(MIXSRC_FIRST_SWITCH+sw_i);
+          getvalue_t sw = ((val < 0) ? 3*sw_i+1 : ((val == 0) ? 3*sw_i+2 : 3*sw_i+3));
           drawSwitch(x, y, sw, 0);
         }
       }

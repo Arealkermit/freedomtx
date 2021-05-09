@@ -65,6 +65,11 @@ void rotaryEncoderCheck();
 #define TIMER_MULT_APB1                 2
 #define TIMER_MULT_APB2                 2
 
+#ifdef REQUIRED_SDCARD_VERSION
+  #undef  REQUIRED_SDCARD_VERSION
+  #define REQUIRED_SDCARD_VERSION       "1.2V0026"  //REQUIRED_FREEDOMTX_SDCARD_VERSION
+#endif
+
 extern uint16_t sessionTimer;
 
 // Board driver
@@ -228,7 +233,7 @@ extern uint8_t g_trimEditMode;
 extern uint8_t g_trimState;
 #elif defined(PCBMAMBO)
 #define STORAGE_NUM_SWITCHES          NUM_SWITCHES
-#define DEFAULT_SWITCH_CONFIG         (SWITCH_TOGGLE << 10) + (SWITCH_3POS << 8) + (SWITCH_3POS << 6) + (SWITCH_3POS << 4) + (SWITCH_3POS << 2) + (SWITCH_2POS << 0)
+#define DEFAULT_SWITCH_CONFIG         (SWITCH_TOGGLE << 10) + (SWITCH_3POS << 8) + (SWITCH_3POS << 6) + (SWITCH_3POS << 4) + (SWITCH_3POS << 2) + (SWITCH_3POS << 0)
 #define DEFAULT_POTS_CONFIG           (POT_WITH_DETENT << 2)+ (POT_WITH_DETENT << 0)
 #define DEFAULT_SLIDERS_CONFIG        SLIDER_NONE
 
@@ -273,10 +278,10 @@ enum Analogs {
   POT2,
   POT_LAST = POT2,
   SWITCH_TRIM,
+  SWITCH_A,
   SWITCH_B,
   SWITCH_C,
   SWITCH_D,
-  SWITCH_E,
 #endif
   TX_VOLTAGE,
   TX_RTC_VOLTAGE,

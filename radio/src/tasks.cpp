@@ -118,6 +118,7 @@ bool isModuleSynchronous(uint8_t module)
 
 void sendSynchronousPulses(uint8_t runMask)
 {
+
 #if defined(HARDWARE_INTERNAL_MODULE)
   if ((runMask & (1 << INTERNAL_MODULE)) && isModuleSynchronous(INTERNAL_MODULE)) {
     if (setupPulsesInternalModule())
@@ -141,7 +142,6 @@ uint32_t nextMixerTime[NUM_MODULES];
 TASK_FUNCTION(mixerTask)
 {
   s_pulses_paused = true;
-
   mixerSchedulerInit();
   mixerSchedulerStart();
 
@@ -159,34 +159,29 @@ TASK_FUNCTION(mixerTask)
     bluetooth.wakeup();
 #endif
 
-#if defined(CROSSFIRE_TASK)
-    __attribute__((unused)) bool timeout = 0;
-    switch (g_model.moduleData[EXTERNAL_MODULE].type) {
-      case MODULE_TYPE_PPM:
-        timeout = mixerSchedulerWaitForTrigger(PPM_PERIOD(EXTERNAL_MODULE) / 1000);
-        break;
-      case MODULE_TYPE_DSM2:
-        timeout = mixerSchedulerWaitForTrigger(DSM2_PERIOD / 1000);
-        break;
-      case MODULE_TYPE_MULTIMODULE:
-        timeout = mixerSchedulerWaitForTrigger(MULTIMODULE_PERIOD / 1000);
-        break;
-      case MODULE_TYPE_R9M_PXX1:
-        timeout = mixerSchedulerWaitForTrigger(PXX_PULSES_PERIOD / 1000);
-        break;
-      case MODULE_TYPE_SBUS:
-        timeout = mixerSchedulerWaitForTrigger(SBUS_PERIOD / 1000);
-        break;
-      case MODULE_TYPE_CROSSFIRE: // unlbock by crsfshot
-      case MODULE_TYPE_NONE:
-      default:
-        timeout = mixerSchedulerWaitForTrigger(4);
-        break;
-    }
-#else
-    // run mixer at least every 30ms
-    __attribute__((unused)) bool timeout = mixerSchedulerWaitForTrigger(30);
-#endif
+  __attribute__((unused)) bool timeout = 0;
+  switch (g_model.moduleData[EXTERNAL_MODULE].type) {
+    case MODULE_TYPE_PPM:
+      timeout = mixerSchedulerWaitForTrigger(PPM_PERIOD(EXTERNAL_MODULE) / 1000);
+      break;
+    case MODULE_TYPE_DSM2:
+      timeout = mixerSchedulerWaitForTrigger(DSM2_PERIOD / 1000);
+      break;
+    case MODULE_TYPE_MULTIMODULE:
+      timeout = mixerSchedulerWaitForTrigger(MULTIMODULE_PERIOD / 1000);
+      break;
+    case MODULE_TYPE_R9M_PXX1:
+      timeout = mixerSchedulerWaitForTrigger(PXX_PULSES_PERIOD / 1000);
+      break;
+    case MODULE_TYPE_SBUS:
+      timeout = mixerSchedulerWaitForTrigger(SBUS_PERIOD / 1000);
+      break;
+    case MODULE_TYPE_CROSSFIRE: // unlbock by crsfshot
+    case MODULE_TYPE_NONE:
+    default:
+      timeout = mixerSchedulerWaitForTrigger(30);
+      break;
+  }
 
 #if defined(DEBUG_MIXER_SCHEDULER)
     GPIO_SetBits(EXTMODULE_TX_GPIO, EXTMODULE_TX_GPIO_PIN);
@@ -208,6 +203,13 @@ TASK_FUNCTION(mixerTask)
 
     uint32_t now = RTOS_GET_MS();
     uint8_t runMask = 0;
+
+#if defined(CROSSFIRE_TASK) && !defined(SIMU)
+    if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_CROSSFIRE && isMixerTaskScheduled()) {
+      clearMixerTaskSchedule();
+      runMask |= (1 << 1);
+    }
+#endif
 
     if (now >= nextMixerTime[0]) {
       runMask |= (1 << 0);
@@ -359,7 +361,7 @@ TASK_FUNCTION(menusTask)
 #if defined(CROSSFIRE_TASK) && !defined(SIMU)
 TASK_FUNCTION(systemTask)
 {
-  static uint32_t get_modelid_delay = 0;  
+  static uint32_t get_modelid_delay = 0;
   volatile uint32_t delayCount = 0;
   set_model_id_needed = true;
 

@@ -82,7 +82,6 @@ static void chargerInit(void)
 }
 
 #define PWR_PRESSED_CNT               3
-#define INITIAL_STATE_UPDATE_CNT      2000
 #define WIFI_PWR_CHARGING_TIMEOUT     6000
 #define BACKLIGHT_TIMEOUT             500
 #define BATT_ADC_SAMPLING_TIME        10
@@ -96,8 +95,7 @@ static void runPwrOffCharging(void)
   tmr10ms_t tmrWait = 0;
   tmr10ms_t tmrPressed = 0;
   uint8_t pwrPressedCnt = 0;
-  uint16_t updateCnt = 0;
-  uint32_t lastChargingTimestamp;
+  uint32_t lastChargingTimestamp = 0;
 #if defined(CHARGING_ANIMATION)
   tmr10ms_t tmrBacklight = 0;
   uint16_t keysState[NUM_OF_KEY_GROUPS];
@@ -110,17 +108,9 @@ static void runPwrOffCharging(void)
 #endif
 
   // initialize usb state & voltage adc
-  tmrWait = getTmr2MHz();
-  while (1) {
-    if (getTmr2MHz() - tmrWait >= 200) { //100us
-      usbPlugged();
-      getADC();
-      checkBattery();
-      tmrWait = getTmr2MHz();
-      if (updateCnt++ >= INITIAL_STATE_UPDATE_CNT)
-        break;
-    }
-  }
+  usbPlugged();
+  getADC();
+  checkBattery();
 
   while (1) {    
     // update battery voltage
@@ -207,6 +197,7 @@ static void runPwrOffCharging(void)
 
 void boardInit()
 {
+  bool skipCharging = false;
 #if defined(PCBTANGO)
   if (IS_PCBREV_01()) {
     RCC_AHB1PeriphClockCmd(PWR_RCC_AHB1Periph | KEYS_RCC_AHB1Periph | LCD_RCC_AHB1Periph |
@@ -264,6 +255,7 @@ void boardInit()
   adcInit();
 #if defined(PCBMAMBO)
   backlightInit();
+  BACKLIGHT_ENABLE();
 #endif
   lcdInit(); // delaysInit() must be called before
   audioInit();
@@ -290,11 +282,11 @@ void boardInit()
 #endif
 
   if(!isDisableBoardOff() && !WAS_RESET_BY_WATCHDOG()){
+    skipCharging = true;
     // clear software reset mark
     if(WAS_RESET_BY_SOFTWARE()) {
       RCC_ClearFlag();
     }
-    runPwrOffCharging();
   }
 
 #if defined(HAPTIC)
@@ -313,6 +305,10 @@ void boardInit()
 
   if (!UNEXPECTED_SHUTDOWN())
     sdInit();
+
+  if( skipCharging ) {
+    runPwrOffCharging();
+  }
 }
 
 void boardOff()

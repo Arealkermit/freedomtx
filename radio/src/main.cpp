@@ -607,6 +607,9 @@ void perMain()
 
 #if defined(RTC_BACKUP_RAM)
   if (globalData.unexpectedShutdown) {
+#if defined(PCBMAMBO)
+    BACKLIGHT_ENABLE();
+#endif
     drawFatalErrorScreen(STR_EMERGENCY_MODE);
     return;
   }

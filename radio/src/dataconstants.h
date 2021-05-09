@@ -326,6 +326,8 @@ enum TelemetryUnit {
   UNIT_WATTS,
   UNIT_MILLIWATTS,
   UNIT_DB,
+  UNIT_DBM,
+  UNIT_HZ,
   UNIT_RPMS,
   UNIT_G,
   UNIT_DEGREE,

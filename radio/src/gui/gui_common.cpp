@@ -143,6 +143,15 @@ bool isChannelUsed(int channel)
   return false;
 }
 
+bool isCrossfireInHighSpeed(int moduleIdx)
+{
+#if defined(SIMU)
+  return false;
+#else
+  return (isModuleCrossfire(moduleIdx) && (CROSSFIRE_BAUDRATES[crsfSpeed.baudIndex] > 500000));
+#endif
+}
+
 int getChannelsUsed()
 {
   int result = 0;

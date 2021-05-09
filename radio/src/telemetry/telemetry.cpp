@@ -231,6 +231,18 @@ void telemetryWakeup()
       }
     }
   }
+  if (telemetryProtocol == PROTOCOL_TELEMETRY_CROSSFIRE) {
+    if (isCrossfireInHighSpeed(EXTERNAL_MODULE) && (get_tmr10ms() - crsfSpeed.lastValidTime) > 200) {
+      if (crsfSpeed.newSpeedValid == false) {
+        if (crsfSpeed.baudIndex != CROSSFIRE_DEFAULT_BAUDRATE_INDEX) {
+          crsfSpeed.invalidFlags |= 1 << crsfSpeed.baudIndex;
+        }
+      }
+      telemetryProtocol = 0xFF;   //switch to new baud rate failed, turn back to default speed
+    }
+    else if (crsfSpeed.newSpeedValid == false)
+      crsfSpeed.newSpeedValid = true;
+  }
 }
 
 void telemetryInterrupt10ms()
@@ -302,7 +314,18 @@ void telemetryInit(uint8_t protocol)
 
 #if defined(CROSSFIRE)
   else if (protocol == PROTOCOL_TELEMETRY_CROSSFIRE) {
-    telemetryPortInit(CROSSFIRE_BAUDRATE, TELEMETRY_SERIAL_DEFAULT);
+    if (crsfSpeed.newSpeedRequest == true) {
+      crsfSpeed.newSpeedRequest = false;
+      crsfSpeed.newSpeedValid = false;
+      telemetryPortInit(CROSSFIRE_BAUDRATES[crsfSpeed.baudIndex], TELEMETRY_SERIAL_DEFAULT);
+      telemetryReset();
+      crsfSpeed.lastValidTime = get_tmr10ms();
+    }
+    else {
+      telemetryPortInit(CROSSFIRE_BAUDRATES[CROSSFIRE_DEFAULT_BAUDRATE_INDEX], TELEMETRY_SERIAL_DEFAULT);
+      telemetryReset();
+      crsfSpeed.newSpeedValid = true;
+    }
 #if defined(LUA)
 #if defined(PCBTANGO) || defined(PCBMAMBO)
     if (!IS_EXTERNAL_MODULE_ENABLED())
@@ -363,7 +386,7 @@ void logTelemetryWriteByte(uint8_t data)
 }
 #endif
 
-#if defined(PCBTANGO) || defined(PCBMAMBO) 
+#if defined(PCBTANGO) || defined(PCBMAMBO)
 uint8_t outputTelemetryBufferTrigger = 0;
 #endif
 
@@ -401,7 +424,7 @@ void ModuleSyncStatus::update(uint16_t newRefreshRate, uint16_t newInputLag)
 {
   if (!newRefreshRate)
     return;
-  
+
   if (newRefreshRate < MIN_REFRESH_RATE)
     newRefreshRate = newRefreshRate * (MIN_REFRESH_RATE / (newRefreshRate + 1));
   else if (newRefreshRate > MAX_REFRESH_RATE)
@@ -421,9 +444,9 @@ uint16_t ModuleSyncStatus::getAdjustedRefreshRate()
   if (lag == 0) {
     return refreshRate;
   }
-  
+
   newRefreshRate += lag;
-  
+
   if (newRefreshRate < MIN_REFRESH_RATE) {
       newRefreshRate = MIN_REFRESH_RATE;
   }
@@ -432,7 +455,7 @@ uint16_t ModuleSyncStatus::getAdjustedRefreshRate()
   }
 
   TRACE("[SYNC] rate = %dus",newRefreshRate);
-  
+
   currentLag -= newRefreshRate - refreshRate;
   return (uint16_t)newRefreshRate;
 }

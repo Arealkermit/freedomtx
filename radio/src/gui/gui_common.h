@@ -94,6 +94,7 @@ bool isTelemetryFieldAvailable(int index);
 bool isTelemetryFieldComparisonAvailable(int index);
 bool isSensorAvailable(int sensor);
 bool isRssiSensorAvailable(int sensor);
+bool isCrossfireInHighSpeed(int moduleIdx);
 
 bool modelHasNotes();
 
@@ -144,6 +145,9 @@ void runFatalErrorScreen(const char * message);
 
 inline uint8_t MODULE_BIND_ROWS(int moduleIdx)
 {
+  if (isModuleCrossfire(moduleIdx))
+    return 0;
+
   if (isModuleXJTD8(moduleIdx) || isModuleSBUS(moduleIdx))
     return 1;
 

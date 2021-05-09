@@ -51,6 +51,7 @@ void mixerSchedulerStop()
 
 void mixerSchedulerEnableTrigger()
 {
+  MIXER_SCHEDULER_TIMER->SR &= ~TIM_SR_UIF;    // clear flag
   MIXER_SCHEDULER_TIMER->DIER |= TIM_DIER_UIE; // enable interrupt
 }
 

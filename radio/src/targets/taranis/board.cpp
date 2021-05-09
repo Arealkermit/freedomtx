@@ -72,6 +72,7 @@ void sportUpdatePowerInit()
 }
 #endif
 
+
 void boardInit()
 {
   RCC_AHB1PeriphClockCmd(PWR_RCC_AHB1Periph |

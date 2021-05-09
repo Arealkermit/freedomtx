@@ -134,11 +134,11 @@ void getSwitchesPosition(bool startup)
   CHECK_2POS(SW_SE);
   CHECK_2POS(SW_SF);
 #elif defined(PCBMAMBO)
-  CHECK_2POS(SW_SA);
+  CHECK_3POS(0, SW_SA);
   CHECK_3POS(1, SW_SB);
   CHECK_3POS(2, SW_SC);
   CHECK_3POS(3, SW_SD);
-  CHECK_3POS(4, SW_SE);
+  CHECK_2POS(SW_SE);
   CHECK_2POS(SW_SF);
 #else
   CHECK_3POS(0, SW_SA);

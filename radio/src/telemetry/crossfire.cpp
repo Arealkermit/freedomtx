@@ -20,6 +20,8 @@
 
 #include "opentx.h"
 
+CrsfSpeedControl crsfSpeed = {0};
+
 const CrossfireSensor crossfireSensors[] = {
   {LINK_ID,        0, ZSTR_RX_RSSI1,      UNIT_DB,                0},
   {LINK_ID,        1, ZSTR_RX_RSSI2,      UNIT_DB,                0},
@@ -31,6 +33,11 @@ const CrossfireSensor crossfireSensors[] = {
   {LINK_ID,        7, ZSTR_TX_RSSI,       UNIT_DB,                0},
   {LINK_ID,        8, ZSTR_TX_QUALITY,    UNIT_PERCENT,           0},
   {LINK_ID,        9, ZSTR_TX_SNR,        UNIT_DB,                0},
+  {LINK_RX_ID,     0, ZSTR_RX_RSSI_PERC,  UNIT_PERCENT,           0},
+  {LINK_RX_ID,     1, ZSTR_RX_RF_POWER,   UNIT_DBM,               0},
+  {LINK_TX_ID,     0, ZSTR_TX_RSSI_PERC,  UNIT_PERCENT,           0},
+  {LINK_TX_ID,     1, ZSTR_TX_RF_POWER,   UNIT_DBM,               0},
+  {LINK_TX_ID,     2, ZSTR_TX_FPS,        UNIT_HZ,                0},
   {BATTERY_ID,     0, ZSTR_BATT,          UNIT_VOLTS,             1},
   {BATTERY_ID,     1, ZSTR_CURR,          UNIT_AMPS,              1},
   {BATTERY_ID,     2, ZSTR_CAPACITY,      UNIT_MAH,               0},
@@ -53,6 +60,10 @@ const CrossfireSensor & getCrossfireSensor(uint8_t id, uint8_t subId)
 {
   if (id == LINK_ID)
     return crossfireSensors[RX_RSSI1_INDEX+subId];
+  else if (id == LINK_RX_ID)
+    return crossfireSensors[RX_RSSI_PERC_INDEX+subId];
+  else if (id == LINK_TX_ID)
+    return crossfireSensors[TX_RSSI_PERC_INDEX+subId];
   else if (id == BATTERY_ID)
     return crossfireSensors[BATT_VOLTAGE_INDEX+subId];
   else if (id == GPS_ID)
@@ -105,6 +116,13 @@ void processCrossfireTelemetryFrame()
     TRACE("[XF] CRC error");
     return;
   }
+  else {
+    crsfSpeed.lastValidTime = get_tmr10ms();
+  }
+
+  if (telemetryState == TELEMETRY_INIT && moduleState[EXTERNAL_MODULE].counter != CRSF_FRAME_MODELID_SENT) {
+    moduleState[EXTERNAL_MODULE].counter = CRSF_FRAME_MODELID;
+  }
 
   uint8_t id = telemetryRxBuffer[2];
   int32_t value;
@@ -151,6 +169,22 @@ void processCrossfireTelemetryFrame()
       }
       break;
 
+    case LINK_RX_ID:
+      if (getCrossfireTelemetryValue<1>(4, value))
+        processCrossfireTelemetryValue(RX_RSSI_PERC_INDEX, value);
+      if (getCrossfireTelemetryValue<1>(7, value))
+        processCrossfireTelemetryValue(TX_RF_POWER_INDEX, value);
+      break;
+
+    case LINK_TX_ID:
+      if (getCrossfireTelemetryValue<1>(4, value))
+        processCrossfireTelemetryValue(TX_RSSI_PERC_INDEX, value);
+      if (getCrossfireTelemetryValue<1>(7, value))
+        processCrossfireTelemetryValue(RX_RF_POWER_INDEX, value);
+      if (getCrossfireTelemetryValue<1>(8, value))
+        processCrossfireTelemetryValue(TX_FPS_INDEX, value * 10);
+      break;
+
     case BATTERY_ID:
       if (getCrossfireTelemetryValue<2>(3, value))
         processCrossfireTelemetryValue(BATT_VOLTAGE_INDEX, value);
@@ -177,6 +211,28 @@ void processCrossfireTelemetryFrame()
       for (int i=0; i<min<int>(16, telemetryRxBuffer[1]-2); i+=4) {
         uint32_t value = *((uint32_t *)&telemetryRxBuffer[3+i]);
         setTelemetryValue(PROTOCOL_TELEMETRY_CROSSFIRE, sensor.id, 0, sensor.subId, value, sensor.unit, i);
+      }
+      break;
+    }
+
+    case COMMAND_ID:
+    {
+      if (telemetryRxBuffer[3] == 0xEA    // radio address
+          && telemetryRxBuffer[5] == SUBCOMMAND_GENERAL // General settings
+          && telemetryRxBuffer[6] == COMMAND_CRSF_SPEED_PROPOSAL // CRSF Protocol Speed Proposal
+         ) {
+        if (getCrossfireTelemetryValue<7>(1, value))
+          crsfSpeed.portID = value;
+        if (getCrossfireTelemetryValue<8>(4, value)) {
+          for (uint8_t i = 0; i < sizeof(CROSSFIRE_BAUDRATES); i++) {
+            if ((uint32_t)value == CROSSFIRE_BAUDRATES[i]) {
+              crsfSpeed.baudIndex = i;
+              break;
+            }
+          }
+        }
+        moduleState[EXTERNAL_MODULE].counter = CRSF_FRAME_SPEED_PROPOSAL;
+        crsfSpeed.newSpeedRequest = false;
       }
       break;
     }

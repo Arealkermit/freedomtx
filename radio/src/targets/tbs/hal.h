@@ -125,8 +125,6 @@
     #define KEYS_GPIOF_PINS                 (0)
   #elif defined(PCBMAMBO)
     #define HARDWARE_SWITCH_A
-    #define SWITCHES_GPIO_REG_A             GPIOE->IDR
-    #define SWITCHES_GPIO_PIN_A             GPIO_Pin_5  // PE.05
 
     #define HARDWARE_SWITCH_B
 
@@ -135,6 +133,8 @@
     #define HARDWARE_SWITCH_D
 
     #define HARDWARE_SWITCH_E
+    #define SWITCHES_GPIO_REG_E             GPIOE->IDR
+    #define SWITCHES_GPIO_PIN_E             GPIO_Pin_5  // PE.05
 
     #define HARDWARE_SWITCH_F
     #define SWITCHES_GPIO_REG_F             GPIOE->IDR
@@ -145,7 +145,7 @@
     #define KEYS_GPIOB_PINS                 (0)
     #define KEYS_GPIOC_PINS                 (0)
     #define KEYS_GPIOD_PINS                 (KEYS_GPIO_PIN_ENTER | KEYS_GPIO_PIN_MENU | KEYS_GPIO_PIN_PAGE | KEYS_GPIO_PIN_EXIT)
-    #define KEYS_GPIOE_PINS                 (SWITCHES_GPIO_PIN_A | SWITCHES_GPIO_PIN_F)
+    #define KEYS_GPIOE_PINS                 (SWITCHES_GPIO_PIN_E | SWITCHES_GPIO_PIN_F)
     #define KEYS_GPIOF_PINS                 (0)
   #endif
 
@@ -179,24 +179,24 @@
     #define ADC_RCC_AHB1Periph              (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_DMA2)
     #define ADC_RCC_APB2Periph              RCC_APB2Periph_ADC1
 
-    #define ADC_GPIO_PIN_SWITCH_B           GPIO_Pin_6  // PA.06
-    #define ADC_GPIO_PIN_SWITCH_C           GPIO_Pin_7  // PA.07
-    #define ADC_GPIO_PIN_SWITCH_D           GPIO_Pin_5  // PA.05
-    #define ADC_GPIO_PIN_SWITCH_E           GPIO_Pin_3  // PA.03
+    #define ADC_GPIO_PIN_SWITCH_A           GPIO_Pin_6  // PA.06
+    #define ADC_GPIO_PIN_SWITCH_B           GPIO_Pin_7  // PA.07
+    #define ADC_GPIO_PIN_SWITCH_C           GPIO_Pin_5  // PA.05
+    #define ADC_GPIO_PIN_SWITCH_D           GPIO_Pin_3  // PA.03
     #define ADC_GPIO_PIN_POT1               GPIO_Pin_4  // PC.04
     #define ADC_GPIO_PIN_POT2               GPIO_Pin_2  // PA.02
     #define ADC_GPIO_PIN_TRIM               GPIO_Pin_1  // PC.01
 
     #define ADC_GPIO_PIN_BATT               GPIO_Pin_1  // PB.01
-    #define ADC_GPIOA_PINS                  (ADC_GPIO_PIN_SWITCH_B | ADC_GPIO_PIN_SWITCH_C | ADC_GPIO_PIN_SWITCH_D | ADC_GPIO_PIN_SWITCH_E | ADC_GPIO_PIN_POT2)
+    #define ADC_GPIOA_PINS                  (ADC_GPIO_PIN_SWITCH_A | ADC_GPIO_PIN_SWITCH_B | ADC_GPIO_PIN_SWITCH_C | ADC_GPIO_PIN_SWITCH_D | ADC_GPIO_PIN_POT2)
     #define ADC_GPIOB_PINS                  (ADC_GPIO_PIN_BATT)
     #define ADC_GPIOC_PINS                  (ADC_GPIO_PIN_POT1 | ADC_GPIO_PIN_TRIM)
 
     #define ADC_CHANNEL_BATT                ADC_Channel_9   // ADC1_IN9
-    #define ADC_CHANNEL_SWITCH_B            ADC_Channel_6   // ADC1_IN6
-    #define ADC_CHANNEL_SWITCH_C            ADC_Channel_7   // ADC1_IN7
-    #define ADC_CHANNEL_SWITCH_D            ADC_Channel_5   // ADC1_IN5
-    #define ADC_CHANNEL_SWITCH_E            ADC_Channel_3   // ADC1_IN3
+    #define ADC_CHANNEL_SWITCH_A            ADC_Channel_6   // ADC1_IN6
+    #define ADC_CHANNEL_SWITCH_B            ADC_Channel_7   // ADC1_IN7
+    #define ADC_CHANNEL_SWITCH_C            ADC_Channel_5   // ADC1_IN5
+    #define ADC_CHANNEL_SWITCH_D            ADC_Channel_3   // ADC1_IN3
     #define ADC_CHANNEL_POT1                ADC_Channel_14  // ADC1_IN14
     #define ADC_CHANNEL_POT2                ADC_Channel_2   // ADC1_IN2
     #define ADC_CHANNEL_TRIM                ADC_Channel_11  // ADC1_IN11

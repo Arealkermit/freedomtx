@@ -429,11 +429,14 @@ void applyDefaultTemplate()
     mix->srcRaw = i+1;
   }
 #if defined(PCBTANGO) || defined(PCBMAMBO)
-  for (int i = 0; i < NUM_SWITCHES; i++) {
+  for (int i = 0; i < NUM_SWITCHES + NUM_POTS; i++) {
     MixData * mix = mixAddress(i+4);
     mix->destCh = i+4;
     mix->weight = 100;
-    mix->srcRaw = MIXSRC_SA+i;
+    if (i >= NUM_SWITCHES)
+      mix->srcRaw = MIXSRC_FIRST_POT+i-NUM_SWITCHES;  // for the POTs
+    else
+      mix->srcRaw = MIXSRC_SA+i;                      // for the SWITCHes
   }
 #endif
 }

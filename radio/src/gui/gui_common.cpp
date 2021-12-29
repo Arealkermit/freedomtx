@@ -201,6 +201,11 @@ bool isSourceAvailable(int source)
     return false;
 #endif
 
+#if defined(PCBTANGO) || defined(PCBMAMBO)
+  if (source >= MIXSRC_FIRST_TRAINER && source <= MIXSRC_LAST_TRAINER)
+    return false;
+#endif
+
   if (source >= MIXSRC_FIRST_CH && source <= MIXSRC_LAST_CH) {
     return isChannelUsed(source - MIXSRC_FIRST_CH);
   }
@@ -276,8 +281,10 @@ bool isSourceAvailableInInputs(int source)
     return (cs->func != LS_FUNC_NONE);
   }
 
+#if !defined(PCBTANGO) && !defined(PCBMAMBO)
   if (source >= MIXSRC_FIRST_TRAINER && source <= MIXSRC_LAST_TRAINER)
     return true;
+#endif
 
   if (source >= MIXSRC_FIRST_TELEM && source <= MIXSRC_LAST_TELEM) {
     div_t qr = div(source - MIXSRC_FIRST_TELEM, 3);
@@ -482,7 +489,7 @@ bool isAssignableFunctionAvailable(int function)
 #endif
     case FUNC_RESERVE5:
       return false;
-#if defined(PCBTANGO)
+#if defined(PCBTANGO) || defined(PCBMAMBO)
     case FUNC_TRAINER:
     case FUNC_SET_FAILSAFE:
       return false;

@@ -23,13 +23,9 @@
 
 #include "datastructs.h"
 #include "bitfield.h"
-#if defined(PCBTANGO) && defined (TANGO_CONVERT_VERSION_101)
-#define EEPROM_VER             219
-#define FIRST_CONV_EEPROM_VER  101
-#else
+
 #define EEPROM_VER             219
 #define FIRST_CONV_EEPROM_VER  216
-#endif
 #define GET_MODULE_PPM_POLARITY(idx)             g_model.moduleData[idx].ppm.pulsePol
 #define GET_TRAINER_PPM_POLARITY()               g_model.trainerData.pulsePol
 #define GET_SBUS_POLARITY(idx)                   g_model.moduleData[idx].sbus.noninverted

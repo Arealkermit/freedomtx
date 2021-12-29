@@ -19,6 +19,12 @@ set(RTC_BACKUP_RAM YES)
 set(PPM_UNIT "PPM display unit" PERCENT_PREC0)
 set(HAPTIC YES)
 set(LUA_EXPORT lua_export_tango)
+set(MODEL_HAVE_NO_BITMAP YES)
+
+if (PCB STREQUAL MAMBO)
+option(POTS_FILTER_NOISE "Filter high noise of POTS" ON)
+endif()
+
 if (PCB STREQUAL TANGO)
   set(FLAVOUR tango)
   add_definitions(-DSTM32F40_41xxx -DPCBTANGO)
@@ -54,6 +60,10 @@ if (CROSSFIRE_TASK)
   add_definitions(-DCROSSFIRE_TASK)
 endif()
 
+if (POTS_FILTER_NOISE)
+  add_definitions(-DPOTS_FILTER_NOISE)
+endif()
+
 add_definitions(-DLIBCRSF_ENABLE_OPENTX_RELATED -DLIBCRSF_ENABLE_SD -DLIBCRSF_ENABLE_COMMAND -DLIBCRSF_ENABLE_PARAMETER)
 add_definitions(-DDEFAULT_MODE=2)
 add_definitions(-DREQUIRED_FREEDOMTX_SDCARD_VERSION="${FREEDOMTX_SDCARD_VERSION}")
@@ -67,6 +77,10 @@ set(GVAR_SCREEN model_gvars.cpp)
 
 add_definitions(-DESP_SERIAL)
 add_definitions(-DENABLE_ROTARY_INVERSE)
+
+if(MODEL_HAVE_NO_BITMAP)
+  add_definitions(-DMODEL_HAVE_NO_BITMAP)
+endif()
 
 add_definitions(-DAGENT)
 set(TARGET_SRC

@@ -53,7 +53,12 @@ void handleUsbConnection()
 #if defined(AGENT)
   static bool additional_popup_trigger = true;
 #endif
+
+#if defined(PCBTANGO) || defined(PCBMAMBO)
+  if (!usbStarted() && usbPlugged() && IS_CHARGING_STATE()) {
+#else
   if (!usbStarted() && usbPlugged()) {
+#endif
 #if defined(AGENT)
     if (getSelectedUsbMode() == USB_UNSELECTED_MODE || additional_popup_trigger) {
       additional_popup_trigger = false;
@@ -583,13 +588,24 @@ void perMain()
     logsWrite();
   }
 
+#if defined(PCBTANGO) || defined(PCBMAMBO)
+  if (!IS_EXTERNAL_MODULE_ENABLED())
+  {
+    if (IS_CROSSFIRE_RX_STATE())
+      handleUsbConnection();
+  }
+  else {
+    handleUsbConnection();
+  }
+#else
   handleUsbConnection();
+#endif
 
 #if defined(PCBXLITES)
   handleJackConnection();
 #endif
 
-#if !defined(PCBTANGO) && !defined(PCBMAMBO) && !defined(SIMU)
+#if defined(TRAINER_GPIO)
   checkTrainerSettings();
 #endif
   periodicTick();

@@ -23,9 +23,9 @@
 
 void convertRadioData(int version)
 {
-#if defined(PCBTANGO)
-  #if defined(TANGO_CONVERT_VERSION_101)
-    convertRadioData_101_to_110(g_eeGeneral);
+#if defined(PCBTANGO) || defined(PCBMAMBO)
+  #if defined(CONVERT_FREEDOMTX_DATA_V130)
+    convertRadio_130_131();
   #endif
 #endif
 
@@ -55,9 +55,9 @@ void convertRadioData(int version)
 
 void convertModelData(int version)
 {
-#if defined(PCBTANGO)
-  #if defined(TANGO_CONVERT_VERSION_101)
-      convertModelData_101_to_110(g_model);
+#if defined(PCBTANGO) || defined(PCBMAMBO)
+  #if defined(CONVERT_FREEDOMTX_DATA_V130)
+      convertModels_130_131();
   #endif
 #endif
 

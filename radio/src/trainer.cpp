@@ -24,6 +24,7 @@ int16_t ppmInput[MAX_TRAINER_CHANNELS];
 uint8_t ppmInputValidityTimer;
 uint8_t currentTrainerMode = 0xff;
 
+#if defined(TRAINER_GPIO)
 void checkTrainerSignalWarning()
 {
   enum PpmInValidState_t {
@@ -137,4 +138,5 @@ void checkTrainerSettings()
 #endif
   }
 }
+#endif
 #endif

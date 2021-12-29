@@ -61,6 +61,9 @@ public:
   void setRfModuleData(uint8_t moduleIdx, ModuleData* modData);
 
   bool  fetchRfData();
+#if defined(CONVERT_FREEDOMTX_DATA_V130)
+  bool  forceFetchRfData();
+#endif
   void  loadBitmap();
 #if !defined(PCBTANGO) && !defined (PCBMAMBO)
   const BitmapBuffer * getBuffer();
@@ -98,6 +101,9 @@ public:
   ~ModelsList();
 
   bool load();
+#if defined(CONVERT_FREEDOMTX_DATA_V130)
+  bool forceLoad();
+#endif
   void save();
   void clear();
 

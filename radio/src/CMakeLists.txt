@@ -374,14 +374,6 @@ set(SRC
   trainer.cpp
   )
 
-if(PCB STREQUAL SKY9X OR PCB STREQUAL 9XRPRO OR PCB STREQUAL AR9X)
-  list(REMOVE_ITEM SRC mixer_scheduler.cpp)
-endif()
-
-if (PCB STREQUAL TANGO OR PCB STREQUAL MAMBO)
-  list(REMOVE_ITEM SRC trainer.cpp)
-endif()
-
 if(GUI)
   add_definitions(-DGUI)
   set(SRC

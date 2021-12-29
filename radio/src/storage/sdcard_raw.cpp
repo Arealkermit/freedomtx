@@ -135,7 +135,33 @@ const char * readModel(const char * filename, uint8_t * buffer, uint32_t size, u
   return loadFile(path, buffer, size, version);
 }
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(CONVERT_FREEDOMTX_DATA_V130)
+const char * forceOpenFile(const char * fullpath, FIL * file, uint16_t * size, uint8_t * version)
+{
+  FRESULT result = f_open(file, fullpath, FA_OPEN_EXISTING | FA_READ);
+  if (result != FR_OK) {
+    return SDCARD_ERROR(result);
+  }
+
+  if (f_size(file) < 8) {
+    f_close(file);
+    return STR_INCOMPATIBLE;
+  }
+
+  UINT read;
+  char buf[8];
+
+  result = f_read(file, (uint8_t *)buf, sizeof(buf), &read);
+  if ((result != FR_OK) || (read != sizeof(buf))) {
+    f_close(file);
+    return SDCARD_ERROR(result);
+  }
+
+  *version = (uint8_t)buf[4];
+  *size = *(uint16_t*)&buf[6];
+  return nullptr;
+}
+
 uint16_t getModelSize(const char * filename)
 {
   char path[256];
@@ -146,7 +172,22 @@ uint16_t getModelSize(const char * filename)
   memset(path, 0, sizeof(path));
   getModelPath(path, filename);
 
-  const char * err = openFile(path, &file, &size, &version);
+  const char * err = forceOpenFile(path, &file, &size, &version);
+  if (err)
+    return -1;
+
+  f_close(&file);
+
+  return size;
+}
+
+uint16_t getRadioSize(void)
+{
+  FIL      file;
+  uint16_t size;
+  uint8_t  version;
+
+  const char * err = forceOpenFile(RADIO_SETTINGS_PATH, &file, &size, &version);
   if (err)
     return -1;
 
@@ -166,39 +207,36 @@ const char * loadModel(const char * filename, bool alarms)
   if (error) {
     TRACE("loadModel error=%s", error);
   }
-#if !defined(PCBTANGO) && !defined(PCBMAMBO)
+
+#if defined(CONVERT_FREEDOMTX_DATA_V130)
+  uint32_t model_size;
+
+  model_size = getModelSize(filename);
+  if (error == STR_INCOMPATIBLE && model_size == MODEL_DATA_SIZE_130) {
+    convertModelData(version);
+    model_size = getModelSize(filename);
+
+    if (model_size == MODEL_DATA_SIZE_131) {
+      //re-load model
+      error = readModel(filename, (uint8_t *)&g_model, sizeof(g_model), &version);
+      if (!error) {
+        TRACE("convert model data of v1.30 success");
+      }
+    }
+    else
+      TRACE("convert model data of v1.30 failed");
+  }
+#endif
+
   if (error) {
     modelDefault(0) ;
     storageCheck(true);
     alarms = false;
   }
-#endif
 
-#if defined(TANGO_CONVERT_VERSION_101)
-  uint32_t model_size;
-
-  model_size = getModelSize(filename);
-  if (model_size == MODEL_DATA_SIZE_101)
-  {
-    convertModelData(version);
-    writeModel();
-    model_size = getModelSize(filename);
-    if (model_size == MODEL_DATA_SIZE_110)
-    {
-      TRACE("convert model data of v1.0.1 success");
-    }
-    else
-    {
-      TRACE("convert model data of v1.0.1 failed");
-    }
-  }
-#endif
-
-#if !defined(PCBMAMBO)
   if (version < EEPROM_VER) {
     convertModelData(version);
   }
-#endif
 
   postModelLoad(alarms);
 
@@ -214,22 +252,40 @@ const char * loadRadioSettings(const char * path)
 {
   uint8_t version;
   const char * error = loadFile(path, (uint8_t *)&g_eeGeneral, sizeof(g_eeGeneral), &version);
+
   if (error) {
+#if defined(CONVERT_FREEDOMTX_DATA_V130)
+    uint32_t radio_size;
+
+    radio_size = getRadioSize();
+    if (error == STR_INCOMPATIBLE && radio_size == RADIO_DATA_SIZE_130) {
+      convertRadioData(version);
+      radio_size = getRadioSize();
+
+      if (radio_size == RADIO_DATA_SIZE_131) {
+        //re-load
+        error = loadFile(path, (uint8_t *) &g_eeGeneral, sizeof(g_eeGeneral), &version);
+        if (!error) {
+          TRACE("convert radio data of v1.30 success");
+        }
+        else {
+          TRACE("convert radio data of v1.30 failed");
+          return error;
+        }
+      }
+    }
+    else {
+      TRACE("loadRadioSettings error=%s", error);
+      return error;
+    }
+#endif
     TRACE("loadRadioSettings error=%s", error);
     return error;
   }
 
-#if defined(TANGO_CONVERT_VERSION_101)
-  convertRadioData(version);
-  writeGeneralSettings();
-  TRACE("convert radio data of v1.0.1 success");
-#endif
-
-#if !defined(PCBMAMBO)
   if (version < EEPROM_VER) {
     convertRadioData(version);
   }
-#endif
 
   postRadioSettingsLoad();
 

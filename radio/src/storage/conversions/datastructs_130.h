@@ -20,6 +20,10 @@
 
 // No include guards here, this file may be included many times in different namespaces
 // i.e. BACKUP RAM Backup/Restore functions
+#ifndef OPENTX_DATASTRUCTS_130_H
+#define OPENTX_DATASTRUCTS_130_H
+
+namespace Conversion_130 {
 
 #include <inttypes.h>
 #include "board.h"
@@ -27,26 +31,31 @@
 #include "definitions.h"
 #include "bitfield.h"
 
+
+#define MAX_TELEMETRY_SENSORS_V130   60
+#define MAX_CURVES_V130              16
+#define LEN_BITMAP_NAME              10
+
 #if defined(PCBTARANIS)
-  #define N_TARANIS_FIELD(x)
-  #define TARANIS_FIELD(x) x;
+  #define N_TARANIS_FIELD_V130(x)
+  #define TARANIS_FIELD_V130(x) x;
 #else
-  #define N_TARANIS_FIELD(x) x;
-  #define TARANIS_FIELD(x)
+  #define N_TARANIS_FIELD_V130(x) x;
+  #define TARANIS_FIELD_V130(x)
 #endif
 
 #if defined(PCBX9E)
-  #define TARANIS_PCBX9E_FIELD(x)       x;
+  #define TARANIS_PCBX9E_FIELD_V130(x)       x;
 #else
-  #define TARANIS_PCBX9E_FIELD(x)
+  #define TARANIS_PCBX9E_FIELD_V130(x)
 #endif
 
 #if defined(PCBHORUS)
-  #define N_HORUS_FIELD(x)
-  #define HORUS_FIELD(x) x;
+  #define N_HORUS_FIELD_V130(x)
+  #define HORUS_FIELD_V130(x) x;
 #else
-  #define N_HORUS_FIELD(x) x;
-  #define HORUS_FIELD(x)
+  #define N_HORUS_FIELD_V130(x) x;
+  #define HORUS_FIELD_V130(x)
 #endif
 
 #if defined(BACKUP)
@@ -146,9 +155,9 @@ PACK(struct LogicalSwitchData {
 
 
 #if defined(PCBTARANIS)
-  #define CFN_SPARE_TYPE               int32_t
+  #define CFN_SPARE_TYPE_V130               int32_t
 #else
-  #define CFN_SPARE_TYPE               int16_t
+  #define CFN_SPARE_TYPE_V130               int16_t
 #endif
 
 PACK(struct CustomFunctionData {
@@ -163,12 +172,12 @@ PACK(struct CustomFunctionData {
       int16_t val;
       uint8_t mode;
       uint8_t param;
-      NOBACKUP(CFN_SPARE_TYPE spare);
+      NOBACKUP(CFN_SPARE_TYPE_V130 spare);
     }) all;
 
     NOBACKUP(PACK(struct {
       int32_t val1;
-      NOBACKUP(CFN_SPARE_TYPE val2);
+      NOBACKUP(CFN_SPARE_TYPE_V130 val2);
     }) clear);
   });
   uint8_t active;
@@ -486,16 +495,16 @@ PACK(struct ModuleData {
 typedef uint16_t BeepANACenter;
 
 #if LEN_BITMAP_NAME > 0
-#define MODEL_HEADER_BITMAP_FIELD      NOBACKUP(char bitmap[LEN_BITMAP_NAME]);
+#define MODEL_HEADER_BITMAP_FIELD_V130      NOBACKUP(char bitmap[LEN_BITMAP_NAME]);
 #else
-#define MODEL_HEADER_BITMAP_FIELD
+#define MODEL_HEADER_BITMAP_FIELD_V130
 #endif
 
 
 PACK(struct ModelHeader {
   char      name[LEN_MODEL_NAME]; // must be first for eeLoadModelName
   uint8_t   modelId[NUM_MODULES];
-  MODEL_HEADER_BITMAP_FIELD
+  MODEL_HEADER_BITMAP_FIELD_V130
 });
 
 #if defined(COLORLCD)
@@ -565,7 +574,7 @@ PACK(struct CustomScreenData {
   #define SCRIPT_DATA
 #endif
 
-PACK(struct ModelData {
+PACK(struct ModelData_v130 {
   ModelHeader header;
   TimerData timers[MAX_TIMERS];
   uint8_t   telemetryProtocol:3;
@@ -584,7 +593,7 @@ PACK(struct ModelData {
   LimitData limitData[MAX_OUTPUT_CHANNELS];
   ExpoData  expoData[MAX_EXPOS];
 
-  CurveData curves[MAX_CURVES];
+  CurveData curves[MAX_CURVES_V130];
   int8_t    points[MAX_CURVE_POINTS];
 
   LogicalSwitchData logicalSw[MAX_LOGICAL_SWITCHES];
@@ -618,9 +627,9 @@ PACK(struct ModelData {
   NOBACKUP(uint8_t potsWarnEnabled);
   NOBACKUP(int8_t potsWarnPosition[STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS]);
 
-  NOBACKUP(TelemetrySensor telemetrySensors[MAX_TELEMETRY_SENSORS];)
+  NOBACKUP(TelemetrySensor telemetrySensors[MAX_TELEMETRY_SENSORS_V130];)
 
-  TARANIS_PCBX9E_FIELD(uint8_t toplcdTimer)
+  TARANIS_PCBX9E_FIELD_V130(uint8_t toplcdTimer)
 
   CUSTOM_SCREENS_DATA
 
@@ -662,15 +671,15 @@ PACK(struct TrainerData {
 #endif
 
 #if defined(PCBXLITES)
-  #define GYRO_FIELDS \
+  #define GYRO_FIELDS_V130 \
     int8_t   gyroMax; \
     int8_t   gyroOffset;
 #else
-  #define GYRO_FIELDS
+  #define GYRO_FIELDS_V130
 #endif
 
 #if defined(PCBHORUS)
-  #define EXTRA_GENERAL_FIELDS \
+  #define EXTRA_GENERAL_FIELDS_V130 \
     NOBACKUP(uint8_t auxSerialMode); \
     swconfig_t switchConfig; \
     uint16_t potsConfig; /* two bits per pot */ \
@@ -683,13 +692,13 @@ PACK(struct TrainerData {
     NOBACKUP(char bluetoothName[LEN_BLUETOOTH_NAME]);
 #elif defined(PCBTARANIS)
   #if defined(STORAGE_BLUETOOTH)
-    #define BLUETOOTH_FIELDS \
+    #define BLUETOOTH_FIELDS_V130 \
       uint8_t spare5; \
       char bluetoothName[LEN_BLUETOOTH_NAME];
   #else
-    #define BLUETOOTH_FIELDS
+    #define BLUETOOTH_FIELDS_V130
   #endif
-  #define EXTRA_GENERAL_FIELDS \
+  #define EXTRA_GENERAL_FIELDS_V130 \
     uint8_t  auxSerialMode:4; \
     uint8_t  slidersConfig:4; \
     uint8_t  potsConfig; /* two bits per pot */\
@@ -698,9 +707,9 @@ PACK(struct TrainerData {
     swconfig_t switchConfig; \
     char switchNames[STORAGE_NUM_SWITCHES][LEN_SWITCH_NAME]; \
     char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME]; \
-    BLUETOOTH_FIELDS
+    BLUETOOTH_FIELDS_V130
 #elif defined(PCBTANGO)
-  #define EXTRA_GENERAL_FIELDS \
+  #define EXTRA_GENERAL_FIELDS_V130 \
       uint8_t  auxSerialMode:4; \
       uint8_t  slidersConfig:4; \
       uint8_t  potsConfig; /* two bits per pot */\
@@ -711,7 +720,7 @@ PACK(struct TrainerData {
       char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME]; \
       NOBACKUP(char currModelFilename[LEN_MODEL_FILENAME+1]);
 #elif defined(PCBMAMBO)
-  #define EXTRA_GENERAL_FIELDS \
+  #define EXTRA_GENERAL_FIELDS_V130 \
       uint8_t  auxSerialMode:4; \
       uint8_t  slidersConfig:4; \
       uint16_t  potsConfig; /* two bits per pot */\
@@ -721,7 +730,7 @@ PACK(struct TrainerData {
       char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME]; \
       NOBACKUP(char currModelFilename[LEN_MODEL_FILENAME+1]);
 #elif defined(PCBSKY9X)
-  #define EXTRA_GENERAL_FIELDS \
+  #define EXTRA_GENERAL_FIELDS_V130 \
     int8_t   txCurrentCalibration; \
     int8_t   spare5; \
     uint8_t  mAhWarn; \
@@ -733,7 +742,7 @@ PACK(struct TrainerData {
     char switchNames[STORAGE_NUM_SWITCHES][LEN_SWITCH_NAME]; \
     char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME];
 #else
-  #define EXTRA_GENERAL_FIELDS
+  #define EXTRA_GENERAL_FIELDS_V130
 #endif
 
 #if defined(PCBHORUS)
@@ -747,9 +756,9 @@ PACK(struct TrainerData {
 #endif
 
 #if defined(BUZZER)
-  #define BUZZER_FIELD int8_t buzzerMode:2    // -2=quiet, -1=only alarms, 0=no keys, 1=all (only used on AVR radios without audio hardware)
+  #define BUZZER_FIELD_V130 int8_t buzzerMode:2    // -2=quiet, -1=only alarms, 0=no keys, 1=all (only used on AVR radios without audio hardware)
 #else
-  #define BUZZER_FIELD int8_t spare4:2
+  #define BUZZER_FIELD_V130 int8_t spare4:2
 #endif
 
 #if defined(ENABLE_ROTARY_INVERSE)
@@ -759,13 +768,13 @@ PACK(struct TrainerData {
   #define ROTARY_MODE
 #endif
 
-PACK(struct RadioData {
+PACK(struct RadioData_v130 {
   NOBACKUP(uint8_t version);
   NOBACKUP(uint16_t variant);
   CalibData calib[NUM_STICKS + STORAGE_NUM_POTS + STORAGE_NUM_SLIDERS + STORAGE_NUM_MOUSE_ANALOGS];
   NOBACKUP(uint16_t chkSum);
-  N_HORUS_FIELD(int8_t currModel);
-  N_HORUS_FIELD(uint8_t contrast);
+  N_HORUS_FIELD_V130(int8_t currModel);
+  N_HORUS_FIELD_V130(uint8_t contrast);
   NOBACKUP(uint8_t vBatWarn);
   NOBACKUP(int8_t txVoltageCalibration);
   uint8_t backlightMode:3;
@@ -774,7 +783,7 @@ PACK(struct RadioData {
   int8_t spare1:2;
   NOBACKUP(TrainerData trainer);
   NOBACKUP(uint8_t view);            // index of view in main screen
-  NOBACKUP(BUZZER_FIELD); /* 2bits */
+  NOBACKUP(BUZZER_FIELD_V130); /* 2bits */
   NOBACKUP(uint8_t fai:1);
   NOBACKUP(int8_t beepMode:2);      // -2=quiet, -1=only alarms, 0=no keys, 1=all
   NOBACKUP(uint8_t alarmsFlash:1);
@@ -792,8 +801,8 @@ PACK(struct RadioData {
   NOBACKUP(uint8_t templateSetup);   // RETA order for receiver channels
   NOBACKUP(int8_t PPM_Multiplier);
   NOBACKUP(int8_t hapticLength);
-  N_HORUS_FIELD(N_TARANIS_FIELD(uint8_t spare2));
-  N_HORUS_FIELD(N_TARANIS_FIELD(uint8_t stickReverse));
+  N_HORUS_FIELD_V130(N_TARANIS_FIELD_V130(uint8_t spare2));
+  N_HORUS_FIELD_V130(N_TARANIS_FIELD_V130(uint8_t stickReverse));
   NOBACKUP(int8_t beepLength:3);
   NOBACKUP(int8_t hapticStrength:3);
   NOBACKUP(uint8_t gpsFormat:1);
@@ -826,13 +835,13 @@ PACK(struct RadioData {
   NOBACKUP(int8_t   varioRepeat);
   CustomFunctionData customFn[MAX_SPECIAL_FUNCTIONS];
 
-  EXTRA_GENERAL_FIELDS
+  EXTRA_GENERAL_FIELDS_V130
 
   THEME_DATA
 
   char ownerRegistrationID[PXX2_LEN_REGISTRATION_ID];
 
-  GYRO_FIELDS
+  GYRO_FIELDS_V130
 
   ROTARY_MODE
 });
@@ -843,7 +852,7 @@ PACK(struct RadioData {
 #undef SCRIPTS_DATA
 #undef CUSTOM_SCREENS_DATA
 #undef SPLASH_MODE
-#undef EXTRA_GENERAL_FIELDS
+#undef EXTRA_GENERAL_FIELDS_V130
 #undef THEME_DATA
 #undef ROTARY_MODE
 #undef NOBACKUP
@@ -1000,8 +1009,13 @@ static inline void check_struct()
 #elif defined(PCBHORUS)
   CHKSIZE(RadioData, 881);
   CHKSIZE(ModelData, 9736);
+#elif defined(PCBTANGO)
+  CHKSIZE(RadioData, 847);
+  CHKSIZE(ModelData, 6155);
 #endif
 
 #undef CHKSIZE
 }
 #endif /* BACKUP */
+};
+#endif

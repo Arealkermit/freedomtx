@@ -118,7 +118,6 @@ bool isModuleSynchronous(uint8_t module)
 
 void sendSynchronousPulses(uint8_t runMask)
 {
-
 #if defined(HARDWARE_INTERNAL_MODULE)
   if ((runMask & (1 << INTERNAL_MODULE)) && isModuleSynchronous(INTERNAL_MODULE)) {
     if (setupPulsesInternalModule())
@@ -137,59 +136,55 @@ void sendSynchronousPulses(uint8_t runMask)
   }
 }
 
+constexpr uint8_t MIXER_FREQUENT_ACTIONS_PERIOD = 5 /*ms*/;
+constexpr uint8_t MIXER_MAX_PERIOD = 30 /*ms*/;
+
+void execMixerFrequentActions()
+{
+#if defined(SBUS_TRAINER)
+  // SBUS trainer
+  processSbusInput();
+#endif
+
+#if defined(GYRO)
+  gyro.wakeup();
+#endif
+
+#if defined(BLUETOOTH)
+  bluetooth.wakeup();
+#endif
+}
+
 uint32_t nextMixerTime[NUM_MODULES];
 
 TASK_FUNCTION(mixerTask)
 {
   s_pulses_paused = true;
+
   mixerSchedulerInit();
+
+#if !defined(PCBSKY9X)
   mixerSchedulerStart();
+#endif
 
   while (true) {
-#if defined(PCBTARANIS) && defined(SBUS)
-    // SBUS trainer
-    processSbusInput();
-#endif
-
-#if defined(GYRO)
-    gyro.wakeup();
-#endif
-
-#if defined(BLUETOOTH)
-    bluetooth.wakeup();
-#endif
-
-  __attribute__((unused)) bool timeout = 0;
-  switch (g_model.moduleData[EXTERNAL_MODULE].type) {
-    case MODULE_TYPE_PPM:
-      timeout = mixerSchedulerWaitForTrigger(PPM_PERIOD(EXTERNAL_MODULE) / 1000);
-      break;
-    case MODULE_TYPE_DSM2:
-      timeout = mixerSchedulerWaitForTrigger(DSM2_PERIOD / 1000);
-      break;
-    case MODULE_TYPE_MULTIMODULE:
-      timeout = mixerSchedulerWaitForTrigger(MULTIMODULE_PERIOD / 1000);
-      break;
-    case MODULE_TYPE_R9M_PXX1:
-      timeout = mixerSchedulerWaitForTrigger(PXX_PULSES_PERIOD / 1000);
-      break;
-    case MODULE_TYPE_SBUS:
-      timeout = mixerSchedulerWaitForTrigger(SBUS_PERIOD / 1000);
-      break;
-    case MODULE_TYPE_CROSSFIRE: // unlbock by crsfshot
-    case MODULE_TYPE_NONE:
-    default:
-      timeout = mixerSchedulerWaitForTrigger(30);
-      break;
-  }
+    for (int timeout = 0; timeout < MIXER_MAX_PERIOD; timeout += MIXER_FREQUENT_ACTIONS_PERIOD) {
+      execMixerFrequentActions();
+      bool interruptedByTimeout = mixerSchedulerWaitForTrigger(MIXER_FREQUENT_ACTIONS_PERIOD);
+      if (!interruptedByTimeout) {
+        break;
+      }
+    }
 
 #if defined(DEBUG_MIXER_SCHEDULER)
     GPIO_SetBits(EXTMODULE_TX_GPIO, EXTMODULE_TX_GPIO_PIN);
     GPIO_ResetBits(EXTMODULE_TX_GPIO, EXTMODULE_TX_GPIO_PIN);
 #endif
 
-    // re-enable trigger
+#if !defined(PCBSKY9X)
+    mixerSchedulerClearTrigger();
     mixerSchedulerEnableTrigger();
+#endif
 
 #if defined(SIMU)
     if (pwrCheck() == e_power_off) {

@@ -374,7 +374,6 @@ getvalue_t getValue(mixsrc_t i)
   else if (i <= MIXSRC_LAST_LOGICAL_SWITCH) {
     return getSwitch(SWSRC_FIRST_LOGICAL_SWITCH + i - MIXSRC_FIRST_LOGICAL_SWITCH) ? 1024 : -1024;
   }
-#if !defined(PCBTANGO) && !defined(PCBMAMBO)
   else if (i <= MIXSRC_LAST_TRAINER) {
     int16_t x = ppmInput[i - MIXSRC_FIRST_TRAINER];
     if (i < MIXSRC_FIRST_TRAINER + NUM_CAL_PPM) {
@@ -382,7 +381,6 @@ getvalue_t getValue(mixsrc_t i)
     }
     return x * 2;
   }
-#endif
   else if (i <= MIXSRC_LAST_CH) {
     return ex_chans[i - MIXSRC_CH1];
   }
@@ -458,6 +456,14 @@ void evalInputs(uint8_t mode)
 
     BeepANACenter mask = (BeepANACenter)1 << ch;
 
+#if defined(POTS_FILTER_NOISE)
+    if (i == 4 || i == 5) {
+      uint8_t tmp = (uint16_t)abs(v) / 32;
+      if (tmp==0 || (tmp==1 && (bpanaCenter & mask))) {
+        v = tmp;
+      }
+    }
+#endif
     calibratedAnalogs[ch] = v; // for show in expo
 
     // filtering for center beep

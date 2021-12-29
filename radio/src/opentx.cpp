@@ -1330,6 +1330,14 @@ void getADC()
     uint16_t previous = s_anaFilt[x] / JITTER_ALPHA;
     uint16_t diff = (v > previous) ? (v - previous) : (previous - v);
 
+#if defined(POTS_FILTER_NOISE)
+    if (x == 4 || x == 5) {
+      if (previous != 0 && (diff >= 20 && diff < 58)) {
+        continue;
+      }
+    }
+#endif
+
     // g_eeGeneral.jitterFilter is inverted, 0 - active
 #if defined(PCBTANGO) || defined(PCBMAMBO)
     if (x > STICK4 && !g_eeGeneral.jitterFilter && diff < (10*ANALOG_MULTIPLIER)) {
@@ -1534,7 +1542,7 @@ void doMixerCalculations()
       s_cnt_1s += 1;
 
       logicalSwitchesTimerTick();
-#if !defined (PCBTANGO) && !defined(PCBMAMBO)
+#if defined(TRAINER_GPIO)
       checkTrainerSignalWarning();
 #endif
       if (s_cnt_1s >= 10) { // 1sec

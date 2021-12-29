@@ -56,9 +56,9 @@ const unsigned char splashdata2[]  = {
 #if defined(FRSKY_RELEASE)
   #include "bitmaps/128x64/splash_frsky.lbm"
 #elif defined(PCBTANGO)
-  #include "bitmaps/128x64/splash_tbs_96.lbm"
+  #include "bitmaps/128x64/splash_tango2.lbm"
 #elif defined(PCBMAMBO)
-  #include "bitmaps/128x64/splash_tbs.lbm"
+  #include "bitmaps/128x64/splash_mambo.lbm"
 #endif
   'S','F','E',0 };
 

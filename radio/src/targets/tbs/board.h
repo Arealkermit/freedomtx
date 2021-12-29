@@ -58,16 +58,24 @@ void rotaryEncoderCheck();
 #define PERI1_FREQUENCY                 42000000
 #define PERI2_FREQUENCY                 84000000
 
-#define MODEL_DATA_SIZE_101             6245
-#define MODEL_DATA_SIZE_110             6253
-
+#if defined(PCBTANGO)
+#define MODEL_DATA_SIZE_130             6253
+#define MODEL_DATA_SIZE_131             6155
+#define RADIO_DATA_SIZE_130             721
+#define RADIO_DATA_SIZE_131             847
+#elif defined(PCBMAMBO)
+#define MODEL_DATA_SIZE_130             6255
+#define MODEL_DATA_SIZE_131             6157
+#define RADIO_DATA_SIZE_130             739
+#define RADIO_DATA_SIZE_131             865
+#endif
 
 #define TIMER_MULT_APB1                 2
 #define TIMER_MULT_APB2                 2
 
 #ifdef REQUIRED_SDCARD_VERSION
   #undef  REQUIRED_SDCARD_VERSION
-  #define REQUIRED_SDCARD_VERSION       "1.2V0026"  //REQUIRED_FREEDOMTX_SDCARD_VERSION
+  #define REQUIRED_SDCARD_VERSION       "1.2V0026"
 #endif
 
 extern uint16_t sessionTimer;
@@ -515,6 +523,9 @@ void extmoduleSendInvertedByte(uint8_t byte);
   #define IS_CHARGING_STATE()         (GPIO_ReadInputDataBit( CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN ) == Bit_RESET)
   #define IS_CHARGING_FAULT()         (0)
 #endif
+
+// Crossfire state
+#define IS_CROSSFIRE_RX_STATE()              (GPIO_ReadInputDataBit( CROSSFIRE_STATE_GPIO, CROSSFIRE_STATE_GPIO_PIN ) == Bit_SET)
 
 // Audio driver
 void audioInit() ;

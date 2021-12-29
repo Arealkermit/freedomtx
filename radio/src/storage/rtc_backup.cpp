@@ -57,8 +57,7 @@ void rambackupWrite()
 
 bool rambackupRestore()
 {
-  if (ramBackup->size == 0)
-    return false;
+  if (ramBackup->size == 0)    return false;
 
   if (uncompress((uint8_t *)&ramBackupUncompressed, sizeof(ramBackupUncompressed), ramBackup->data, ramBackup->size) != sizeof(ramBackupUncompressed))
     return false;

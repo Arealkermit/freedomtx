@@ -29,12 +29,18 @@ static void telemetryInitDirPin()
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;//GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Pin   = TELEMETRY_DIR_GPIO_PIN;
   GPIO_Init(TELEMETRY_DIR_GPIO, &GPIO_InitStructure);
   TELEMETRY_DIR_INPUT();
 
-  GPIO_InitStructure.GPIO_Pin = TELEMETRY_RX_POLARITY_RX_PIN;
+#ifdef TELEMETRY_TX_POLARITY_PIN
+  GPIO_InitStructure.GPIO_Pin = TELEMETRY_TX_POLARITY_PIN;
+  GPIO_Init(TELEMETRY_TX_POLARITY_GPIO, &GPIO_InitStructure);
+  TELEMETRY_TX_POLARITY_INVERT();
+#endif
+
+  GPIO_InitStructure.GPIO_Pin = TELEMETRY_RX_POLARITY_PIN;
   GPIO_Init(TELEMETRY_RX_POLARITY_GPIO, &GPIO_InitStructure);
   TELEMETRY_RX_POLARITY_INVERT();
 }

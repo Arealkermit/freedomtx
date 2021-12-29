@@ -14,14 +14,14 @@ if(PCB STREQUAL X12S OR PCB STREQUAL X10)
   set(EEPROM_CONVERSIONS 218)
 endif()
 
-if (PCB STREQUAL TANGO)
-  if (VERSION_MAJOR STREQUAL "1" AND VERSION_MINOR STREQUAL "1")
-    set(SRC
-      ${SRC}
-      storage/conversions/conversions_101_110.cpp
-      )
-    add_definitions(-DTANGO_CONVERT_VERSION_101)
-  endif()
+if (PCB STREQUAL TANGO OR PCB STREQUAL MAMBO)
+#  if (VERSION_MAJOR STREQUAL "1" AND VERSION_MINOR STREQUAL "3")
+#    set(SRC
+#      ${SRC}
+#      storage/conversions/conversions_130_131.cpp
+#      )
+#    add_definitions(-DCONVERT_FREEDOMTX_DATA_V130)
+#  endif()
   set(EEPROM_CONVERSIONS 219)
 endif()
 

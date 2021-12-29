@@ -1231,6 +1231,7 @@
 #define ZSTR_A4                        "A4"
 #define ZSTR_BATT                      "RxBt"
 #define ZSTR_ALT                       "Alt"
+#define ZSTR_BARO                      "Baro"
 #define ZSTR_TEMP1                     "Tmp1"
 #define ZSTR_TEMP2                     "Tmp2"
 #define ZSTR_TEMP3                     "Tmp3"

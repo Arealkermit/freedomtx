@@ -55,7 +55,7 @@ void handleUsbConnection()
 #endif
 
 #if defined(PCBTANGO) || defined(PCBMAMBO)
-  if (!usbStarted() && usbPlugged() && IS_CHARGING_STATE()) {
+  if (!usbStarted() && IS_CHARGING_STATE()) {
 #else
   if (!usbStarted() && usbPlugged()) {
 #endif

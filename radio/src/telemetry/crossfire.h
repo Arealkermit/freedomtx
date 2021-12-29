@@ -35,6 +35,7 @@
 #define GPS_TIME_ID                    0x03
 #define CF_VARIO_ID                    0x07
 #define BATTERY_ID                     0x08
+#define BARO_ID                        0x09
 #define LINK_ID                        0x14
 #define CHANNELS_ID                    0x16
 #define SUBSET_CHANNELS_ID             0x17
@@ -93,6 +94,7 @@ enum CrossfireSensorIndexes {
   BATT_CURRENT_INDEX,
   BATT_CAPACITY_INDEX,
   BATT_REMAINING_INDEX,
+  BARO_ALTITUDE_INDEX,
   GPS_LATITUDE_INDEX,
   GPS_LONGITUDE_INDEX,
   GPS_GROUND_SPEED_INDEX,

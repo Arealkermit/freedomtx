@@ -42,6 +42,7 @@ const CrossfireSensor crossfireSensors[] = {
   {BATTERY_ID,     1, ZSTR_CURR,          UNIT_AMPS,              1},
   {BATTERY_ID,     2, ZSTR_CAPACITY,      UNIT_MAH,               0},
   {BATTERY_ID,     3, ZSTR_BATT_PERCENT,  UNIT_PERCENT,           0},
+  {BARO_ID,        0, ZSTR_BARO,          UNIT_METERS,            1},
   {GPS_ID,         0, ZSTR_GPS,           UNIT_GPS_LATITUDE,      0},
   {GPS_ID,         0, ZSTR_GPS,           UNIT_GPS_LONGITUDE,     0},
   {GPS_ID,         2, ZSTR_GSPD,          UNIT_KMH,               1},
@@ -66,6 +67,8 @@ const CrossfireSensor & getCrossfireSensor(uint8_t id, uint8_t subId)
     return crossfireSensors[TX_RSSI_PERC_INDEX+subId];
   else if (id == BATTERY_ID)
     return crossfireSensors[BATT_VOLTAGE_INDEX+subId];
+  else if (id == BARO_ID)
+    return crossfireSensors[BARO_ALTITUDE_INDEX+subId];
   else if (id == GPS_ID)
     return crossfireSensors[GPS_LATITUDE_INDEX+subId];
   else if (id == CF_VARIO_ID)
@@ -194,6 +197,11 @@ void processCrossfireTelemetryFrame()
         processCrossfireTelemetryValue(BATT_CAPACITY_INDEX, value);
       if (getCrossfireTelemetryValue<1>(10, value))
         processCrossfireTelemetryValue(BATT_REMAINING_INDEX, value);
+      break;
+
+    case BARO_ID:
+      if (getCrossfireTelemetryValue<2>(3, value))
+        processCrossfireTelemetryValue(BARO_ALTITUDE_INDEX,  (value & 0x8000) ? (value & 0x7fff) * 10 : value - 10000);
       break;
 
     case ATTITUDE_ID:

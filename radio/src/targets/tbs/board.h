@@ -525,7 +525,7 @@ void extmoduleSendInvertedByte(uint8_t byte);
 #endif
 
 // Crossfire state
-#define IS_CROSSFIRE_RX_STATE()              (GPIO_ReadInputDataBit( CROSSFIRE_STATE_GPIO, CROSSFIRE_STATE_GPIO_PIN ) == Bit_SET)
+#define IS_CROSSFIRE_RX_STATE()       (GPIO_ReadInputDataBit( CROSSFIRE_STATE_GPIO, CROSSFIRE_STATE_GPIO_PIN ) == Bit_SET)
 
 // Audio driver
 void audioInit() ;

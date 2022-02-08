@@ -515,17 +515,8 @@ void extmoduleSendInvertedByte(uint8_t byte);
   #define IS_PCBREV_03()                (hardwareOptions.pcbrev == PCBREV_Tango2_V3)
 #endif
 
-// Charger
-#if defined(PCBTANGO)
-  #define IS_CHARGING_STATE()         (usbPlugged() && GPIO_ReadInputDataBit( CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN ) == Bit_RESET)
-  #define IS_CHARGING_FAULT()         (usbPlugged() && GPIO_ReadInputDataBit( CHARGER_FAULT_GPIO, CHARGER_FAULT_GPIO_PIN ) == Bit_RESET)
-#else
-  #define IS_CHARGING_STATE()         (GPIO_ReadInputDataBit( CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN ) == Bit_RESET)
-  #define IS_CHARGING_FAULT()         (0)
-#endif
-
 // Crossfire state
-#define IS_CROSSFIRE_RX_STATE()       (GPIO_ReadInputDataBit( CROSSFIRE_STATE_GPIO, CROSSFIRE_STATE_GPIO_PIN ) == Bit_SET)
+#define IS_CROSSFIRE_RX_STATE()       (GPIO_ReadInputDataBit(CROSSFIRE_STATE_GPIO, CROSSFIRE_STATE_GPIO_PIN ) == Bit_SET)
 
 // Audio driver
 void audioInit() ;
@@ -580,9 +571,11 @@ void auxSerialStop();
   #if defined(CHARGING_LEDS)
     #define LED_CHARGING_IN_PROGRESS()    ledRed()
     #define LED_CHARGING_DONE()           ledGreen()
-  #else
+    #define LED_CHARGING_OFF()            ledOff()    
+  #else            
     #define LED_CHARGING_IN_PROGRESS()
     #define LED_CHARGING_DONE()
+    #define LED_CHARGING_OFF()    
   #endif
 #elif defined(PCBMAMBO)
   #define ledOff()

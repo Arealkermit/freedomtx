@@ -38,6 +38,7 @@ add_definitions(-DEEPROM_VARIANT=0x8000)
 add_definitions(-DPWR_BUTTON_${PWR_BUTTON})
 add_definitions(-DSOFTWARE_VOLUME)
 add_definitions(-DBATT_CRITICAL_SHUTDOWN)
+add_definitions(-DUSB_JUDGE_BY_CHARGE_STATE)
 
 if(DEBUG)
   if(PCB STREQUAL TANGO)

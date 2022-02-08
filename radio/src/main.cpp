@@ -54,11 +54,7 @@ void handleUsbConnection()
   static bool additional_popup_trigger = true;
 #endif
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-  if (!usbStarted() && IS_CHARGING_STATE()) {
-#else
   if (!usbStarted() && usbPlugged()) {
-#endif
 #if defined(AGENT)
     if (getSelectedUsbMode() == USB_UNSELECTED_MODE || additional_popup_trigger) {
       additional_popup_trigger = false;

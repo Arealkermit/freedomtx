@@ -89,13 +89,17 @@ static void chargerInit(void)
 #define KEY_PRESS_UPDATE_TIME         10
 #define CHARGING_TO_CHARGED_DELAY     500
 #define NUM_OF_KEY_GROUPS             6
+#define FULLY_CHARGED_VOLTAGE         42
+#define USB_UNPLUGGED_TIMEOUT         20
+
 static void runPwrOffCharging(void)
 {
   tmr10ms_t tmrAdc = 0;
   tmr10ms_t tmrWait = 0;
   tmr10ms_t tmrPressed = 0;
+  tmr10ms_t tmrUsbLastPlugged = g_tmr10ms;
   uint8_t pwrPressedCnt = 0;
-  uint32_t lastChargingTimestamp = 0;
+  uint32_t lastChargingTimestamp = g_tmr10ms;
 #if defined(CHARGING_ANIMATION)
   tmr10ms_t tmrBacklight = 0;
   uint16_t keysState[NUM_OF_KEY_GROUPS];
@@ -130,7 +134,7 @@ static void runPwrOffCharging(void)
     }
 
     // quit the power off charging loop
-    if (!usbPlugged() || pwrPressedCnt >= PWR_PRESSED_CNT)
+    if (pwrPressedCnt >= PWR_PRESSED_CNT)
       break;
     else if (pwrPressedCnt)
       continue;
@@ -149,47 +153,65 @@ static void runPwrOffCharging(void)
         tmrBacklight = g_tmr10ms;
       }
     }
-    if (g_tmr10ms - tmrBacklight < BACKLIGHT_TIMEOUT || 0)
+    if ((g_tmr10ms - tmrBacklight) < BACKLIGHT_TIMEOUT)
       BACKLIGHT_ENABLE();
     else 
       BACKLIGHT_DISABLE();
 #endif
 
     // charging 
-    if (IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged()) {
-      lastChargingTimestamp = g_tmr10ms;
+    if (usbPlugged()) {
+        tmrUsbLastPlugged = g_tmr10ms;
+            
+      if (g_vbat100mV < FULLY_CHARGED_VOLTAGE) {
+        lastChargingTimestamp = g_tmr10ms;
 #if defined(CHARGING_LEDS)
-      if (isLedCharging == false) {
-        isLedCharging = true;
-        LED_CHARGING_IN_PROGRESS();
-      }
+        if (isLedCharging == false) {
+          isLedCharging = true;
+          LED_CHARGING_IN_PROGRESS();
+        }
 #endif
-      if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
+        if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
 #if defined(CHARGING_ANIMATION)
-        lcdClear();
-        drawChargingState();
-        lcdRefresh();
+          lcdClear();
+          drawChargingState();
+          lcdRefresh();
 #endif
-        TRACE("state: charging  vbatt: %.1fV", (float)g_vbat100mV/10);
-        tmrWait = g_tmr10ms;
+          TRACE("state: charging  vbatt: %.1fV", (float)g_vbat100mV/10);
+          tmrWait = g_tmr10ms;
+        }
+      }
+      // charged
+      else if (g_vbat100mV >= FULLY_CHARGED_VOLTAGE && (g_tmr10ms - lastChargingTimestamp) >= CHARGING_TO_CHARGED_DELAY) {
+#if defined(CHARGING_LEDS)
+        if (isLedCharged == false) {
+          isLedCharged = true;
+          LED_CHARGING_DONE();
+        }
+#endif
+        if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
+#if defined(CHARGING_ANIMATION)
+          lcdClear();
+          drawFullyCharged();
+          lcdRefresh();
+#endif
+          TRACE("state: charged  vbatt: %.1fV", (float)g_vbat100mV/10);
+          tmrWait = g_tmr10ms;
+        }
       }
     }
-    // charged 
-    else if (!IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged() && g_tmr10ms - lastChargingTimestamp >= CHARGING_TO_CHARGED_DELAY) {
-#if defined(CHARGING_LEDS)
-      if (isLedCharged == false) {
-        isLedCharged = true;
-        LED_CHARGING_DONE();
-      }
-#endif
-      if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
+    else {
+      if ((g_tmr10ms - tmrUsbLastPlugged) > USB_UNPLUGGED_TIMEOUT) {
+        TRACE("usb un-plugged");
 #if defined(CHARGING_ANIMATION)
         lcdClear();
-        drawFullyCharged();
         lcdRefresh();
 #endif
-        TRACE("state: charged  vbatt: %.1fV", (float)g_vbat100mV/10);
-        tmrWait = g_tmr10ms;
+
+#if defined(CHARGING_LEDS)
+        LED_CHARGING_OFF();
+#endif
+        break;
       }
     }
   }
@@ -271,10 +293,6 @@ void boardInit()
 
   hardwareOptions.pcbrev = crsfGetHWID() & ~HW_ID_MASK;
 
-#if defined(RTCLOCK) && !defined(COPROCESSOR)
-  rtcInit(); // RTC must be initialized before rambackupRestore() is called
-#endif
-
 #if defined(DEBUG) && defined(AUX_SERIAL_GPIO)
   auxSerialInit(0, 0); // default serial mode (None if DEBUG not defined)
   TRACE("\n%s board started :)", MY_DEVICE_NAME);
@@ -305,6 +323,10 @@ void boardInit()
 
   if (!UNEXPECTED_SHUTDOWN())
     sdInit();
+
+#if defined(RTCLOCK) && !defined(COPROCESSOR)
+  rtcInit(); // RTC must be initialized before rambackupRestore() is called
+#endif
 
   if( skipCharging ) {
     runPwrOffCharging();

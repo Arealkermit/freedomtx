@@ -27,6 +27,8 @@ void rtcSetTime(const struct gtm * t)
   RTC_TimeTypeDef RTC_TimeStruct;
   RTC_DateTypeDef RTC_DateStruct;
 
+  PWR_BackupAccessCmd(ENABLE);
+
   RTC_TimeStructInit(&RTC_TimeStruct);
   RTC_DateStructInit(&RTC_DateStruct);
 
@@ -36,9 +38,11 @@ void rtcSetTime(const struct gtm * t)
   RTC_DateStruct.RTC_Year = t->tm_year - 100;
   RTC_DateStruct.RTC_Month = t->tm_mon + 1;
   RTC_DateStruct.RTC_Date = t->tm_mday;
-  
+
   RTC_SetTime(RTC_Format_BIN, &RTC_TimeStruct);
   RTC_SetDate(RTC_Format_BIN, &RTC_DateStruct);
+
+  PWR_BackupAccessCmd(DISABLE);
 }
 
 void rtcGetTime(struct gtm * t)

@@ -68,7 +68,12 @@ void setSelectedUsbMode(int mode)
 int usbPlugged()
 {
   static PinDebounce debounce;
+#if defined(USB_JUDGE_BY_CHARGE_STATE)
+  static PinDebounce chargeState;
+  return (debounce.debounce(USB_GPIO, USB_GPIO_PIN_VBUS) && !chargeState.debounce(CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN));
+#else
   return debounce.debounce(USB_GPIO, USB_GPIO_PIN_VBUS);
+#endif
 }
 
 USB_OTG_CORE_HANDLE USB_OTG_dev;

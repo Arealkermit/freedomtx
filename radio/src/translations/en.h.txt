@@ -266,8 +266,8 @@
 
 #define LEN_VUNITSSYSTEM               TR("\006", "\010")
 #define TR_VUNITSSYSTEM                TR("Metric""Imper.", "Metric\0 ""Imperial")
-#define LEN_VTELEMUNIT                 "\003"
-#define TR_VTELEMUNIT                  "-\0 ""V\0 ""A\0 ""mA\0""kts""m/s""f/s""kmh""mph""m\0 ""ft\0""@C\0""@F\0""%\0 ""mAh""W\0 ""mW\0""dB\0""dBm""Hz\0""rpm""g\0 ""@\0 ""rad""ml\0""fOz""mlm"
+#define LEN_VTELEMUNIT                 "\004"
+#define TR_VTELEMUNIT                  "-\0  ""V\0  ""A\0  ""mA\0 ""kts ""m/s ""cm/s""f/s ""kmh ""mph ""m\0  ""ft\0 ""@C\0 ""@F\0 ""%\0  ""mAh ""W\0  ""mW\0 ""dB\0 ""dBm ""Hz\0 ""rpm ""g\0  ""@\0  ""rad ""ml\0 ""fOz ""mlm "
 
 #define STR_V                          (STR_VTELEMUNIT+1)
 #define STR_A                          (STR_VTELEMUNIT+4)
@@ -1231,7 +1231,8 @@
 #define ZSTR_A4                        "A4"
 #define ZSTR_BATT                      "RxBt"
 #define ZSTR_ALT                       "Alt"
-#define ZSTR_BARO                      "Baro"
+#define ZSTR_BARO_ALTITUDE             "BALT"
+#define ZSTR_BARO_VSPEED               "BVSP"
 #define ZSTR_TEMP1                     "Tmp1"
 #define ZSTR_TEMP2                     "Tmp2"
 #define ZSTR_TEMP3                     "Tmp3"

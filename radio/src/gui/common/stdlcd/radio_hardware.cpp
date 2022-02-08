@@ -184,7 +184,7 @@ enum {
   ITEM_RADIO_HARDWARE_AUX_SERIAL_MODE,
 #endif
 
-#if !defined(PCBTANGO)
+#if !defined(PCBTANGO) && !defined(PCBMAMBO)
   ITEM_RADIO_HARDWARE_JITTER_FILTER,
   ITEM_RADIO_HARDWARE_RAS,
 #if defined(SPORT_UPDATE_PWR_GPIO)
@@ -646,7 +646,7 @@ void menuRadioHardware(event_t event)
         break;
 #endif
 
-#if !defined(PCBTANGO)
+#if !defined(PCBTANGO) && !defined(PCBMAMBO)
 #if defined(AUX_SERIAL)
       case ITEM_RADIO_HARDWARE_AUX_SERIAL_MODE:
         g_eeGeneral.auxSerialMode = editChoice(HW_SETTINGS_COLUMN2, y, STR_AUX_SERIAL_MODE, STR_AUX_SERIAL_MODES, g_eeGeneral.auxSerialMode, 0, UART_MODE_MAX, attr, event);

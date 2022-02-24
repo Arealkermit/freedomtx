@@ -240,12 +240,12 @@ enum EnumSwitchesPositions
 extern uint8_t g_trimEditMode;
 extern uint8_t g_trimState;
 #elif defined(PCBMAMBO)
-#define STORAGE_NUM_SWITCHES          NUM_SWITCHES
-#define DEFAULT_SWITCH_CONFIG         (SWITCH_TOGGLE << 10) + (SWITCH_3POS << 8) + (SWITCH_3POS << 6) + (SWITCH_3POS << 4) + (SWITCH_3POS << 2) + (SWITCH_3POS << 0)
-#define DEFAULT_POTS_CONFIG           (POT_WITH_DETENT << 2)+ (POT_WITH_DETENT << 0)
-#define DEFAULT_SLIDERS_CONFIG        SLIDER_NONE
+#define NUM_SWITCHES                    6
+#define STORAGE_NUM_SWITCHES            NUM_SWITCHES
+#define DEFAULT_SWITCH_CONFIG           (SWITCH_TOGGLE << 10) + (SWITCH_TOGGLE << 8) + (SWITCH_3POS << 6) + (SWITCH_3POS << 4) + (SWITCH_3POS << 2) + (SWITCH_3POS << 0)
+#define DEFAULT_POTS_CONFIG             (POT_WITH_DETENT << 2)+ (POT_WITH_DETENT << 0)
+#define DEFAULT_SLIDERS_CONFIG          SLIDER_NONE
 
-#define NUM_SWITCHES                        6
 #define STORAGE_NUM_SWITCHES_POSITIONS  (STORAGE_NUM_SWITCHES * 3)
 #endif
 void keysInit();
@@ -513,6 +513,15 @@ void extmoduleSendInvertedByte(uint8_t byte);
   #define IS_PCBREV_01()                (hardwareOptions.pcbrev == PCBREV_Tango2_V1)
   #define IS_PCBREV_02()                (hardwareOptions.pcbrev == PCBREV_Tango2_V2)
   #define IS_PCBREV_03()                (hardwareOptions.pcbrev == PCBREV_Tango2_V3)
+#endif
+
+// Charger
+#if defined(PCBTANGO)
+  #define IS_CHARGING_STATE()         (GPIO_ReadInputDataBit( CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN ) == Bit_RESET)
+  #define IS_CHARGING_FAULT()         (GPIO_ReadInputDataBit( CHARGER_FAULT_GPIO, CHARGER_FAULT_GPIO_PIN ) == Bit_RESET)
+#else
+  #define IS_CHARGING_STATE()         (GPIO_ReadInputDataBit( CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN ) == Bit_RESET)
+  #define IS_CHARGING_FAULT()         (0)
 #endif
 
 // Crossfire state

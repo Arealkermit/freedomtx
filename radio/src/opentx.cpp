@@ -710,6 +710,7 @@ ls_telemetry_value_t maxTelemValue(source_t channel)
   return 30000;
 }
 
+
 #define INAC_STICKS_SHIFT   6
 #define INAC_SWITCHES_SHIFT 8
 bool inputsMoved()
@@ -717,7 +718,11 @@ bool inputsMoved()
   uint8_t sum = 0;
   for (uint8_t i=0; i<NUM_STICKS+NUM_POTS+NUM_SLIDERS; i++)
 #if defined(PCBTANGO) || defined(PCBMAMBO)
-    sum += ((int16_t)anaIn(i) + 4096) >> INAC_STICKS_SHIFT;
+    if (i < NUM_STICKS) {
+        sum += calcRESXto1000(channelOutputs[i])/10;
+    }
+    else
+      sum += anaIn(i) >> INAC_STICKS_SHIFT;
 #else
     sum += anaIn(i) >> INAC_STICKS_SHIFT;
 #endif

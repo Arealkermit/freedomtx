@@ -115,8 +115,9 @@ static void runPwrOffCharging(void)
   usbPlugged();
   getADC();
   checkBattery();
+  WDG_ENABLE(3000);
 
-  while (1) {    
+  while (1) {
     // update battery voltage
     if (g_tmr10ms - tmrAdc >= BATT_ADC_SAMPLING_TIME) {
       getADC();
@@ -159,11 +160,29 @@ static void runPwrOffCharging(void)
       BACKLIGHT_DISABLE();
 #endif
 
-    // charging 
     if (usbPlugged()) {
         tmrUsbLastPlugged = g_tmr10ms;
-            
-      if (g_vbat100mV < FULLY_CHARGED_VOLTAGE) {
+
+      // charged
+      if (g_vbat100mV >= FULLY_CHARGED_VOLTAGE && (g_tmr10ms - lastChargingTimestamp) >= CHARGING_TO_CHARGED_DELAY) {
+#if defined(CHARGING_LEDS)
+        if (isLedCharged == false) {
+          isLedCharged = true;
+          LED_CHARGING_DONE();
+        }
+#endif
+        if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
+#if defined(CHARGING_ANIMATION)
+          lcdClear();
+          drawFullyCharged();
+          lcdRefresh();
+#endif
+          TRACE("state: charged  vbatt: %.1fV", (float)g_vbat100mV/10);
+          tmrWait = g_tmr10ms;
+        }
+      }
+      else {
+        // charging
         lastChargingTimestamp = g_tmr10ms;
 #if defined(CHARGING_LEDS)
         if (isLedCharging == false) {
@@ -178,24 +197,6 @@ static void runPwrOffCharging(void)
           lcdRefresh();
 #endif
           TRACE("state: charging  vbatt: %.1fV", (float)g_vbat100mV/10);
-          tmrWait = g_tmr10ms;
-        }
-      }
-      // charged
-      else if (g_vbat100mV >= FULLY_CHARGED_VOLTAGE && (g_tmr10ms - lastChargingTimestamp) >= CHARGING_TO_CHARGED_DELAY) {
-#if defined(CHARGING_LEDS)
-        if (isLedCharged == false) {
-          isLedCharged = true;
-          LED_CHARGING_DONE();
-        }
-#endif
-        if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
-#if defined(CHARGING_ANIMATION)
-          lcdClear();
-          drawFullyCharged();
-          lcdRefresh();
-#endif
-          TRACE("state: charged  vbatt: %.1fV", (float)g_vbat100mV/10);
           tmrWait = g_tmr10ms;
         }
       }
@@ -214,6 +215,8 @@ static void runPwrOffCharging(void)
         break;
       }
     }
+    delay_ms(1);
+    WDG_RESET();
   }
 }
 
@@ -474,7 +477,6 @@ void loadDefaultRadioSettings(void)
   g_eeGeneral.backlightMode = g_eeGeneral.backlightMode < e_backlight_mode_keys ? e_backlight_mode_keys : g_eeGeneral.backlightMode;
 #endif
   g_eeGeneral.lightAutoOff = g_eeGeneral.lightAutoOff < BACKLIGHT_TIMEOUT_MIN ? 6 : g_eeGeneral.lightAutoOff;
-  g_eeGeneral.switchConfig = DEFAULT_SWITCH_CONFIG;
   g_eeGeneral.jitterFilter = 0;
 
   #define MARK_1        0x0000A55A

@@ -311,7 +311,7 @@ void displayBattVoltage()
   lcdDrawSolidVerticalLine(VBATT_X - 4, VBATT_Y + 10, 3);
   uint8_t count = GET_TXBATT_BARS(20);
 #if defined(PCBTANGO) || defined(PCBMAMBO)
-  if (usbPlugged())
+  if (usbPlugged() && IS_CHARGING_STATE())
     count = (get_tmr10ms() % 100) * count / 100;
 #endif
   for (uint8_t i = 0; i < count; i += 2)

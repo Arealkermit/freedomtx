@@ -181,7 +181,7 @@ static void runPwrOffCharging(void)
           tmrWait = g_tmr10ms;
         }
       }
-      else {
+      else if (g_vbat100mV < FULLY_CHARGED_VOLTAGE) {
         // charging
         lastChargingTimestamp = g_tmr10ms;
 #if defined(CHARGING_LEDS)

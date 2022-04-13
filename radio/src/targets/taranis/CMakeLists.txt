@@ -5,6 +5,8 @@ option(PXX2 "PXX2 protocol support" OFF)
 option(INTERNAL_MODULE_PPM "Support for PPM internal module" OFF)
 option(AUTOUPDATE "Auto update internal chips from SD" OFF)
 
+set(EXTERNAL_MODULE YES)
+
 if(PCB STREQUAL X9E)
   option(INTERNAL_MODULE_PXX1 "Support for PXX1 internal module" ON)
   option(INTERNAL_MODULE_PXX2 "Support for PXX2 internal module" OFF)
@@ -367,7 +369,6 @@ set(TARGET_SRC
   ${TARGET_SRC}
   ${LED_DRIVER}
   backlight_driver.cpp
-  extmodule_driver.cpp
   trainer_driver.cpp
   ../common/arm/stm32/timers_driver.cpp
   ../common/arm/stm32/audio_dac_driver.cpp
@@ -419,6 +420,14 @@ endif()
 if(INTERNAL_MODULE_PPM)
   add_definitions(-DHARDWARE_INTERNAL_MODULE)
   add_definitions(-DINTERNAL_MODULE_PPM)
+endif()
+
+if(EXTERNAL_MODULE)
+  set(TARGET_SRC
+    ${TARGET_SRC}
+    extmodule_driver.cpp
+    )
+  add_definitions(-DHARDWARE_EXTERNAL_MODULE)
 endif()
 
 set(RADIO_DEPENDENCIES ${RADIO_DEPENDENCIES} ${BITMAPS_TARGET})

@@ -140,10 +140,10 @@ const uint8_t CROSSFIRE_PERIODS[] = {
   16,
   4,
   4,
-  4,
-  4,
-  4,
-  4
+  2,
+  2,
+  2,
+  2,
 };
 
 

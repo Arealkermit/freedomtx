@@ -318,12 +318,15 @@ void telemetryInit(uint8_t protocol)
       crsfSpeed.newSpeedRequest = false;
       crsfSpeed.newSpeedValid = false;
       telemetryPortInit(CROSSFIRE_BAUDRATES[crsfSpeed.baudIndex], TELEMETRY_SERIAL_DEFAULT);
+      g_eeGeneral.telemetryBaudrate = crsfSpeed.baudIndex;
       telemetryReset();
       crsfSpeed.lastValidTime = get_tmr10ms();
     }
     else {
-      telemetryPortInit(CROSSFIRE_BAUDRATES[CROSSFIRE_DEFAULT_BAUDRATE_INDEX], TELEMETRY_SERIAL_DEFAULT);
+      g_eeGeneral.telemetryBaudrate = CROSSFIRE_DEFAULT_BAUDRATE_INDEX;
+      telemetryPortInit(CROSSFIRE_BAUDRATES[g_eeGeneral.telemetryBaudrate], TELEMETRY_SERIAL_DEFAULT);
       telemetryReset();
+      crsfSpeed.baudIndex = g_eeGeneral.telemetryBaudrate;
       crsfSpeed.newSpeedValid = true;
     }
 #if defined(LUA)

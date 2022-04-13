@@ -10,6 +10,7 @@ option(INTERNAL_MODULE_PXX2 "Support for PXX2 internal module" OFF)
 endif()
 
 option(CROSSFIRE_TASK "Crossfire task" YES)
+set(EXTERNAL_MODULE YES)
 set(PWR_BUTTON "PRESS" CACHE STRING "Pwr button type (PRESS/SWITCH)")
 set(STICKS "STANDARD" CACHE STRING "Sticks type (STANDARD/HORUS)")
 set(CPU_TYPE STM32F4)
@@ -162,6 +163,10 @@ endif()
 
 if(LCD_DUAL_BUFFER)
   add_definitions(-DLCD_DUAL_BUFFER)
+endif()
+
+if(EXTERNAL_MODULE)
+  add_definitions(-DHARDWARE_EXTERNAL_MODULE)
 endif()
 
 set(STM32LIB_SRC

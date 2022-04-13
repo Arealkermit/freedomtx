@@ -17,6 +17,7 @@ set(LINKER_SCRIPT targets/horus/stm32f4_flash.ld)
 set(RTC_BACKUP_RAM YES)
 set(PPM_LIMITS_SYMETRICAL YES)
 set(USB_SERIAL ON CACHE BOOL "Enable USB serial (CDC)")
+set(EXTERNAL_MODULE YES)
 
 # for size report script
 set(CPU_TYPE_FULL STM32F429xI)
@@ -136,6 +137,10 @@ endif()
 if(INTERNAL_MODULE_MULTI)
   add_definitions(-DHARDWARE_INTERNAL_MODULE)
   add_definitions(-DINTERNAL_MODULE_MULTI)
+endif()
+
+if(EXTERNAL_MODULE)
+  add_definitions(-DHARDWARE_EXTERNAL_MODULE)
 endif()
 
 include_directories(${RADIO_SRC_DIRECTORY}/fonts/480x272 gui/${GUI_DIR} gui/${GUI_DIR}/layouts)

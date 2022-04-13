@@ -141,6 +141,11 @@ constexpr uint8_t MIXER_MAX_PERIOD = 30 /*ms*/;
 
 void execMixerFrequentActions()
 {
+  if (!s_pulses_paused) {
+    DEBUG_TIMER_START(debugTimerTelemetryWakeup);
+    telemetryWakeup();
+    DEBUG_TIMER_STOP(debugTimerTelemetryWakeup);
+  }
 #if defined(SBUS_TRAINER)
   // SBUS trainer
   processSbusInput();
@@ -172,8 +177,20 @@ TASK_FUNCTION(mixerTask)
       execMixerFrequentActions();
       bool interruptedByTimeout = mixerSchedulerWaitForTrigger(MIXER_FREQUENT_ACTIONS_PERIOD);
       if (!interruptedByTimeout) {
+#if defined(CROSSFIRE_TASK) && !defined(SIMU)
+      if (!IS_EXTERNAL_MODULE_ENABLED()) {
+        if (isMixerTaskScheduled()) {
+          clearMixerTaskSchedule();
+          break;
+        }
+      }
+      else {
         break;
       }
+#else
+        break;
+#endif
+      }  
     }
 
 #if defined(DEBUG_MIXER_SCHEDULER)
@@ -196,36 +213,22 @@ TASK_FUNCTION(mixerTask)
     }
 #endif
 
-    uint32_t now = RTOS_GET_MS();
-    uint8_t runMask = 0;
-
-#if defined(CROSSFIRE_TASK) && !defined(SIMU)
-    if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_CROSSFIRE && isMixerTaskScheduled()) {
-      clearMixerTaskSchedule();
-      runMask |= (1 << 1);
-    }
-#endif
-
-    if (now >= nextMixerTime[0]) {
-      runMask |= (1 << 0);
-    }
-
-#if NUM_MODULES >= 2
-    if (now >= nextMixerTime[1]) {
-      runMask |= (1 << 1);
-    }
-#endif
-
-    if (!runMask) {
-      continue;  // go back to sleep
-    }
-
     if (!s_pulses_paused) {
       uint16_t t0 = getTmr2MHz();
 
       DEBUG_TIMER_START(debugTimerMixer);
       RTOS_LOCK_MUTEX(mixerMutex);
       doMixerCalculations();
+
+#if defined(HARDWARE_INTERNAL_MODULE) && defined(HARDWARE_EXTERNAL_MODULE)
+      sendSynchronousPulses((1 << INTERNAL_MODULE) | (1 << EXTERNAL_MODULE));
+#elif defined(HARDWARE_INTERNAL_MODULE)
+      sendSynchronousPulses((1 << INTERNAL_MODULE));
+#elif defined(HARDWARE_EXTERNAL_MODULE)
+      sendSynchronousPulses(1 << EXTERNAL_MODULE);
+#endif
+
+      doMixerPeriodicUpdates();
       DEBUG_TIMER_START(debugTimerMixerCalcToUsage);
       DEBUG_TIMER_SAMPLE(debugTimerMixerIterval);
       RTOS_UNLOCK_MUTEX(mixerMutex);
@@ -245,10 +248,6 @@ TASK_FUNCTION(mixerTask)
       usbJoystickUpdate();
 #endif
 
-      DEBUG_TIMER_START(debugTimerTelemetryWakeup);
-      telemetryWakeup();
-      DEBUG_TIMER_STOP(debugTimerTelemetryWakeup);
-
       if (heartbeat == HEART_WDT_CHECK) {
         WDG_RESET();
         heartbeat = 0;
@@ -258,7 +257,9 @@ TASK_FUNCTION(mixerTask)
       if (t0 > maxMixerDuration)
         maxMixerDuration = t0;
 
-      sendSynchronousPulses(runMask);
+      // TODO:
+      // - check the cause of timeouts when switching
+      //    between protocols with multi-proto RF
     }
   }
 }

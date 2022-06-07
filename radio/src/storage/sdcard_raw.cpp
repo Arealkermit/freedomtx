@@ -280,8 +280,27 @@ const char * loadRadioSettings(const char * path)
     }
 #endif
     TRACE("loadRadioSettings error=%s", error);
+
+#if defined(SD_CONFIG_PROTECT) && !defined(SIMU)
+    uint32_t failedCnt = readBackupReg(BKREG_SD_FAILED_CNT);
+    if (failedCnt != SD_FAILED_CNT_MAX - 1) {
+      TRACE(" *** loadRadioSettings() failed cnt = %d, reset and try again", failedCnt + 1);
+      if (failedCnt > SD_FAILED_CNT_MAX - 1)
+        writeBackupReg(BKREG_SD_FAILED_CNT, SD_FAILED_CNT_DEF + 1);
+      else
+        writeBackupReg(BKREG_SD_FAILED_CNT, failedCnt + 1);
+      delay_ms(88);
+      NVIC_SystemReset();
+      WDG_RESET();
+    }
+#endif
     return error;
   }
+
+#if defined(SD_CONFIG_PROTECT) && !defined(SIMU)
+  TRACE("set sd failed count as default");
+  writeBackupReg(BKREG_SD_FAILED_CNT, SD_FAILED_CNT_DEF);
+#endif
 
   if (version < EEPROM_VER) {
     convertRadioData(version);
@@ -327,6 +346,10 @@ void storageReadAll()
     storageEraseAll(true);
 #if defined(PCBTANGO) || defined(PCBMAMBO)
     bkregSetStatusFlag(STORAGE_ERASE_STATUS);
+#if defined(SD_CONFIG_PROTECT) && !defined(SIMU)
+  TRACE("set sd failed count as default");
+  writeBackupReg(BKREG_SD_FAILED_CNT, SD_FAILED_CNT_DEF);
+#endif
 #endif
   }
 

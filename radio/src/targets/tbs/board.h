@@ -108,6 +108,10 @@ enum {
 
 // SD driver
 #define BLOCK_SIZE                      512 /* Block Size in Bytes */
+#if defined(SD_CONFIG_PROTECT)
+#define SD_FAILED_CNT_DEF   0x00
+#define SD_FAILED_CNT_MAX   0x05
+#endif
 #if !defined(SIMU) || defined(SIMU_DISKIO)
 uint32_t sdIsHC();
 uint32_t sdGetSpeed();
@@ -126,8 +130,7 @@ DRESULT __disk_write(BYTE drv, const BYTE * buff, DWORD sector, UINT count);
 #else
 #define __disk_read                     disk_read
 #define __disk_write                    disk_write
-#define DISK_OPERATION_TIMEOUT          10
-#define SD_MAX_VOLT_TRIAL               ((uint32_t)0x000000FF)
+#define DISK_OPERATION_TIMEOUT          120
 #endif
 
 #if defined(SIMU)

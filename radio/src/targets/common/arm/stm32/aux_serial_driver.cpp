@@ -19,7 +19,12 @@
  */
 
 #include "opentx.h"
+#if defined(RADIO_TANGO) || defined(RADIO_MAMBO)
+#include "targets/tbs/board.h"
+#else
 #include "targets/horus/board.h"
+#endif
+
 
 #if defined(AUX_SERIAL)
 uint8_t auxSerialMode = 0;

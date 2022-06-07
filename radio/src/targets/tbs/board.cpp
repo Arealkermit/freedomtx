@@ -79,6 +79,8 @@ static void chargerInit(void)
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(CHARGER_STATE_GPIO, &GPIO_InitStructure);
+  GPIO_ResetBits(CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN);
+  GPIO_ResetBits(CHARGER_STATE_GPIO, CHARGER_FAULT_GPIO_PIN);
 }
 
 #define PWR_PRESSED_CNT               3
@@ -87,9 +89,9 @@ static void chargerInit(void)
 #define BATT_ADC_SAMPLING_TIME        10
 #define ANIMATION_UPDATE_TIME         50
 #define KEY_PRESS_UPDATE_TIME         10
-#define CHARGING_TO_CHARGED_DELAY     500
+#define CHARGING_TO_CHARGED_DELAY     210000
 #define NUM_OF_KEY_GROUPS             6
-#define FULLY_CHARGED_VOLTAGE         42
+#define FULLY_CHARGED_VOLTAGE_REF     42
 #define USB_UNPLUGGED_TIMEOUT         20
 
 static void runPwrOffCharging(void)
@@ -106,15 +108,12 @@ static void runPwrOffCharging(void)
   GPIO_TypeDef * keysPort[NUM_OF_KEY_GROUPS] = {GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF};
   uint16_t keysPin[NUM_OF_KEY_GROUPS] = {KEYS_GPIOA_PINS, KEYS_GPIOB_PINS, KEYS_GPIOC_PINS, KEYS_GPIOD_PINS, KEYS_GPIOE_PINS, KEYS_GPIOF_PINS};
 #endif
-#if defined(CHARGING_LEDS)
-  bool isLedCharging = false;
-  bool isLedCharged = false;
-#endif
 
   // initialize usb state & voltage adc
   usbPlugged();
   getADC();
   checkBattery();
+  chargerInit();
   WDG_ENABLE(3000);
 
   while (1) {
@@ -164,12 +163,12 @@ static void runPwrOffCharging(void)
         tmrUsbLastPlugged = g_tmr10ms;
 
       // charged
-      if (g_vbat100mV >= FULLY_CHARGED_VOLTAGE && (g_tmr10ms - lastChargingTimestamp) >= CHARGING_TO_CHARGED_DELAY) {
+      if ((!IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged()) || (g_vbat100mV >= FULLY_CHARGED_VOLTAGE_REF && (g_tmr10ms - lastChargingTimestamp) >= CHARGING_TO_CHARGED_DELAY)) {
 #if defined(CHARGING_LEDS)
-        if (isLedCharged == false) {
-          isLedCharged = true;
+        if ((g_tmr10ms % 400) < 200)
           LED_CHARGING_DONE();
-        }
+        else
+          LED_CHARGING_OFF();         
 #endif
         if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
 #if defined(CHARGING_ANIMATION)
@@ -177,18 +176,20 @@ static void runPwrOffCharging(void)
           drawFullyCharged();
           lcdRefresh();
 #endif
-          TRACE("state: charged  vbatt: %.1fV", (float)g_vbat100mV/10);
+          TRACE("charged vbatt: %.1fV, timestamp: %d", (float)g_vbat100mV/10, g_tmr10ms - lastChargingTimestamp);
           tmrWait = g_tmr10ms;
         }
       }
-      else if (g_vbat100mV < FULLY_CHARGED_VOLTAGE) {
+      else {
         // charging
-        lastChargingTimestamp = g_tmr10ms;
-#if defined(CHARGING_LEDS)
-        if (isLedCharging == false) {
-          isLedCharging = true;
-          LED_CHARGING_IN_PROGRESS();
+        if (g_vbat100mV < FULLY_CHARGED_VOLTAGE_REF) {
+          lastChargingTimestamp = g_tmr10ms;
         }
+#if defined(CHARGING_LEDS)
+        if ((g_tmr10ms % 400) < 200)
+          LED_CHARGING_IN_PROGRESS();
+        else
+          LED_CHARGING_OFF();          
 #endif
         if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
 #if defined(CHARGING_ANIMATION)
@@ -196,7 +197,7 @@ static void runPwrOffCharging(void)
           drawChargingState();
           lcdRefresh();
 #endif
-          TRACE("state: charging  vbatt: %.1fV", (float)g_vbat100mV/10);
+          TRACE("charging vbatt: %.1fV, timestamp: %d", (float)g_vbat100mV/10, g_tmr10ms - lastChargingTimestamp);
           tmrWait = g_tmr10ms;
         }
       }
@@ -267,23 +268,33 @@ void boardInit()
 #endif
 
   pwrInit();
-  keysInit();
+  delaysInit();
+   __enable_irq();
+
+#if defined(DEBUG) && defined(AUX_SERIAL_GPIO)
+  auxSerialInit(0, 0); // default serial mode (None if DEBUG not defined)
+#endif
+
+  TRACE("\n%s board started :)", MY_DEVICE_NAME);
+  TRACE("RCC->CSR = %08x\n", RCC->CSR);
+
+  audioInit();
 
   // we need to initialize g_FATFS_Obj here, because it is in .ram section (because of DMA access)
   // and this section is un-initialized
   memset(&g_FATFS_Obj, 0, sizeof(g_FATFS_Obj));
 
+  keysInit();
 #if defined(ROTARY_ENCODER_NAVIGATION)
   rotaryEncoderInit();
 #endif
-  delaysInit();
   adcInit();
+  lcdInit();
 #if defined(PCBMAMBO)
   backlightInit();
   BACKLIGHT_ENABLE();
 #endif
-  lcdInit(); // delaysInit() must be called before
-  audioInit();
+
   init2MhzTimer();
   init5msTimer();
   CRSF_Init();
@@ -292,15 +303,8 @@ void boardInit()
     ledInit();
   #endif
   chargerInit();
-  __enable_irq();
 
   hardwareOptions.pcbrev = crsfGetHWID() & ~HW_ID_MASK;
-
-#if defined(DEBUG) && defined(AUX_SERIAL_GPIO)
-  auxSerialInit(0, 0); // default serial mode (None if DEBUG not defined)
-  TRACE("\n%s board started :)", MY_DEVICE_NAME);
-  TRACE("RCC->CSR = %08x\n", RCC->CSR);
-#endif
 
   if(!isDisableBoardOff() && !WAS_RESET_BY_WATCHDOG()){
     skipCharging = true;
@@ -324,21 +328,18 @@ void boardInit()
   }
 #endif
 
-  if (!UNEXPECTED_SHUTDOWN())
-    sdInit();
-
 #if defined(RTCLOCK) && !defined(COPROCESSOR)
   rtcInit(); // RTC must be initialized before rambackupRestore() is called
 #endif
 
-  if( skipCharging ) {
+  if (skipCharging) {
     runPwrOffCharging();
   }
 }
 
 void boardOff()
 {
-  TRACE("power off\n");
+  TRACE("board off\n");
   
 #if defined(AUDIO_MUTE_GPIO_PIN)
   GPIO_SetBits(AUDIO_MUTE_GPIO, AUDIO_MUTE_GPIO_PIN); // mute
@@ -361,12 +362,9 @@ void boardOff()
     WDG_RESET();
   }
 
+
   lcdOff();
   SysTick->CTRL = 0; // turn off systick
-
-  // immediate software reset to do power off charging
-  if (usbPlugged())
-    NVIC_SystemReset();
 
   pwrOff();
 
@@ -375,6 +373,9 @@ void boardOff()
 
   volatile uint32_t tmr = get_tmr10ms();
   while( get_tmr10ms() - tmr <= 100){
+  // immediate software reset to do power off charging
+  if (usbPlugged())
+    NVIC_SystemReset();
     WDG_RESET();
   }
 

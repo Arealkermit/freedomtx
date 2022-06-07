@@ -49,6 +49,13 @@ RamBackup * ramBackup = (RamBackup *)BKPSRAM_BASE;
 
 void rambackupWrite()
 {
+#if defined(PCBTANGO) || defined(PCBMAMBO)
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+  PWR_BackupRegulatorCmd(ENABLE);
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
+  PWR_BackupAccessCmd(ENABLE);
+  while(PWR_GetFlagStatus(PWR_FLAG_BRR) == RESET);
+#endif
   copyRadioData(&ramBackupUncompressed.radio, &g_eeGeneral);
   copyModelData(&ramBackupUncompressed.model, &g_model);
   ramBackup->size = compress(ramBackup->data, sizeof(ramBackup->data), (const uint8_t *)&ramBackupUncompressed, sizeof(ramBackupUncompressed));

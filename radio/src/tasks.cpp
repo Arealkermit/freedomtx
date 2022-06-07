@@ -292,7 +292,6 @@ bool perMainEnabled = true;
 TASK_FUNCTION(menusTask)
 {
   opentxInit();
-
 #if defined(PWR_BUTTON_PRESS)
   while (true) {
     uint32_t pwr_check = pwrCheck();

@@ -767,6 +767,9 @@ void checkBacklight()
 
 void resetBacklightTimeout()
 {
+  if (!g_eeGeneral.lightAutoOff)
+    g_eeGeneral.lightAutoOff = 100;
+
   lightOffCounter = ((uint16_t)g_eeGeneral.lightAutoOff*250) << 1;
 }
 

@@ -395,6 +395,27 @@ void sportSendBuffer(const uint8_t * buffer, uint32_t count)
 {
 }
 
+void sportSendByte(uint8_t byte)
+{
+
+}
+
+void telemetryClearFifo()
+{
+
+}
+
+void telemetryPortSetDirectionInput()
+{
+
+}
+
+void telemetryPortInvertedInit(uint32_t baudrate)
+{
+
+}
+
+
 bool telemetryGetByte(uint8_t * byte)
 {
   bool res = telemetryFifo.pop(*byte);

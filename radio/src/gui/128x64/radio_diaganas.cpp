@@ -39,10 +39,6 @@ void menuRadioDiagAnalogs(event_t event)
 
   for (uint8_t i=0; i<NUM_STICKS+NUM_POTS+NUM_SLIDERS; i++) {
     uint8_t x;
-#if defined(PCBMAMBO)
-    x = INDENT_WIDTH;
-    y += FH;
-#else
     if (i & 1) {
       x = LCD_W/2 + INDENT_WIDTH;
     }
@@ -50,17 +46,10 @@ void menuRadioDiagAnalogs(event_t event)
       x = INDENT_WIDTH;
       y += FH;
     }
-#endif
     drawStringWithIndex(x, y, "A", i+1);
     lcdDrawChar(lcdNextPos, y, ':');
     lcdDrawHexNumber(x+3*FW-1, y, anaIn(i));
-#if defined(PCBMAMBO) && defined(JITTER_MEASURE)
-    lcdDrawNumber(x+10*FW-1, y, rawJitter[i].get(), RIGHT);
-    lcdDrawNumber(x+10*FW-1+20, y, avgJitter[i].get(), RIGHT);
-    lcdDrawNumber(x+10*FW-1+40, y, (int16_t) calibratedAnalogs[CONVERT_MODE(i)] * 25 / 256, RIGHT);
-#else
     lcdDrawNumber(x+10*FW-1, y, (int16_t)calibratedAnalogs[CONVERT_MODE(i)]*25/256, RIGHT);
-#endif
   }
 
 #if defined(GYRO)

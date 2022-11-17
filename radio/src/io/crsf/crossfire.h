@@ -59,29 +59,29 @@ typedef enum {
 } CRSF_FLAG_INDEX;
 
 #define get_task_flag(i)    crossfireSharedData.taskFlag[i]
-#define get_crsf_flag(i)    (crossfireSharedData.crsfFlag & ( 1UL << i ) ? true : false )
-#define set_crsf_flag(i)    (crossfireSharedData.crsfFlag |= ( 1UL << i ))
-#define clear_crsf_flag(i)  (crossfireSharedData.crsfFlag &= ~( 1UL << i ))
+#define getCrsfFlag(i)      (crossfireSharedData.crsfFlag & ( 1UL << i ) ? true : false )
+#define setCrsfFlag(i)      (crossfireSharedData.crsfFlag |= ( 1UL << i ))
+#define clearCrsfFlag(i)    (crossfireSharedData.crsfFlag &= ~( 1UL << i ))
 
 typedef enum {
   BKREG_PREPARE_FWUPDATE = 0x0,
   BKREG_HW_ID,
   BKREG_SKIP_BOARD_OFF,
   BKREG_SERIAL_NO,
-  BKREG_HW_ID_FREEDOMTX,
+  BKREG_HW_ID_RADIO,
   BKREG_HW_ID_XF,
-  BKREG_SERIAL_NO_FREEDOMTX,
+  BKREG_SERIAL_NO_RADIO,
   BKREG_SERIAL_NO_XF,
   BKREG_STATUS_FLAG,
   BKREG_DEFAULT_WORD,
   BKREG_TEMP_BUFFER_ADDR,
-  BKREG_SD_FAILED_CNT,
   BKREG_INDEX_COUNT
 } BKREG_INDEX;
 
 typedef enum {
   DEVICE_RESTART_WITHOUT_WARN_FLAG = 0x0,
   STORAGE_ERASE_STATUS,
+  CRSF_SET_MODEL_ID_PENDING,
   BKREG_STATUS_FLAG_COUNT,
 } BKREG_STATUS_FLAG_INDEX;
 
@@ -134,26 +134,26 @@ struct CrossfireSharedData {
 #ifdef CRSF_ENABLE_SD_DEBUG
 #define CRSF_SD_PRINTF  TRACE_NOCRLF
 #else
-#define CRSF_SD_PRINTF( ... )
+#define CRSF_SD_PRINTF(...)
 #endif
 
 extern bool set_model_id_needed;
-extern uint8_t current_crsf_model_id;
-void crsfRemoteRelatedHandler( uint8_t *p_arr );
+extern uint8_t currentCrsfModelId;
+void crsfRemoteRelatedHandler(uint8_t * p_arr);
 #endif
 
 typedef struct CrossfireSharedData CrossfireSharedData_t;
 #define crossfireSharedData (*((CrossfireSharedData_t*)SHARED_MEMORY_ADDRESS))
 
-#define isMixerTaskScheduled()     (crossfireSharedData.mixer_schedule)
+#define isMixerTaskScheduled()    (crossfireSharedData.mixer_schedule)
 #define clearMixerTaskSchedule()  {crossfireSharedData.mixer_schedule = 0;}
-void CRSF_Init( void );
-void crsfSharedFifoHandler( void );
+void crsfInit(void);
+void crsfSharedFifoHandler(void);
 void crsfSetModelID(void);
 void crsfGetModelID(void);
 uint32_t crsfGetHWID(void);
-void UpdateCrossfireChannels( void );
-void CRSF_to_Shared_FIFO( uint8_t *p_arr );
-void CRSF_This_Device( uint8_t *p_arr );
+void updateIntCrossfireChannels(void);
+void crsfToSharedFIFO(uint8_t * p_arr);
+void crsfThisDevice(uint8_t * p_arr);
 
 #endif // _CROSSFIRE_H_

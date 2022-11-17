@@ -52,6 +52,18 @@ void auxSerialPowerOff()
   GPIO_ResetBits(AUX_SERIAL_PWR_GPIO, AUX_SERIAL_PWR_GPIO_PIN);
 }
 #endif
+#if defined(AUX2_SERIAL_PWR_GPIO)
+void aux2SerialPowerOn()
+{
+  GPIO_SetBits(AUX2_SERIAL_PWR_GPIO, AUX2_SERIAL_PWR_GPIO_PIN);
+}
+
+void aux2SerialPowerOff()
+{
+  GPIO_ResetBits(AUX2_SERIAL_PWR_GPIO, AUX2_SERIAL_PWR_GPIO_PIN);
+}
+#endif
+
 
 #if HAS_SPORT_UPDATE_CONNECTOR()
 void sportUpdateInit()
@@ -91,11 +103,13 @@ void boardInit()
                          LED_RCC_AHB1Periph |
                          LCD_RCC_AHB1Periph |
                          BACKLIGHT_RCC_AHB1Periph |
+                         KEYS_BACKLIGHT_RCC_AHB1Periph |
                          SD_RCC_AHB1Periph |
                          AUDIO_RCC_AHB1Periph |
                          KEYS_RCC_AHB1Periph |
                          ADC_RCC_AHB1Periph |
                          AUX_SERIAL_RCC_AHB1Periph |
+                         AUX2_SERIAL_RCC_AHB1Periph |
                          TELEMETRY_RCC_AHB1Periph |
                          TRAINER_RCC_AHB1Periph |
                          BT_RCC_AHB1Periph |
@@ -103,9 +117,11 @@ void boardInit()
                          HAPTIC_RCC_AHB1Periph |
                          INTMODULE_RCC_AHB1Periph |
                          EXTMODULE_RCC_AHB1Periph |
-                         I2C_TOUCH_RCC_AHB1Periph |
+                         I2C_RCC_AHB1Periph |
                          GPS_RCC_AHB1Periph |
-                         SPORT_UPDATE_RCC_AHB1Periph,
+                         SPORT_UPDATE_RCC_AHB1Periph |
+                         TOUCH_INT_RCC_AHB1Periph |
+                         TOUCH_RST_RCC_AHB1Periph,
                          ENABLE);
 
   RCC_APB1PeriphClockCmd(ROTARY_ENCODER_RCC_APB1Periph |
@@ -114,13 +130,14 @@ void boardInit()
                          TIMER_2MHz_RCC_APB1Periph |
                          AUDIO_RCC_APB1Periph |
                          AUX_SERIAL_RCC_APB1Periph |
+                         AUX2_SERIAL_RCC_APB1Periph |
                          TELEMETRY_RCC_APB1Periph |
                          TRAINER_RCC_APB1Periph |
                          AUDIO_RCC_APB1Periph |
                          INTMODULE_RCC_APB1Periph |
                          EXTMODULE_RCC_APB1Periph |
+                         I2C_RCC_APB1Periph |
                          MIXER_SCHEDULER_TIMER_RCC_APB1Periph |
-                         I2C_TOUCH_RCC_APB1Periph |
                          GPS_RCC_APB1Periph |
                          BACKLIGHT_RCC_APB1Periph,
                          ENABLE);
@@ -134,8 +151,19 @@ void boardInit()
                          TELEMETRY_RCC_APB2Periph |
                          BT_RCC_APB2Periph |
                          AUX_SERIAL_RCC_APB2Periph |
+                         AUX2_SERIAL_RCC_APB2Periph |
+                         GPS_RCC_APB2Periph |
                          BACKLIGHT_RCC_APB2Periph,
                          ENABLE);
+
+#if defined(RADIO_TX16S)
+  if (FLASH_OB_GetBOR() != OB_BOR_LEVEL3) {
+    FLASH_OB_Unlock();
+    FLASH_OB_BORConfig(OB_BOR_LEVEL3);
+    FLASH_OB_Launch();
+    FLASH_OB_Lock();
+  }
+#endif
 
   pwrInit();
   pwrOn();
@@ -145,6 +173,9 @@ void boardInit()
 
 #if defined(DEBUG) && defined(AUX_SERIAL)
   auxSerialInit(UART_MODE_DEBUG, 0); // default serial mode (None if DEBUG not defined)
+#endif
+#if defined(DEBUG) && defined(AUX2_SERIAL)
+  aux2SerialInit(UART_MODE_DEBUG, 0); // default serial mode (None if DEBUG not defined)
 #endif
 
   TRACE("\nHorus board started :)");
@@ -189,6 +220,10 @@ void boardInit()
 #endif
 
   ledInit();
+
+#if defined(USB_CHARGER)
+  usbChargerInit();
+#endif
 
 #if HAS_SPORT_UPDATE_CONNECTOR()
   sportUpdateInit();
@@ -236,8 +271,14 @@ void boardOff()
   pwrOff();
 }
 
+#if defined (RADIO_TX16S)
+  #define BATTERY_DIVIDER 1495
+#else
+  #define BATTERY_DIVIDER 1629
+#endif
+
 uint16_t getBatteryVoltage()
 {
   int32_t instant_vbat = anaIn(TX_VOLTAGE);  // using filtered ADC value on purpose
-  return (uint16_t)((instant_vbat * (1000 + g_eeGeneral.txVoltageCalibration)) / 1629);
+  return (uint16_t)((instant_vbat * (1000 + g_eeGeneral.txVoltageCalibration)) / BATTERY_DIVIDER);
 }

@@ -20,6 +20,7 @@
 
 #include "opentx.h"
 #include "multi.h"
+#include "pulses/afhds3.h"
 #include "mixer_scheduler.h"
 
 uint8_t telemetryStreaming = 0;
@@ -36,11 +37,41 @@ uint8_t telemetryProtocol = 255;
 uint8_t serialInversion = 0;
 #endif
 
+#if defined(INTERNAL_MODULE_SERIAL_TELEMETRY)
+uint8_t intTelemetryRxBuffer[TELEMETRY_RX_PACKET_SIZE];
+uint8_t intTelemetryRxBufferCount;
+#endif
+
+uint8_t * getTelemetryRxBuffer(uint8_t moduleIdx)
+{
+#if defined(INTERNAL_MODULE_SERIAL_TELEMETRY)
+  if (moduleIdx == INTERNAL_MODULE)
+    return intTelemetryRxBuffer;
+#endif
+  return telemetryRxBuffer;
+}
+
+uint8_t &getTelemetryRxBufferCount(uint8_t moduleIdx)
+{
+#if defined(INTERNAL_MODULE_SERIAL_TELEMETRY)
+  if (moduleIdx == INTERNAL_MODULE)
+    return intTelemetryRxBufferCount;
+#endif
+  return telemetryRxBufferCount;
+}
+
 void processTelemetryData(uint8_t data)
 {
 #if defined(CROSSFIRE)
   if (telemetryProtocol == PROTOCOL_TELEMETRY_CROSSFIRE) {
-    processCrossfireTelemetryData(data);
+    processCrossfireTelemetryData(data, EXTERNAL_MODULE);
+    return;
+  }
+#endif
+
+#if defined(GHOST)
+  if (telemetryProtocol == PROTOCOL_TELEMETRY_GHOST) {
+    processGhostTelemetryData(data);
     return;
   }
 #endif
@@ -60,11 +91,13 @@ void processTelemetryData(uint8_t data)
   }
 #endif
 
-#if defined(PCBTANGO)
-  if (IS_PCBREV_01() || !IS_EXTERNAL_MODULE_ENABLED()) return;
-#elif defined(PCBMAMBO)
-  if (!IS_EXTERNAL_MODULE_ENABLED()) return;
+#if defined(AFHDS3)
+  if (telemetryProtocol == PROTOCOL_TELEMETRY_AFHDS3) {
+    afhds3::processTelemetryData(EXTERNAL_MODULE, data, telemetryRxBuffer, telemetryRxBufferCount, TELEMETRY_RX_PACKET_SIZE);
+    return;
+  }
 #endif
+
   processFrskyTelemetryData(data);
 }
 
@@ -82,24 +115,80 @@ inline bool isBadAntennaDetected()
   return false;
 }
 
+#if defined(INTERNAL_MODULE_PXX2)
+static void pollIntPXX2()
+{
+  uint8_t frame[PXX2_FRAME_MAXLENGTH];
+
+  while (intmoduleFifo.getFrame(frame)) {
+    processPXX2Frame(INTERNAL_MODULE, frame);
+  }
+}
+#endif
+
+#if defined(PXX2) && defined(EXTMODULE_USART)
+static void pollExtPXX2()
+{
+  uint8_t frame[PXX2_FRAME_MAXLENGTH];
+
+  while (extmoduleFifo.getFrame(frame)) {
+    processPXX2Frame(EXTERNAL_MODULE, frame);
+  }
+}
+#endif
+
+#if !defined(PCBSKY9X)
+static inline void pollIntTelemetry(void (*processData)(uint8_t,uint8_t))
+{
+  uint8_t data;
+  if (intmoduleFifo.pop(data)) {
+    LOG_TELEMETRY_WRITE_START();
+    do {
+      processData(data, INTERNAL_MODULE);
+      LOG_TELEMETRY_WRITE_BYTE(data);
+    } while (intmoduleFifo.pop(data));
+  }
+}
+#endif
+
+#if defined(INTERNAL_MODULE_MULTI)
+static void pollIntMulti()
+{
+  pollIntTelemetry(processMultiTelemetryData);
+}
+#endif
+
+#if defined(INTERNAL_MODULE_ELRS)
+static void pollIntELRS()
+{
+  pollIntTelemetry(processCrossfireTelemetryData);
+}
+#endif
+
+#if !defined(PCBSKY9X)
+static void pollExtTelemetry()
+{
+  uint8_t data;
+  if (telemetryGetByte(&data)) {
+    LOG_TELEMETRY_WRITE_START();
+    do {
+      processTelemetryData(data);
+      LOG_TELEMETRY_WRITE_BYTE(data);
+    } while (telemetryGetByte(&data));
+  }
+#if defined(PXX2) && defined(EXTMODULE_USART)
+  if (isModulePXX2(EXTERNAL_MODULE)) {
+    pollExtPXX2();
+  }
+#endif
+}
+#endif
+
 void telemetryWakeup()
 {
-  uint8_t requiredTelemetryProtocol;
-#if defined(PCBTANGO)
-  if (IS_PCBREV_01() || !IS_EXTERNAL_MODULE_ENABLED())
-    requiredTelemetryProtocol = PROTOCOL_TELEMETRY_CROSSFIRE;
-  else {
-    requiredTelemetryProtocol = modelTelemetryProtocol();
-  }
-#elif defined(PCBMAMBO)
-  if (IS_EXTERNAL_MODULE_ENABLED())
-    requiredTelemetryProtocol = modelTelemetryProtocol();
-  else
-    requiredTelemetryProtocol = PROTOCOL_TELEMETRY_CROSSFIRE;
-#else
-  requiredTelemetryProtocol = modelTelemetryProtocol();
-#endif
+  uint8_t requiredTelemetryProtocol = modelTelemetryProtocol();
   uint8_t data;
+
 #if defined(REVX)
   uint8_t requiredSerialInversion = g_model.moduleData[EXTERNAL_MODULE].invertedSerial;
   if (telemetryProtocol != requiredTelemetryProtocol || serialInversion != requiredSerialInversion) {
@@ -112,41 +201,38 @@ void telemetryWakeup()
   }
 #endif
 
-#if defined(INTERNAL_MODULE_PXX2) || defined(EXTMODULE_USART)
-  uint8_t frame[PXX2_FRAME_MAXLENGTH];
-
-  #if defined(INTERNAL_MODULE_PXX2)
-  while (intmoduleFifo.getFrame(frame)) {
-    processPXX2Frame(INTERNAL_MODULE, frame);
+  // Poll internal modules
+#if defined(INTERNAL_MODULE_PXX2)
+  if (isModuleISRM(INTERNAL_MODULE)) {
+    pollIntPXX2();
   }
-  #endif
-
-  #if defined(EXTMODULE_USART)
-  while (extmoduleFifo.getFrame(frame)) {
-    processPXX2Frame(EXTERNAL_MODULE, frame);
-  }
-  #endif
 #endif
 
 #if defined(INTERNAL_MODULE_MULTI)
-  if (intmoduleFifo.pop(data)) {
-    LOG_TELEMETRY_WRITE_START();
-    do {
-      processMultiTelemetryData(data, INTERNAL_MODULE);
-      LOG_TELEMETRY_WRITE_BYTE(data);
-    } while (intmoduleFifo.pop(data));
+  if (isModuleMultimodule(INTERNAL_MODULE)) {
+    pollIntMulti();
   }
 #endif
 
-#if defined(STM32)
-  if (telemetryGetByte(&data)) {
-    LOG_TELEMETRY_WRITE_START();
-    do {
-      processTelemetryData(data);
-      LOG_TELEMETRY_WRITE_BYTE(data);
-    } while (telemetryGetByte(&data));
+#if defined(INTERNAL_MODULE_ELRS)
+  if (isModuleCrossfire(INTERNAL_MODULE)) {
+    pollIntELRS();
   }
-#elif defined(PCBSKY9X)
+#endif
+  
+#if defined(INTERNAL_MODULE_CRSF) && !defined(SIMU)
+  if (IS_INTERNAL_MODULE_ENABLED()) {
+    if (intCrsfTelemetryFifo.pop(data)) {
+      LOG_TELEMETRY_WRITE_START();
+      do {
+        processCrossfireTelemetryData(data, INTERNAL_MODULE);
+        LOG_TELEMETRY_WRITE_BYTE(data);
+      } while (intCrsfTelemetryFifo.pop(data));
+    }
+  }
+#endif
+
+#if defined(PCBSKY9X)
   if (telemetryProtocol == PROTOCOL_TELEMETRY_FRSKY_D_SECONDARY) {
     while (telemetrySecondPortReceive(data)) {
       processTelemetryData(data);
@@ -156,8 +242,11 @@ void telemetryWakeup()
     // Receive serial data here
     rxPdcUsart(processTelemetryData);
   }
+#else
+  // Poll external / S.PORT telemetry
+  // TODO: how to switch this OFF ???
+  pollExtTelemetry();
 #endif
-
   for (int i=0; i<MAX_TELEMETRY_SENSORS; i++) {
     const TelemetrySensor & sensor = g_model.telemetrySensors[i];
     if (sensor.type == TELEM_TYPE_CALCULATED) {
@@ -220,6 +309,11 @@ void telemetryWakeup()
       if (TELEMETRY_STREAMING()) {
         if (telemetryState == TELEMETRY_KO) {
           AUDIO_TELEMETRY_BACK();
+#if defined(CROSSFIRE)
+          if (isModuleCrossfire(EXTERNAL_MODULE)) {
+            moduleState[EXTERNAL_MODULE].counter = CRSF_FRAME_MODELID;
+          }
+#endif
         }
         telemetryState = TELEMETRY_OK;
       }
@@ -232,16 +326,16 @@ void telemetryWakeup()
     }
   }
   if (telemetryProtocol == PROTOCOL_TELEMETRY_CROSSFIRE) {
-    if (isCrossfireInHighSpeed(EXTERNAL_MODULE) && (get_tmr10ms() - crsfSpeed.lastValidTime) > 200) {
-      if (crsfSpeed.newSpeedValid == false) {
-        if (crsfSpeed.baudIndex != CROSSFIRE_DEFAULT_BAUDRATE_INDEX) {
-          crsfSpeed.invalidFlags |= 1 << crsfSpeed.baudIndex;
+    if (isCrossfireInHighSpeed(EXTERNAL_MODULE) && (get_tmr10ms() - crsfFrameStatus.lastValidTime) > 200) {
+      if (crsfFrameStatus.newSpeedValid == false) {
+        if (crsfFrameStatus.baudIndex != CROSSFIRE_DEFAULT_BAUDRATE_INDEX) {
+          crsfFrameStatus.invalidFlags |= 1 << crsfFrameStatus.baudIndex;
         }
       }
       telemetryProtocol = 0xFF;   //switch to new baud rate failed, turn back to default speed
     }
-    else if (crsfSpeed.newSpeedValid == false)
-      crsfSpeed.newSpeedValid = true;
+    else if (crsfFrameStatus.newSpeedValid == false)
+      crsfFrameStatus.newSpeedValid = true;
   }
 }
 
@@ -290,6 +384,11 @@ void telemetryInit(uint8_t protocol)
 {
   telemetryProtocol = protocol;
 
+#if defined(TRAINER_SPORT_SBUS)
+  if (g_model.trainerData.mode == TRAINER_MODE_MASTER_SBUS_SPORT)
+    return;
+#endif
+
   if (protocol == PROTOCOL_TELEMETRY_FRSKY_D) {
     telemetryPortInit(FRSKY_D_BAUDRATE, TELEMETRY_SERIAL_DEFAULT);
   }
@@ -299,12 +398,9 @@ void telemetryInit(uint8_t protocol)
     // The DIY Multi module always speaks 100000 baud regardless of the telemetry protocol in use
     telemetryPortInit(MULTIMODULE_BAUDRATE, TELEMETRY_SERIAL_8E2);
 #if defined(LUA)
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-    if (!IS_EXTERNAL_MODULE_ENABLED())
-      outputTelemetryBufferTrigger = 0;
-#endif
     outputTelemetryBuffer.reset();
 #endif
+    telemetryPortSetDirectionInput();
   }
   else if (protocol == PROTOCOL_TELEMETRY_SPEKTRUM) {
     // Spektrum's own small race RX (SPM4648) uses 125000 8N1, use the same since there is no real standard
@@ -314,26 +410,32 @@ void telemetryInit(uint8_t protocol)
 
 #if defined(CROSSFIRE)
   else if (protocol == PROTOCOL_TELEMETRY_CROSSFIRE) {
-    if (crsfSpeed.newSpeedRequest == true) {
-      crsfSpeed.newSpeedRequest = false;
-      crsfSpeed.newSpeedValid = false;
-      telemetryPortInit(CROSSFIRE_BAUDRATES[crsfSpeed.baudIndex], TELEMETRY_SERIAL_DEFAULT);
-      g_eeGeneral.telemetryBaudrate = crsfSpeed.baudIndex;
+    if (crsfFrameStatus.newSpeedRequest == true) {
+      crsfFrameStatus.newSpeedRequest = false;
+      crsfFrameStatus.newSpeedValid = false;
+      telemetryPortInit(CROSSFIRE_BAUDRATES[crsfFrameStatus.baudIndex], TELEMETRY_SERIAL_DEFAULT);
+      g_eeGeneral.telemetryBaudrate = crsfFrameStatus.baudIndex;
       telemetryReset();
-      crsfSpeed.lastValidTime = get_tmr10ms();
+      crsfFrameStatus.lastValidTime = get_tmr10ms();
     }
     else {
       g_eeGeneral.telemetryBaudrate = CROSSFIRE_DEFAULT_BAUDRATE_INDEX;
       telemetryPortInit(CROSSFIRE_BAUDRATES[g_eeGeneral.telemetryBaudrate], TELEMETRY_SERIAL_DEFAULT);
       telemetryReset();
-      crsfSpeed.baudIndex = g_eeGeneral.telemetryBaudrate;
-      crsfSpeed.newSpeedValid = true;
+      crsfFrameStatus.baudIndex = g_eeGeneral.telemetryBaudrate;
+      crsfFrameStatus.newSpeedValid = true;
     }
 #if defined(LUA)
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-    if (!IS_EXTERNAL_MODULE_ENABLED())
-      outputTelemetryBufferTrigger = 0;
+    outputTelemetryBuffer.reset();
 #endif
+    telemetryPortSetDirectionOutput();
+  }
+#endif
+
+#if defined(GHOST)
+  else if (protocol == PROTOCOL_TELEMETRY_GHOST) {
+    telemetryPortInit(GHOST_BAUDRATE, TELEMETRY_SERIAL_DEFAULT);
+#if defined(LUA)
     outputTelemetryBuffer.reset();
 #endif
     telemetryPortSetDirectionOutput();
@@ -347,13 +449,16 @@ void telemetryInit(uint8_t protocol)
   }
 #endif
 
+#if defined(AFHDS3)
+  else if (protocol == PROTOCOL_TELEMETRY_AFHDS3) {
+    telemetryPortInvertedInit(AFHDS3_BAUDRATE);
+    telemetryPortSetDirectionInput();
+  }
+#endif
+
   else {
     telemetryPortInit(FRSKY_SPORT_BAUDRATE, TELEMETRY_SERIAL_WITHOUT_DMA);
 #if defined(LUA)
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-    if (!IS_EXTERNAL_MODULE_ENABLED())
-      outputTelemetryBufferTrigger = 0;
-#endif
     outputTelemetryBuffer.reset();
 #endif
   }
@@ -389,33 +494,30 @@ void logTelemetryWriteByte(uint8_t data)
 }
 #endif
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_FAMILY_TBS)
 uint8_t outputTelemetryBufferTrigger = 0;
 #endif
 
 OutputTelemetryBuffer outputTelemetryBuffer __DMA;
+
 #if defined(LUA)
 Fifo<uint8_t, LUA_TELEMETRY_INPUT_FIFO_SIZE> * luaInputTelemetryFifo = NULL;
 #endif
 
 #if defined(HARDWARE_INTERNAL_MODULE)
-
 static ModuleSyncStatus moduleSyncStatus[NUM_MODULES];
 
 ModuleSyncStatus &getModuleSyncStatus(uint8_t moduleIdx)
 {
   return moduleSyncStatus[moduleIdx];
 }
-
 #else
-
 static ModuleSyncStatus moduleSyncStatus;
 
 ModuleSyncStatus &getModuleSyncStatus(uint8_t moduleIdx)
 {
   return moduleSyncStatus;
 }
-
 #endif
 
 ModuleSyncStatus::ModuleSyncStatus()
@@ -423,7 +525,7 @@ ModuleSyncStatus::ModuleSyncStatus()
   memset(this, 0, sizeof(ModuleSyncStatus));
 }
 
-void ModuleSyncStatus::update(uint16_t newRefreshRate, uint16_t newInputLag)
+void ModuleSyncStatus::update(uint16_t newRefreshRate, int16_t newInputLag)
 {
   if (!newRefreshRate)
     return;
@@ -437,11 +539,13 @@ void ModuleSyncStatus::update(uint16_t newRefreshRate, uint16_t newInputLag)
   inputLag    = newInputLag;
   currentLag  = newInputLag;
   lastUpdate  = get_tmr10ms();
+
+  //TRACE("[SYNC] update rate = %dus; lag = %dus",refreshRate,currentLag);
 }
 
 uint16_t ModuleSyncStatus::getAdjustedRefreshRate()
 {
-  int16_t lag = currentLag - SAFE_SYNC_LAG;
+  int16_t lag = currentLag;
   int32_t newRefreshRate = refreshRate;
 
   if (lag == 0) {
@@ -457,9 +561,9 @@ uint16_t ModuleSyncStatus::getAdjustedRefreshRate()
     newRefreshRate = MAX_REFRESH_RATE;
   }
 
-  TRACE("[SYNC] rate = %dus",newRefreshRate);
-
   currentLag -= newRefreshRate - refreshRate;
+  //TRACE("[SYNC] mod rate = %dus; lag = %dus",newRefreshRate,currentLag);
+
   return (uint16_t)newRefreshRate;
 }
 
@@ -472,13 +576,12 @@ void ModuleSyncStatus::getRefreshString(char * statusText)
   char * tmp = statusText;
 #if defined(DEBUG)
   *tmp++ = 'L';
-  tmp = strAppendUnsigned(tmp, inputLag, 5);
-  tmp = strAppend(tmp, "us R ");
-  tmp = strAppendUnsigned(tmp, (uint32_t) (refreshRate / 1000), 5);
-  tmp = strAppend(tmp, "us");
+  tmp = strAppendSigned(tmp, inputLag, 5);
+  tmp = strAppend(tmp, "R");
+  tmp = strAppendUnsigned(tmp, refreshRate, 5);
 #else
-  tmp = strAppend(tmp, "Sync at ");
-  tmp = strAppendUnsigned(tmp, (uint32_t) (refreshRate / 1000000));
-  tmp = strAppend(tmp, " ms");
+  tmp = strAppend(tmp, "Sync ");
+  tmp = strAppendUnsigned(tmp, refreshRate);
 #endif
+  tmp = strAppend(tmp, "us");
 }

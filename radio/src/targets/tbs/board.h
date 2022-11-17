@@ -18,8 +18,7 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _BOARD_H_
-#define _BOARD_H_
+#pragma once
 
 #include <inttypes.h>
 #include "definitions.h"
@@ -34,7 +33,6 @@ void rotaryEncoderInit();
 void rotaryEncoderCheck();
 #endif
 
-
 #if !defined(LUA_EXPORT_GENERATION)
 #include "STM32F4xx_DSP_StdPeriph_Lib_V1.4.0/Libraries/STM32F4xx_StdPeriph_Driver/inc/stm32f4xx_sdio.h"
 #include "STM32F4xx_DSP_StdPeriph_Lib_V1.4.0/Libraries/STM32F4xx_StdPeriph_Driver/inc/stm32f4xx_dma2d.h"
@@ -42,9 +40,9 @@ void rotaryEncoderCheck();
 #include "STM32F4xx_DSP_StdPeriph_Lib_V1.4.0/Libraries/STM32F4xx_StdPeriph_Driver/inc/stm32f4xx_fmc.h"
 #endif
 
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 #define MY_DEVICE_NAME                  "Tango II"
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
 #define MY_DEVICE_NAME                  "Mambo"
 #endif
 #define FLASHSIZE                       0xC0000
@@ -60,14 +58,14 @@ void rotaryEncoderCheck();
 
 #if defined(PCBTANGO)
 #define MODEL_DATA_SIZE_130             6253
-#define MODEL_DATA_SIZE_131             6155
+#define MODEL_DATA_SIZE_137             6155
 #define RADIO_DATA_SIZE_130             721
-#define RADIO_DATA_SIZE_131             847
+#define RADIO_DATA_SIZE_137             846
 #elif defined(PCBMAMBO)
 #define MODEL_DATA_SIZE_130             6255
-#define MODEL_DATA_SIZE_131             6157
+#define MODEL_DATA_SIZE_137             6157
 #define RADIO_DATA_SIZE_130             739
-#define RADIO_DATA_SIZE_131             865
+#define RADIO_DATA_SIZE_137             864
 #endif
 
 #define TIMER_MULT_APB1                 2
@@ -79,6 +77,11 @@ void rotaryEncoderCheck();
 #endif
 
 extern uint16_t sessionTimer;
+#if defined(RADIO_TANGO)
+static const uint8_t switchPosition[][2] = {{0,0}, {0,1}, {1,0}, {1,1}, {1,2}, {0,2}};
+#elif defined(RADIO_MAMBO)
+static const uint8_t switchPosition[][2] = {{0,1}, {0,0}, {1,0}, {1,1}, {0,2}, {1,2}};
+#endif
 
 // Board driver
 void boardInit();
@@ -91,14 +94,14 @@ void init5msTimer();
 void check_telemetry_exti();
 
 // PCBREV driver
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 enum {
   PCBREV_Tango2_Unknown = 0,
   PCBREV_Tango2_V1,
   PCBREV_Tango2_V2,
   PCBREV_Tango2_V3,
 };
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
 enum {
   PCBREV_Mambo_Unknown = 0,
   PCBREV_Mambo_V1,
@@ -108,10 +111,6 @@ enum {
 
 // SD driver
 #define BLOCK_SIZE                      512 /* Block Size in Bytes */
-#if defined(SD_CONFIG_PROTECT)
-#define SD_FAILED_CNT_DEF   0x00
-#define SD_FAILED_CNT_MAX   0x05
-#endif
 #if !defined(SIMU) || defined(SIMU_DISKIO)
 uint32_t sdIsHC();
 uint32_t sdGetSpeed();
@@ -130,7 +129,7 @@ DRESULT __disk_write(BYTE drv, const BYTE * buff, DWORD sector, UINT count);
 #else
 #define __disk_read                     disk_read
 #define __disk_write                    disk_write
-#define DISK_OPERATION_TIMEOUT          120
+#define DISK_OPERATION_TIMEOUT          10
 #endif
 
 #if defined(SIMU)
@@ -157,7 +156,19 @@ void flashWrite(uint32_t * address, const uint32_t * buffer);
 uint32_t isFirmwareStart(const uint8_t * buffer);
 uint32_t isBootloaderStart(const uint8_t * buffer);
 
-#define IS_INTERNAL_MODULE_ON()         false
+#define INTERNAL_MODULE_OFF()           crossfireTurnOffRf(false)
+#if defined(SIMU)
+#define IS_INTERNAL_MODULE_ON()         (false)
+#else
+#define IS_INTERNAL_MODULE_ON()         (isCrossfireRfOn())
+#endif
+
+#define intmoduleSendNextFrame()
+#define HAS_SPORT_UPDATE_CONNECTOR()    (false)
+#define SPORT_UPDATE_POWER_ON()
+#define SPORT_UPDATE_POWER_OFF()
+#define SPORT_UPDATE_POWER_INIT()
+#define IS_SPORT_UPDATE_POWER_ON()      (false)
 
 // Keys driver
 enum EnumKeys
@@ -234,7 +245,7 @@ enum EnumSwitchesPositions
   SW_SF2,
 };
 
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 #define NUM_SWITCHES                    6
 #define STORAGE_NUM_SWITCHES            NUM_SWITCHES
 #define DEFAULT_SWITCH_CONFIG           (SWITCH_TOGGLE << 10) + (SWITCH_TOGGLE << 8) + (SWITCH_2POS << 6) + (SWITCH_3POS << 4) + (SWITCH_3POS << 2) + (SWITCH_2POS << 0)
@@ -242,13 +253,13 @@ enum EnumSwitchesPositions
 #define STORAGE_NUM_SWITCHES_POSITIONS  (STORAGE_NUM_SWITCHES * 3)
 extern uint8_t g_trimEditMode;
 extern uint8_t g_trimState;
-#elif defined(PCBMAMBO)
-#define NUM_SWITCHES                    6
-#define STORAGE_NUM_SWITCHES            NUM_SWITCHES
-#define DEFAULT_SWITCH_CONFIG           (SWITCH_TOGGLE << 10) + (SWITCH_TOGGLE << 8) + (SWITCH_3POS << 6) + (SWITCH_3POS << 4) + (SWITCH_3POS << 2) + (SWITCH_3POS << 0)
-#define DEFAULT_POTS_CONFIG             (POT_WITH_DETENT << 2)+ (POT_WITH_DETENT << 0)
-#define DEFAULT_SLIDERS_CONFIG          SLIDER_NONE
+#elif defined(RADIO_MAMBO)
+#define STORAGE_NUM_SWITCHES          NUM_SWITCHES
+#define DEFAULT_SWITCH_CONFIG         (SWITCH_TOGGLE << 10) + (SWITCH_3POS << 8) + (SWITCH_3POS << 6) + (SWITCH_3POS << 4) + (SWITCH_3POS << 2) + (SWITCH_3POS << 0)
+#define DEFAULT_POTS_CONFIG           (POT_WITH_DETENT << 2)+ (POT_WITH_DETENT << 0)
+#define DEFAULT_SLIDERS_CONFIG        SLIDER_NONE
 
+#define NUM_SWITCHES                        6
 #define STORAGE_NUM_SWITCHES_POSITIONS  (STORAGE_NUM_SWITCHES * 3)
 #endif
 void keysInit();
@@ -270,8 +281,8 @@ uint32_t readTrims();
   #define WAS_RESET_BY_WATCHDOG_OR_SOFTWARE()   (false)
 #else
   void watchdogInit(unsigned int duration);
-  #define WDG_ENABLE(x)                 watchdogInit(x)
-  #define WDG_RESET()                   IWDG->KR = 0xAAAA
+  #define WDG_ENABLE(x)                       watchdogInit(x)
+  #define WDG_RESET()                         IWDG->KR = 0xAAAA
   #define WAS_RESET_BY_SOFTWARE()             (RCC->CSR & RCC_CSR_SFTRSTF)
   #define WAS_RESET_BY_WATCHDOG()             (RCC->CSR & (RCC_CSR_WDGRSTF | RCC_CSR_WWDGRSTF))
   #define WAS_RESET_BY_WATCHDOG_OR_SOFTWARE() (RCC->CSR & (RCC_CSR_WDGRSTF | RCC_CSR_WWDGRSTF | RCC_CSR_SFTRSTF))
@@ -283,7 +294,7 @@ enum Analogs {
   STICK2,
   STICK3,
   STICK4,
-#if defined(PCBMAMBO)
+#if defined(RADIO_MAMBO)
   POT_FIRST,
   POT1 = POT_FIRST,
   POT2,
@@ -299,7 +310,7 @@ enum Analogs {
   NUM_ANALOGS
 };
 
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 #define NUM_POTS                        0
 #define NUM_XPOTS                       0
 #define NUM_SLIDERS                     0
@@ -312,7 +323,7 @@ enum Analogs {
 
 #define NUM_TRIMS_KEYS                  8
 #define STICKS_PWM_ENABLED()            false
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
 #define NUM_POTS                        2
 #define NUM_XPOTS                       STORAGE_NUM_POTS
 #define NUM_SLIDERS                     0
@@ -329,6 +340,10 @@ enum Analogs {
 #define STICKS_PWM_ENABLED()            false
 #endif
 
+#if !defined(NUM_FUNCTIONS_SWITCHES)
+  #define NUM_FUNCTIONS_SWITCHES          0
+#endif
+
 PACK(typedef struct {
   uint8_t pcbrev:4;
   uint8_t sticksPwmDisabled:1;
@@ -342,7 +357,7 @@ enum CalibratedAnalogs {
   CALIBRATED_STICK2,
   CALIBRATED_STICK3,
   CALIBRATED_STICK4,
-#if defined(PCBMAMBO)
+#if defined(RADIO_MAMBO)
   CALIBRATED_POT_FIRST,
   CALIBRATED_POT_LAST = CALIBRATED_POT_FIRST + NUM_POTS - 1,
   CALIBRATED_SLIDER_FIRST,
@@ -351,7 +366,7 @@ enum CalibratedAnalogs {
   NUM_CALIBRATED_ANALOGS
 };
 
-#if defined(PCBMAMBO)
+#if defined(RADIO_MAMBO)
   #define IS_POT(x)                   ((x)>=POT_FIRST && (x)<=POT_LAST) 
 #else
   #define IS_POT(x)                   (false)
@@ -367,12 +382,13 @@ uint16_t getBatteryVoltage();   // returns current battery voltage in 10mV steps
 #define BATTERY_CRITICAL              33 // 3.3V
 #define BATTERY_MIN                   33 // 3.3V
 #define BATTERY_MAX                   42 // 4.2V
+#define BATTERY_TYPE_FIXED
 
 #define BATT_CALIB_OFFSET             5
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 #define BATT_SCALE                    (4.446f)
 #define BATT_SCALE2                   (4.162f)
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
 #define BATT_SCALE                    (4.55f)
 #endif
 // BATT_SCALE = 12-bit max value * pd / ANALOG_MULTIPLIER / vref / multiplication
@@ -423,6 +439,13 @@ bool pwrPressed();
 #define STARTUP_ANIMATION
 uint32_t pwrPressedDuration();
 void pwrResetHandler();
+bool pwrPressed();
+#if defined(PWR_EXTRA_SWITCH_GPIO)
+  bool pwrForcePressed();
+#else
+  #define pwrForcePressed() false
+#endif
+uint32_t pwrPressedDuration();
 
 #if defined(SIMU)
 #define UNEXPECTED_SHUTDOWN()           false
@@ -432,6 +455,7 @@ void pwrResetHandler();
 
 // Backlight driver
 #define BACKLIGHT_TIMEOUT_MIN           2
+#define BACKLIGHT_FORCED_ON             101
 #if defined(SIMU)
   #define backlightInit()
   #define backlightDisable()
@@ -440,10 +464,10 @@ void pwrResetHandler();
   #define backlightEnable(level)
   #define BACKLIGHT_ENABLE()
 #else
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
   #define backlightDisable()              lcdOff()
   #define isBacklightEnabled()            isLcdOn()
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
   void backlightInit(void);
   void backlightDisable(void);
   #define BACKLIGHT_DISABLE()             backlightDisable()
@@ -452,12 +476,14 @@ void pwrResetHandler();
   void backlightEnable(uint8_t level);
   #define BACKLIGHT_DISABLE()             backlightDisable()
   #define BACKLIGHT_ENABLE()              backlightEnable(g_eeGeneral.backlightBright)
+  #define BACKLIGHT_LEVEL_MAX             100
 #endif
 
 void usbJoystickUpdate();
+#define USB_FIRMWARE_DEFAULT_MODE       USB_AGENT_MODE
 #define USB_NAME                        "TBS"
 #define USB_MANUFACTURER                'T', 'B', 'S', ' ', ' ', ' ', ' ', ' '  /* 8 bytes */
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 #define USB_PRODUCT                     'T', 'a', 'n', 'g', 'o', ' ', '2', ' '  /* 8 Bytes */
 #else
 #define USB_PRODUCT                     'M', 'a', 'm', 'b', 'o', ' ', ' ', ' '  /* 8 Bytes */
@@ -492,16 +518,18 @@ void extmodulePpmStart();
 void extmodulePxxPulsesStart();
 void extmodulePxxSerialStart();
 void extmodulePxx2Start();
-void extmoduleSerialStart(uint32_t baudrate, bool inverted);
+void extmoduleSerialStart();
 void extmoduleInvertedSerialStart(uint32_t baudrate);
 void extmoduleSendBuffer(const uint8_t * data, uint8_t size);
 void extmoduleSendNextFrame();
 void extmoduleSendInvertedByte(uint8_t byte);
 
+// Trainer driver
+#define SLAVE_MODE()                    (g_model.trainerData.mode == TRAINER_MODE_SLAVE)
+
 // Sport update driver
 #define SPORT_UPDATE_POWER_ON()
 #define SPORT_UPDATE_POWER_OFF()
-#define INTERNAL_MODULE_OFF()
 
 #define EXTERNAL_MODULE_ON()          EXTERNAL_MODULE_PWR_ON()
 #if defined(EXTMODULE_USART)
@@ -512,16 +540,16 @@ void extmoduleSendInvertedByte(uint8_t byte);
 #define IS_EXTERNAL_MODULE_ON()       (GPIO_ReadInputDataBit(EXTMODULE_PWR_GPIO, EXTMODULE_PWR_GPIO_PIN) == Bit_SET)
 
 // PCBREV driver
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
   #define IS_PCBREV_01()                (hardwareOptions.pcbrev == PCBREV_Tango2_V1)
   #define IS_PCBREV_02()                (hardwareOptions.pcbrev == PCBREV_Tango2_V2)
   #define IS_PCBREV_03()                (hardwareOptions.pcbrev == PCBREV_Tango2_V3)
 #endif
 
 // Charger
-#if defined(PCBTANGO)
-  #define IS_CHARGING_STATE()         (GPIO_ReadInputDataBit( CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN ) == Bit_RESET)
-  #define IS_CHARGING_FAULT()         (GPIO_ReadInputDataBit( CHARGER_FAULT_GPIO, CHARGER_FAULT_GPIO_PIN ) == Bit_RESET)
+#if defined(RADIO_TANGO)
+  #define IS_CHARGING_STATE()         (usbPlugged() && GPIO_ReadInputDataBit( CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN ) == Bit_RESET)
+  #define IS_CHARGING_FAULT()         (usbPlugged() && GPIO_ReadInputDataBit( CHARGER_FAULT_GPIO, CHARGER_FAULT_GPIO_PIN ) == Bit_RESET)
 #else
   #define IS_CHARGING_STATE()         (GPIO_ReadInputDataBit( CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN ) == Bit_RESET)
   #define IS_CHARGING_FAULT()         (0)
@@ -571,8 +599,14 @@ void auxSerialStop();
 // BT driver
 #define IS_BLUETOOTH_CHIP_PRESENT()     (false)
 
+// USB Charger
+#if defined(USB_CHARGER)
+void usbChargerInit();
+bool usbChargerLed();
+#endif
+
 // Led driver
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
   #define CHARGING_LEDS
   void ledInit(void);
   void ledOff(void);
@@ -583,31 +617,27 @@ void auxSerialStop();
   #if defined(CHARGING_LEDS)
     #define LED_CHARGING_IN_PROGRESS()    ledRed()
     #define LED_CHARGING_DONE()           ledGreen()
-    #define LED_CHARGING_OFF()            ledOff()    
-  #else            
+  #else
     #define LED_CHARGING_IN_PROGRESS()
     #define LED_CHARGING_DONE()
-    #define LED_CHARGING_OFF()    
   #endif
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
   #define ledOff()
 #endif
 
 // LCD driver
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
   #define LCD_W                           128
   #define LCD_H                           96
   #define LCD_DEPTH                       4
   #define IS_LCD_RESET_NEEDED()           true
-  #define LCD_CONTRAST_MIN                0
-  #define LCD_CONTRAST_MAX                45
   #define LCD_CONTRAST_DEFAULT            20
   void lcdInit();
   void lcdOn();
   void lcdOff();
   bool isLcdOn();
   void lcdAdjustContrast(uint8_t val);
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
   #define CHARGING_ANIMATION
   #define LCD_W                           128
   #define LCD_H                           64
@@ -646,6 +676,7 @@ void lcdSetContrast();
 #include "dmafifo.h"
 
 #define TELEMETRY_FIFO_SIZE             128
+extern Fifo<uint8_t, TELEMETRY_FIFO_SIZE> intCrsfTelemetryFifo;
 extern Fifo<uint8_t, TELEMETRY_FIFO_SIZE> telemetryFifo;
 typedef DMAFifo<32> AuxSerialRxFifo;
 extern AuxSerialRxFifo auxSerialRxFifo;
@@ -660,6 +691,7 @@ extern AuxSerialRxFifo auxSerialRxFifo;
 void trampolineInit(void);
 void boardReboot2bootloader(uint32_t isNeedFlash, uint32_t HwId, uint32_t sn);
 void loadDefaultRadioSettings(void);
-void onUSBConnectMenu(const char *result);
+void onUSBConnectMenu(const char * result);
 
-#endif // _BOARD_H_
+#define PLL_M      4
+#define PLL_N      168

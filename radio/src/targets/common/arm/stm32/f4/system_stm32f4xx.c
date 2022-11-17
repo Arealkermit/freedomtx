@@ -121,6 +121,7 @@
   */
 
 #include "stm32f4xx.h"
+#include "board.h"
 
 /**
   * @}
@@ -152,10 +153,7 @@
 
 /************************* PLL Parameters *************************************/
 /* PLL_VCO = (HSE_VALUE or HSI_VALUE / PLL_M) * PLL_N */
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-  #define PLL_M      4
-  #define PLL_N      168
-#else
+#if !defined(PLL_M)
   #define PLL_M      12
   #define PLL_N      336
 #endif

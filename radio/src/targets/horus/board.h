@@ -89,6 +89,8 @@ enum {
 #elif defined(PCBX10)
   #if defined(PCBREV_EXPRESS)
     #define IS_FIRMWARE_COMPATIBLE_WITH_BOARD() (hardwareOptions.pcbrev == PCBREV_X10_EXPRESS)
+  #elif defined(RADIO_FAMILY_T16)
+    #define IS_FIRMWARE_COMPATIBLE_WITH_BOARD() (true)
   #else
     #define IS_FIRMWARE_COMPATIBLE_WITH_BOARD() (hardwareOptions.pcbrev == PCBREV_X10_STD)
   #endif
@@ -146,6 +148,10 @@ void SDRAM_Init();
 // Pulses driver
 #define INTERNAL_MODULE_ON()           GPIO_SetBits(INTMODULE_PWR_GPIO, INTMODULE_PWR_GPIO_PIN)
 
+#if defined(INTERNAL_MODULE_PXX1) || defined(INTERNAL_MODULE_PXX2)
+  #define HARDWARE_INTERNAL_RAS
+#endif
+
 #if defined(INTMODULE_USART)
   #define INTERNAL_MODULE_OFF()        intmoduleStop()
 #else
@@ -178,17 +184,22 @@ void intmoduleSendByte(uint8_t byte);
 void intmoduleSendBuffer(const uint8_t * data, uint8_t size);
 void intmoduleSendNextFrame();
 
-void extmoduleSerialStart(uint32_t baudrate, bool inverted);
+void extmoduleSerialStart();
 void extmoduleInvertedSerialStart(uint32_t baudrate);
 void extmoduleSendBuffer(const uint8_t * data, uint8_t size);
 void extmoduleSendNextFrame();
 void extmoduleSendInvertedByte(uint8_t byte);
+
+#define ELRS_INTERNAL_BAUDRATE        5250000     // 5.25 Mbps
 
 // Trainer driver
 void init_trainer_ppm();
 void stop_trainer_ppm();
 void init_trainer_capture();
 void stop_trainer_capture();
+
+// SBUS
+int sbusGetByte(uint8_t * byte);
 
 // Keys driver
 enum EnumKeys
@@ -281,6 +292,10 @@ enum EnumSwitchesPositions
 
 #define STORAGE_NUM_SWITCHES_POSITIONS  (STORAGE_NUM_SWITCHES * 3)
 
+#if !defined(NUM_FUNCTIONS_SWITCHES)
+#define NUM_FUNCTIONS_SWITCHES        0
+#endif
+
 void keysInit();
 uint32_t switchState(uint8_t index);
 uint32_t readKeys();
@@ -369,7 +384,7 @@ enum Analogs {
   SLIDER_LAST = SLIDER_FIRST + NUM_SLIDERS - 1,
   TX_VOLTAGE,
 #if defined(PCBX12S)
-  MOUSE1, // TODO why after voltage?
+  MOUSE1, // after voltage because previous ones come from SPI on X12S
   MOUSE2,
 #endif
   NUM_ANALOGS
@@ -379,7 +394,11 @@ enum Analogs {
 #define SLIDER2 SLIDER_FRONT_RIGHT
 
 #define DEFAULT_SWITCH_CONFIG  (SWITCH_TOGGLE << 14) + (SWITCH_3POS << 12) + (SWITCH_2POS << 10) + (SWITCH_3POS << 8) + (SWITCH_3POS << 6) + (SWITCH_3POS << 4) + (SWITCH_3POS << 2) + (SWITCH_3POS << 0)
-#define DEFAULT_POTS_CONFIG    (POT_WITH_DETENT << 4) + (POT_MULTIPOS_SWITCH << 2) + (POT_WITHOUT_DETENT << 0)
+#if defined(RADIO_FAMILY_T16)
+  #define DEFAULT_POTS_CONFIG    (POT_WITH_DETENT << 4) + (POT_MULTIPOS_SWITCH << 2) + (POT_WITH_DETENT << 0)
+#else
+  #define DEFAULT_POTS_CONFIG    (POT_WITH_DETENT << 4) + (POT_MULTIPOS_SWITCH << 2) + (POT_WITHOUT_DETENT << 0)
+#endif
 
 #if defined(PCBX12S)
 #define DEFAULT_SLIDERS_CONFIG (SLIDER_WITH_DETENT << 3) + (SLIDER_WITH_DETENT << 2) + (SLIDER_WITH_DETENT << 1) + (SLIDER_WITH_DETENT << 0)
@@ -485,6 +504,11 @@ void pwrOn();
 void pwrOff();
 void pwrResetHandler();
 bool pwrPressed();
+#if defined(PWR_EXTRA_SWITCH_GPIO)
+  bool pwrForcePressed();
+#else
+  #define pwrForcePressed() false
+#endif
 uint32_t pwrPressedDuration();
 
 // USB Charger
@@ -525,7 +549,8 @@ void backlightInit();
 #else
 void backlightEnable(uint8_t dutyCycle = 0);
 #endif
-#define BACKLIGHT_LEVEL_MAX   100
+#define BACKLIGHT_LEVEL_MAX     100
+#define BACKLIGHT_FORCED_ON     BACKLIGHT_LEVEL_MAX + 1
 #if defined(PCBX12S)
 #define BACKLIGHT_LEVEL_MIN   5
 #elif defined(RADIO_FAMILY_T16)
@@ -533,7 +558,7 @@ void backlightEnable(uint8_t dutyCycle = 0);
 #else
 #define BACKLIGHT_LEVEL_MIN   46
 #endif
-#define BACKLIGHT_ENABLE()    backlightEnable(globalData.unexpectedShutdown ? BACKLIGHT_LEVEL_MAX : BACKLIGHT_LEVEL_MAX - g_eeGeneral.backlightBright)
+#define BACKLIGHT_ENABLE()    backlightEnable(globalData.unexpectedShutdown ? BACKLIGHT_LEVEL_MAX : BACKLIGHT_LEVEL_MAX - currentBacklightBright)
 #define BACKLIGHT_DISABLE()   backlightEnable(globalData.unexpectedShutdown ? BACKLIGHT_LEVEL_MAX : ((g_eeGeneral.blOffBright == BACKLIGHT_LEVEL_MIN) && (g_eeGeneral.backlightMode != e_backlight_mode_off)) ? 0 : g_eeGeneral.blOffBright)
 #define isBacklightEnabled()  true
 
@@ -548,10 +573,14 @@ void usbJoystickUpdate();
   #define USB_NAME                     "Jumper T16"
   #define USB_MANUFACTURER             'J', 'u', 'm', 'p', 'e', 'r', ' ', ' '  /* 8 bytes */
   #define USB_PRODUCT                  'T', '1', '6', ' ', ' ', ' ', ' ', ' '  /* 8 Bytes */  
+#elif defined(RADIO_T18)
+  #define USB_NAME                     "Jumper T18"
+  #define USB_MANUFACTURER             'J', 'u', 'm', 'p', 'e', 'r', ' ', ' '  /* 8 bytes */
+  #define USB_PRODUCT                  'T', '1', '8', ' ', ' ', ' ', ' ', ' '  /* 8 Bytes */
 #elif defined(RADIO_TX16S)
-  #define USB_NAME                     "RadioMas TX16S"
-  #define USB_MANUFACTURER             'R', 'a', 'd', 'i', 'o', 'M', 'a', 's'  /* 8 bytes */
-  #define USB_PRODUCT                  'T', 'X', '1', '6', 'S', ' ', ' ', ' '  /* 8 Bytes */
+  #define USB_NAME                     "RM TX16S"
+  #define USB_MANUFACTURER             'R', 'M', '_', 'T', 'X', ' ', ' ', ' '  /* 8 bytes */
+  #define USB_PRODUCT                  'R', 'M', ' ', 'T', 'X', '1', '6', 'S'  /* 8 Bytes */
 #elif defined(PCBX10)
   #define USB_NAME                     "FrSky X10"
   #define USB_MANUFACTURER             'F', 'r', 'S', 'k', 'y', ' ', ' ', ' '  /* 8 bytes */
@@ -608,10 +637,19 @@ void sportUpdatePowerInit();
 #define IS_SPORT_UPDATE_POWER_ON()     (false)
 #endif
 
-// Second serial port driver
+// Aux serial port driver
+#if defined(RADIO_TX16S)
+  #define DEBUG_BAUDRATE                  400000
+  #define LUA_DEFAULT_BAUDRATE            115200
+#else
+  #define DEBUG_BAUDRATE                  115200
+  #define LUA_DEFAULT_BAUDRATE            115200
+#endif
 #if defined(AUX_SERIAL_GPIO)
-#define DEBUG_BAUDRATE                  115200
 extern uint8_t auxSerialMode;
+#if defined __cplusplus
+void auxSerialSetup(unsigned int baudrate, bool dma, uint16_t length = USART_WordLength_8b, uint16_t parity = USART_Parity_No, uint16_t stop = USART_StopBits_1);
+#endif
 void auxSerialInit(unsigned int mode, unsigned int protocol);
 void auxSerialPutc(char c);
 #define auxSerialTelemetryInit(protocol) auxSerialInit(UART_MODE_TELEMETRY, protocol)
@@ -620,11 +658,33 @@ void auxSerialStop();
 void auxSerialPowerOn();
 void auxSerialPowerOff();
 #if defined(AUX_SERIAL_PWR_GPIO)
-#define AUX_SERIAL_POWER_ON()            auxSerialPowerOn()
-#define AUX_SERIAL__POWER_OFF()          auxSerialPowerOff()
+#define AUX_SERIAL_POWER_ON()             auxSerialPowerOn()
+#define AUX_SERIAL_POWER_OFF()            auxSerialPowerOff()
 #else
 #define AUX_SERIAL_POWER_ON()
-#define AUX_SERIAL__POWER_OFF()
+#define AUX_SERIAL_POWER_OFF()
+#endif
+#endif
+
+// Aux2 serial port driver
+#if defined(AUX2_SERIAL)
+extern uint8_t aux2SerialMode;
+#if defined __cplusplus
+void aux2SerialSetup(unsigned int baudrate, bool dma, uint16_t length = USART_WordLength_8b, uint16_t parity = USART_Parity_No, uint16_t stop = USART_StopBits_1);
+#endif
+void aux2SerialInit(unsigned int mode, unsigned int protocol);
+void aux2SerialPutc(char c);
+#define aux2SerialTelemetryInit(protocol) aux2SerialInit(UART_MODE_TELEMETRY, protocol)
+void aux2SerialSbusInit();
+void aux2SerialStop();
+void aux2SerialPowerOn();
+void aux2SerialPowerOff();
+#if defined(AUX2_SERIAL_PWR_GPIO)
+#define AUX2_SERIAL_POWER_ON()            aux2SerialPowerOn()
+#define AUX2_SERIAL_POWER_OFF()           aux2SerialPowerOff()
+#else
+#define AUX2_SERIAL_POWER_ON()
+#define AUX2_SERIAL_POWER_OFF()
 #endif
 #endif
 
@@ -649,7 +709,7 @@ void gpsSendByte(uint8_t byte);
 
 // BT driver
 #define BT_TX_FIFO_SIZE    64
-#define BT_RX_FIFO_SIZE    128
+#define BT_RX_FIFO_SIZE    256
 #define BLUETOOTH_BOOTLOADER_BAUDRATE  230400
 #define BLUETOOTH_FACTORY_BAUDRATE     57600
 #define BLUETOOTH_DEFAULT_BAUDRATE     115200
@@ -664,6 +724,7 @@ void bluetoothDisable();
 extern DMAFifo<512> telemetryFifo;
 typedef DMAFifo<32> AuxSerialRxFifo;
 extern AuxSerialRxFifo auxSerialRxFifo;
+extern AuxSerialRxFifo aux2SerialRxFifo;
 extern volatile uint32_t externalModulePort;
 #endif
 

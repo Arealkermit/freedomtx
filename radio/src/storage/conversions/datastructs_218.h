@@ -99,7 +99,7 @@
   #define MAX_TRAINER_CHANNELS_218         16
   #define MAX_TELEMETRY_SENSORS_218        32
   #define MAX_CUSTOM_SCREENS_218           5
-#elif defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#elif defined(PCBTARANIS)
   #define MAX_MODELS_218                   60
   #define MAX_OUTPUT_CHANNELS_218          32 // number of real output channels CH1-CH32
   #define MAX_FLIGHT_MODES_218             9
@@ -130,7 +130,7 @@ typedef uint32_t swarnstate218_t;
 typedef uint64_t swconfig218_t;
 typedef uint64_t swarnstate218_t;
 typedef uint32_t swarnenable218_t;
-#elif defined(PCBTARANIS) || defined (PCBTANGO) || defined(PCBMAMBO)
+#elif defined(PCBTARANIS)
 typedef uint16_t swconfig218_t;
 typedef uint16_t swarnstate218_t;
 typedef uint8_t swarnenable218_t;
@@ -340,7 +340,7 @@ PACK(struct FrSkyTelemetryData_v217 {
 
 #if defined(PCBHORUS)
   #define MODELDATA_EXTRA_218   uint8_t spare:3; uint8_t trainerMode:3; uint8_t potsWarnMode:2; ModuleData_v218 moduleData[NUM_MODULES+1]; ScriptData scriptsData[MAX_SCRIPTS_218]; char inputNames[MAX_INPUTS_218][LEN_INPUT_NAME_218]; uint8_t potsWarnEnabled; int8_t potsWarnPosition[3 + 4];
-#elif defined(PCBTARANIS) || defined (PCBTANGO) || defined(PCBMAMBO)
+#elif defined(PCBTARANIS)
   #define MODELDATA_EXTRA_218   uint8_t spare:3; uint8_t trainerMode:3; uint8_t potsWarnMode:2; ModuleData_v218 moduleData[NUM_MODULES+1]; ScriptData scriptsData[MAX_SCRIPTS_218]; char inputNames[MAX_INPUTS_218][LEN_INPUT_NAME_218]; uint8_t potsWarnEnabled; int8_t potsWarnPosition[STORAGE_NUM_POTS + STORAGE_NUM_SLIDERS];
 #elif defined(PCBSKY9X)
   #define MODELDATA_EXTRA_218   uint8_t spare:6;                        uint8_t potsWarnMode:2; ModuleData_v218 moduleData[NUM_MODULES+1];                                          char inputNames[MAX_INPUTS_218][LEN_INPUT_NAME_218]; uint8_t potsWarnEnabled; int8_t potsWarnPosition[STORAGE_NUM_POTS + STORAGE_NUM_SLIDERS]; uint8_t rxBattAlarms[2];
@@ -488,7 +488,7 @@ PACK(struct ModelData_v218 {
     uint8_t spare:1; \
     uint8_t blOffBright:7; \
     char bluetoothName[LEN_BLUETOOTH_NAME_218];
-#elif defined(PCBTARANIS) || defined (PCBTANGO) || defined(PCBMAMBO)
+#elif defined(PCBTARANIS)
   #if defined(STORAGE_BLUETOOTH) && !defined(PCBX9D) && !defined(PCBX9DP)
     #define BLUETOOTH_FIELDS_218 \
       uint8_t spare; \

@@ -72,18 +72,6 @@
   #define MAX_INPUTS                   32
   #define MAX_TRAINER_CHANNELS         16
   #define MAX_TELEMETRY_SENSORS        40
-#elif defined(PCBTANGO) || defined(PCBMAMBO)
-  #define MAX_MODELS                   60
-  #define MAX_OUTPUT_CHANNELS          32 // number of real output channels CH1-CH32
-  #define MAX_FLIGHT_MODES             9
-  #define MAX_MIXERS                   64
-  #define MAX_EXPOS                    64
-  #define MAX_LOGICAL_SWITCHES         64
-  #define MAX_SPECIAL_FUNCTIONS        64 // number of functions assigned to switches
-  #define MAX_SCRIPTS                  7
-  #define MAX_INPUTS                   32
-  #define MAX_TRAINER_CHANNELS         0
-  #define MAX_TELEMETRY_SENSORS        60
 #elif defined(PCBSKY9X)
   #define MAX_MODELS                   60
   #define MAX_OUTPUT_CHANNELS          32 // number of real output channels CH1-CH32
@@ -135,18 +123,6 @@ enum CurveType {
   #define LEN_FUNCTION_NAME            8
   #define MAX_CURVES                   32
   #define MAX_CURVE_POINTS             512
-#elif defined(PCBTANGO)  || defined(PCBMAMBO)
-  #define LEN_MODEL_NAME               10
-  #define LEN_TIMER_NAME               3
-  #define LEN_FLIGHT_MODE_NAME         6
-  #define LEN_BITMAP_NAME              10
-  #define LEN_EXPOMIX_NAME             6
-  #define LEN_CHANNEL_NAME             4
-  #define LEN_INPUT_NAME               3
-  #define LEN_CURVE_NAME               3
-  #define LEN_FUNCTION_NAME            6
-  #define MAX_CURVES                   16   // TODO next EEPROM check if can be changed to 32 to have all ARM the same
-  #define MAX_CURVE_POINTS             512
 #else
   #define LEN_MODEL_NAME               10
   #define LEN_TIMER_NAME               3
@@ -160,7 +136,7 @@ enum CurveType {
   #define MAX_CURVE_POINTS             512
 #endif
 
-#if defined(PCBTARANIS) || defined(PCBSKY9X) || defined(PCBHORUS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS) || defined(PCBSKY9X) || defined(PCBHORUS)
   #define NUM_MODULES                  2
 #else
   #define NUM_MODULES                  1
@@ -210,6 +186,9 @@ enum ModuleIndex {
   EXTERNAL_MODULE,
   SPORT_MODULE,
 };
+
+//  TODO: simplify at an eeprom change to a single master list and use ui filters. Simplies radio conversions and both radio and companion code
+//        Companion opentxeeprom.cpp will require after import and before export manipulation removed
 enum TrainerMode {
   TRAINER_MODE_MASTER_TRAINER_JACK,
   TRAINER_MODE_SLAVE,
@@ -217,18 +196,16 @@ enum TrainerMode {
   TRAINER_MODE_MASTER_SBUS_EXTERNAL_MODULE,
   TRAINER_MODE_MASTER_CPPM_EXTERNAL_MODULE,
 #endif
-#if defined(PCBTARANIS) || defined(AUX_SERIAL)
+#if defined(PCBTARANIS) || defined(AUX_SERIAL) || defined(AUX2_SERIAL)
   TRAINER_MODE_MASTER_BATTERY_COMPARTMENT,
 #endif
   TRAINER_MODE_MASTER_BLUETOOTH,
   TRAINER_MODE_SLAVE_BLUETOOTH,
   TRAINER_MODE_MULTI,
+#if defined(TRAINER_SPORT_SBUS)
+  TRAINER_MODE_MASTER_SBUS_SPORT
+#endif
 };
-#elif defined(PCBTANGO) || defined(PCBMAMBO)
-  enum ModuleIndex {
-    INTERNAL_MODULE,
-    EXTERNAL_MODULE
-  };
 #elif defined(PCBSKY9X)
   enum ModuleIndex {
     EXTERNAL_MODULE,
@@ -237,7 +214,20 @@ enum TrainerMode {
   };
 #endif
 
-#if defined(RADIO_FAMILY_T16) || defined(ALLOW_TRAINER_MULTI)
+//  TODO: simplify at an eeprom change to a single master list and use ui filters
+#define TRAINER_MODE_MIN()               TRAINER_MODE_MASTER_TRAINER_JACK
+
+#if !defined(HARDWARE_EXTERNAL_MODULE)
+  #define TRAINER_MODE_MAX()             TRAINER_MODE_SLAVE
+#elif defined(RADIO_T16) && !defined(INTERNAL_MODULE_MULTI)
+#if  defined(BLUETOOTH)
+  #define TRAINER_MODE_MAX()             TRAINER_MODE_SLAVE_BLUETOOTH
+#else
+  #define TRAINER_MODE_MAX()             TRAINER_MODE_SLAVE
+#endif
+#elif defined(TRAINER_SPORT_SBUS)
+  #define TRAINER_MODE_MAX()             TRAINER_MODE_MASTER_SBUS_SPORT
+#elif defined(INTERNAL_MODULE_MULTI) || defined(INTERNAL_MODULE_CRSF) || defined(INTERNAL_MODULE_ELRS) || defined(HARDWARE_TRAINER_MULTI_MOD)
   #define TRAINER_MODE_MAX()             TRAINER_MODE_MULTI
 #elif defined(BLUETOOTH)
   #define TRAINER_MODE_MAX()             TRAINER_MODE_SLAVE_BLUETOOTH
@@ -252,7 +242,6 @@ enum TrainerMode {
 #else
   #define IS_INTERNAL_MODULE_ENABLED() (false)
 #endif
-
 #define IS_EXTERNAL_MODULE_ENABLED() (g_model.moduleData[EXTERNAL_MODULE].type != MODULE_TYPE_NONE)
 
 #if defined(HARDWARE_INTERNAL_MODULE)
@@ -275,15 +264,14 @@ enum UartModes {
   UART_MODE_MAX = UART_MODE_COUNT-1
 };
 
+#define LEN_MODEL_FILENAME           16
 #if defined(PCBHORUS)
   #define LEN_SWITCH_NAME              3
   #define LEN_ANA_NAME                 3
-  #define LEN_MODEL_FILENAME           16
   #define LEN_BLUETOOTH_NAME           10
 #else
   #define LEN_SWITCH_NAME              3
   #define LEN_ANA_NAME                 3
-  #define LEN_MODEL_FILENAME           16
   #define LEN_BLUETOOTH_NAME           10
 #endif
 
@@ -298,8 +286,11 @@ enum TelemetryProtocol
   PROTOCOL_TELEMETRY_FLYSKY_IBUS,
   PROTOCOL_TELEMETRY_HITEC,
   PROTOCOL_TELEMETRY_HOTT,
+  PROTOCOL_TELEMETRY_MLINK,
   PROTOCOL_TELEMETRY_MULTIMODULE,
-  PROTOCOL_TELEMETRY_LAST=PROTOCOL_TELEMETRY_MULTIMODULE,
+  PROTOCOL_TELEMETRY_AFHDS3,
+  PROTOCOL_TELEMETRY_GHOST,
+  PROTOCOL_TELEMETRY_LAST=PROTOCOL_TELEMETRY_GHOST,
   PROTOCOL_TELEMETRY_LUA
 };
 
@@ -327,7 +318,6 @@ enum TelemetryUnit {
   UNIT_WATTS,
   UNIT_MILLIWATTS,
   UNIT_DB,
-  UNIT_DBM,
   UNIT_HZ,
   UNIT_RPMS,
   UNIT_G,
@@ -336,12 +326,12 @@ enum TelemetryUnit {
   UNIT_MILLILITERS,
   UNIT_FLOZ,
   UNIT_MILLILITERS_PER_MINUTE,
-  UNIT_MAX = UNIT_MILLILITERS_PER_MINUTE,
-  UNIT_SPARE1,
-  UNIT_SPARE2,
-  UNIT_SPARE3,
-  UNIT_SPARE4,
-  UNIT_SPARE5,
+  UNIT_HERTZ,
+  UNIT_MS,
+  UNIT_US,
+  UNIT_KM,
+  UNIT_DBM,
+  UNIT_MAX = UNIT_DBM,
   UNIT_SPARE6,
   UNIT_SPARE7,
   UNIT_SPARE8,
@@ -372,7 +362,7 @@ enum TelemetryUnit {
   #define NUM_LINE_ITEMS 2
 #endif
 
-#if defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS)
   #define MAX_TELEM_SCRIPT_INPUTS  8
 #endif
 
@@ -443,7 +433,12 @@ enum SwitchSources {
   SWSRC_SD2,
 #endif
 
-#if defined(STORAGE_SWITCH_E)
+#if defined(FUNCTION_SWITCHES) && defined(RADIO_TPRO)
+  SWSRC_FIRST_FUNCTION_SWITCH,
+  SWSRC_SE0 = SWSRC_FIRST_FUNCTION_SWITCH,
+  SWSRC_SE1,
+  SWSRC_SE2,
+#elif defined(STORAGE_SWITCH_E)
   SWSRC_SE0,
   SWSRC_SE1,
   SWSRC_SE2,
@@ -568,10 +563,6 @@ enum SwitchSources {
   SWSRC_TrimT6Up,
 #endif
 
-#if defined(PCBSKY9X)
-  SWSRC_REa,
-#endif
-
   SWSRC_FIRST_LOGICAL_SWITCH,
   SWSRC_SW1 = SWSRC_FIRST_LOGICAL_SWITCH,
   SWSRC_SW2,
@@ -611,7 +602,7 @@ enum SwitchSources {
   SWSRC_INVERT = SWSRC_COUNT+1,
 };
 
-#if NUM_SWITCHES >= 8
+#if NUM_SWITCHES - NUM_FUNCTIONS_SWITCHES >= 8
   #define SWSRC_TRAINER SWSRC_SH2
 #else
   #define SWSRC_TRAINER SWSRC_LAST_SWITCH,
@@ -635,11 +626,8 @@ enum MixSources {
   MIXSRC_Ele,                           LUA_EXPORT("ele", "Elevator")
   MIXSRC_Thr,                           LUA_EXPORT("thr", "Throttle")
   MIXSRC_Ail,                           LUA_EXPORT("ail", "Aileron")
-#if defined(PCBTANGO)
-  MIXSRC_FIRST_POT = MIXSRC_Ail,
-#else
+
   MIXSRC_FIRST_POT,
-#endif
 #if defined(PCBHORUS)
   MIXSRC_S1 = MIXSRC_FIRST_POT,         LUA_EXPORT("s1", "Potentiometer S1")
   MIXSRC_6POS,                          LUA_EXPORT("6pos", "Multipos Switch")
@@ -685,12 +673,6 @@ enum MixSources {
   MIXSRC_SLIDER1 = MIXSRC_FIRST_SLIDER, LUA_EXPORT("ls", "Left slider")
   MIXSRC_SLIDER2,                       LUA_EXPORT("rs", "Right slider")
   MIXSRC_LAST_POT = MIXSRC_SLIDER2,
-#elif defined(PCBTANGO)
-  MIXSRC_LAST_POT = MIXSRC_FIRST_POT,
-#elif defined(PCBMAMBO)
-  MIXSRC_P1 = MIXSRC_FIRST_POT,
-  MIXSRC_P2,
-  MIXSRC_LAST_POT = MIXSRC_P2,
 #else
   MIXSRC_P1 = MIXSRC_FIRST_POT,
   MIXSRC_P2,
@@ -708,7 +690,7 @@ enum MixSources {
   MIXSRC_GYRO2,                         LUA_EXPORT("gyry", "Gyro Y")
 #endif
 
-  MIXSRC_MAX,
+  MIXSRC_MAX,                          LUA_EXPORT("max", "MAX")
 
   MIXSRC_FIRST_HELI,
   MIXSRC_CYC1 = MIXSRC_FIRST_HELI,     LUA_EXPORT("cyc1", "Cyclic 1")
@@ -845,11 +827,15 @@ enum MixSources {
 static_assert(MIXSRC_FIRST_LOGICAL_SWITCH == MIXSRC_FIRST_SWITCH + STORAGE_NUM_SWITCHES, "Wrong switches definition in MIXSRC list");
 #endif
 
-#define MIXSRC_FIRST        (MIXSRC_NONE + 1)
-#define MIXSRC_LAST         MIXSRC_LAST_CH
-#define MIXSRC_LAST_SWITCH  (MIXSRC_FIRST_SWITCH + STORAGE_NUM_SWITCHES - 1)
-#define INPUTSRC_FIRST      MIXSRC_Rud
-#define INPUTSRC_LAST       MIXSRC_LAST_TELEM
+#define MIXSRC_FIRST                (MIXSRC_NONE + 1)
+#define MIXSRC_LAST                 MIXSRC_LAST_CH
+#define MIXSRC_LAST_SWITCH          (MIXSRC_FIRST_SWITCH + STORAGE_NUM_SWITCHES - 1)
+#define INPUTSRC_FIRST              MIXSRC_Rud
+#define INPUTSRC_LAST               MIXSRC_LAST_TELEM
+#if defined(FUNCTION_SWITCHES)
+#define MIXSRC_LAST_REGULAR_SWITCH  (MIXSRC_FIRST_SWITCH + NUM_REGULAR_SWITCHES - 1)
+#define MIXSRC_FIRST_FS_SWITCH      (MIXSRC_LAST_REGULAR_SWITCH + 1)
+#endif
 
 enum BacklightMode {
   e_backlight_mode_off  = 0,
@@ -886,6 +872,7 @@ enum Functions {
   FUNC_LOGS,
   FUNC_BACKLIGHT,
   FUNC_SCREENSHOT,
+  FUNC_RACING_MODE,
 #if defined(DEBUG)
   FUNC_TEST, // should remain the last before MAX as not added in Companion
 #endif
@@ -934,6 +921,11 @@ enum BluetoothModes {
   BLUETOOTH_OFF,
   BLUETOOTH_TELEMETRY,
   BLUETOOTH_TRAINER,
+#if defined(PCBX9E)
+  BLUETOOTH_MAX=BLUETOOTH_TELEMETRY
+#else
+  BLUETOOTH_MAX=BLUETOOTH_TRAINER
+#endif
 };
 
 // PXX2 constants

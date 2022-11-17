@@ -1490,18 +1490,18 @@ bool MdiChild::convertStorage(Board::Type from, Board::Type to, bool newFile)
   isUntitled = true;
 
   if (cstate.hasLogEntries(RadioDataConversionState::EVT_INF)) {
-    QDialog * msgBox = new QDialog(Q_NULLPTR, Qt::Dialog | Qt::WindowTitleHint | Qt::WindowSystemMenuHint | Qt::WindowCloseButtonHint);
+    auto * msgBox = new QDialog(Q_NULLPTR, Qt::Dialog | Qt::WindowTitleHint | Qt::WindowSystemMenuHint | Qt::WindowCloseButtonHint);
 
-    ExportableTableView * tv = new ExportableTableView(msgBox);
+    auto * tv = new ExportableTableView(msgBox);
     tv->setSortingEnabled(true);
     tv->verticalHeader()->hide();
     tv->setModel(cstate.getLogModel(RadioDataConversionState::EVT_INF, tv));
     tv->resizeColumnsToContents();
     tv->resizeRowsToContents();
 
-    QDialogButtonBox * btnBox = new QDialogButtonBox(QDialogButtonBox::Ok, this);
+    auto * btnBox = new QDialogButtonBox(QDialogButtonBox::Ok, this);
 
-    QVBoxLayout * lo = new QVBoxLayout(msgBox);
+    auto * lo = new QVBoxLayout(msgBox);
     lo->addWidget(new QLabel(tr("<b>The conversion generated some important messages, please review them below.</b>")));
     lo->addWidget(tv);
     lo->addWidget(btnBox);
@@ -1530,6 +1530,22 @@ int MdiChild::askQuestion(const QString & msg, QMessageBox::StandardButtons butt
 
 void MdiChild::writeEeprom()  // write to Tx
 {
+  if (g.confirmWriteModelsAndSettings()) {
+    QMessageBox msgbox;
+    msgbox.setText(tr("You are about to overwrite ALL models and settings on the Radio."));
+    msgbox.setInformativeText(tr("Do you want to continue?"));
+    msgbox.setIcon(QMessageBox::Icon::Question);
+    msgbox.setStandardButtons(QMessageBox::Yes | QMessageBox::Abort);
+    msgbox.setDefaultButton(QMessageBox::Abort);
+
+    QCheckBox *cb = new QCheckBox(tr("Don't show this message again"));
+    msgbox.setCheckBox(cb);
+    connect(cb, &QCheckBox::stateChanged, [=](const int &state){ g.confirmWriteModelsAndSettings(!state); });
+
+    if (msgbox.exec() == QMessageBox::Abort)
+      return;
+  }
+
   Board::Type board = getCurrentBoard();
   if (IS_FAMILY_HORUS_OR_T16(board)) {
     QString radioPath = findMassstoragePath("RADIO", true);

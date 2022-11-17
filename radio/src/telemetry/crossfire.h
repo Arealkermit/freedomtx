@@ -56,6 +56,9 @@
 #define COMMAND_CRSF_SPEED_PROPOSAL    0x70
 #define COMMAND_CRSF_SPEED_RESPONSE    0x71
 
+#define UART_SYNC                      0xC8
+#define SUBCOMMAND_CRSF                0x10
+#define COMMAND_MODEL_SELECT_ID        0x05
 
 struct CrossfireSensor {
   const uint8_t id;
@@ -65,7 +68,7 @@ struct CrossfireSensor {
   const uint8_t precision;
 };
 
-struct CrsfSpeedControl{
+struct CrossfireFrameStatus{
   uint8_t newSpeedRequest:1;
   uint8_t newSpeedValid:1;
   uint8_t portID:3;
@@ -94,7 +97,6 @@ enum CrossfireSensorIndexes {
   BATT_CURRENT_INDEX,
   BATT_CAPACITY_INDEX,
   BATT_REMAINING_INDEX,
-  BARO_ALTITUDE_INDEX,
   BARO_VSPEED_INDEX,
   GPS_LATITUDE_INDEX,
   GPS_LONGITUDE_INDEX,
@@ -107,6 +109,7 @@ enum CrossfireSensorIndexes {
   ATTITUDE_YAW_INDEX,
   FLIGHT_MODE_INDEX,
   VERTICAL_SPEED_INDEX,
+  BARO_ALTITUDE_INDEX,
   UNKNOWN_INDEX,
 };
 
@@ -119,11 +122,11 @@ enum CrossfireFrames{
   CRSF_FRAME_SPEED_PROPOSAL_SENT,
 };
 
-void processCrossfireTelemetryData(uint8_t data);
+void processCrossfireTelemetryData(uint8_t data, uint8_t module);
 void crossfireSetDefault(int index, uint8_t id, uint8_t subId);
 uint8_t createCrossfireModelIDFrame(uint8_t * frame);
-extern CrsfSpeedControl crsfSpeed;
 bool isCrossfireOutputBufferAvailable();
+extern CrossfireFrameStatus crsfFrameStatus;
 
 
 
@@ -137,6 +140,7 @@ const uint32_t CROSSFIRE_BAUDRATES[] = {
   2470000
 };
 const uint8_t CROSSFIRE_PERIODS[] = {
+  4,
   16,
   4,
   4,
@@ -146,11 +150,15 @@ const uint8_t CROSSFIRE_PERIODS[] = {
   2,
 };
 
-
 #define CROSSFIRE_BAUDRATE    CROSSFIRE_BAUDRATES[g_eeGeneral.telemetryBaudrate]
-#define CROSSFIRE_PERIOD      (CROSSFIRE_PERIODS[g_eeGeneral.telemetryBaudrate]*1000)
+#define CROSSFIRE_PERIOD      (CROSSFIRE_PERIODS[g_eeGeneral.telemetryBaudrate] * 1000)
 
+#if defined(DEBUG)
+#define CROSSFIRE_TELEM_MIRROR_BAUDRATE   DEBUG_BAUDRATE
+#else
 #define CROSSFIRE_TELEM_MIRROR_BAUDRATE   115200
+#endif
+
 #define CRSF_FRAME_ERROR_COUNT_THRESHOLD  15
 #define CROSSFIRE_DEFAULT_BAUDRATE_INDEX  1
 

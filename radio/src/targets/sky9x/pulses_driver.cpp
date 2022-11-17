@@ -156,7 +156,8 @@ void init_ssc(uint8_t baudrateDiv1000)
 #if defined(REVX)
   if (isModuleMultimodule(EXTERNAL_MODULE)) {
     PIOA->PIO_MDDR = PIO_PA17;                 // Push Pull O/p in A17
-  } else {
+  }
+  else {
     PIOA->PIO_MDER = PIO_PA17;						// Open Drain O/p in A17
   }
 #else
@@ -189,7 +190,7 @@ void extmoduleStop()
   disable_main_ppm();
 }
 
-void extmoduleSerialStart(uint32_t baudrate, bool inverted)
+void extmoduleSerialStart(uint32_t baudrate, uint32_t period_half_us, bool inverted)
 {
   if (baudrate == 125000) {
     // TODO init_main_ppm could take the period as parameter?

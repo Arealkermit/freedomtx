@@ -21,6 +21,7 @@
 #include "telemetry.h"
 #include "multi.h"
 
+constexpr int32_t MULTI_DESIRED_VERSION = (1 << 24) | (3 << 16) | (1 << 8)  | 69;
 #define MULTI_CHAN_BITS 11
 
 extern uint8_t g_moduleIdx;
@@ -41,6 +42,8 @@ enum MultiPacketTypes : uint8_t
   FlyskyIBusTelemetryAC,
   MultiRxChannels,
   HottTelemetry,
+  MLinkTelemetry,
+  ConfigTelemetry
 };
 
 enum MultiBufferState : uint8_t
@@ -96,10 +99,6 @@ static uint16_t& getMultiTelemetryLastRxTS(uint8_t module)
 {
   return multiTelemetryLastRxTS[module];
 }
-
-// Use additional telemetry buffer
-uint8_t intTelemetryRxBuffer[TELEMETRY_RX_PACKET_SIZE];
-uint8_t intTelemetryRxBufferCount;
 
 #else // !INTERNAL_MODULE_MULTI
 
@@ -159,10 +158,10 @@ static MultiBufferState guessProtocol(uint8_t module)
     return FrskyTelemetryFallback;
 }
 
-static void processMultiScannerPacket(const uint8_t *data)
+static void processMultiScannerPacket(const uint8_t *data, const uint8_t moduleIdx)
 {
   uint8_t cur_channel = data[0];
-  if (moduleState[g_moduleIdx].mode == MODULE_MODE_SPECTRUM_ANALYSER) {
+  if (moduleState[moduleIdx].mode == MODULE_MODE_SPECTRUM_ANALYSER) {
     for (uint8_t channel = 0; channel <5; channel++) {
       uint8_t power = max<int>(0,(data[channel+1] - 34) >> 1); // remove everything below -120dB
 
@@ -243,39 +242,13 @@ static void processMultiSyncPacket(const uint8_t * data, uint8_t module)
 {
   ModuleSyncStatus &status = getModuleSyncStatus(module);
 
-//   status.lastUpdate = get_tmr10ms();
-//   status.interval = data[4];
-//   status.target = data[5];
-// #if !defined(PPM_PIN_SERIAL)
-//   auto oldlag = status.inputLag;
-//   (void) oldlag;
-// #endif
-
-//   uint16_t refreshRate = data[0] << 8 | data[1];
-//   status.calcAdjustedRefreshRate(refreshRate, data[2] << 8 | data[3]);
-
-//   serialPrint("MP ADJ: R %d, L %04d, T %03d, calc %04d",
-//               refreshRate,
-//               data[2] << 8 | data[3],
-//               status.target,
-//               status.getAdjustedRefreshRate()/2);
   uint16_t refreshRate = data[0] << 8 | data[1];
   int16_t  inputLag    = data[2] << 8 | data[3];
 
-  // if (inputLag > refreshRate/2)
-  //   inputLag -= refreshRate;
-
   status.update(refreshRate, inputLag);
-
-  TRACE("MP ADJ: R %d, L %04d",
-              refreshRate, inputLag);
-
-// #if !defined(PPM_PIN_SERIAL)
-//   TRACE("MP ADJ: rest: %d, lag %04d, diff: %04d  target: %d, interval: %d, Refresh: %d, intAdjRefresh: %d, adjRefresh %d\r\n",
-//         module == EXTERNAL_MODULE ? extmodulePulsesData.dsm2.rest : 0,
-//         status.inputLag, oldlag - status.inputLag, status.target, status.interval, status.refreshRate, status.adjustedRefreshRate / 50,
-//         status.getAdjustedRefreshRate());
-// #endif
+#if defined(DEBUG)
+  serialPrint("MP ADJ: R %d, L %04d", refreshRate, inputLag);
+#endif
 }
 
 #if defined(PCBTARANIS) || defined(PCBHORUS)
@@ -315,16 +288,55 @@ static void processMultiRxChannels(const uint8_t * data, uint8_t len)
 }
 #endif
 
+#if defined(LUA)
+
+static void processConfigPacket(const uint8_t * packet, uint8_t len)
+{
+  // Multi_Buffer[0..3]=="Conf" -> Lua script is running
+  // Multi_Buffer[4]==0x01 -> TX to Module data ready to be sent
+  // Multi_Buffer[4]==0xFF -> Clear buffer data
+  // Multi_Buffer[5..11]=7 bytes of TX to Module data
+  // Multi_Buffer[12] -> Current page
+  // Multi_Buffer[13..172]=8*20=160 bytes of Module to TX data
+  if (Multi_Buffer && memcmp(Multi_Buffer, "Conf", 4) == 0) {
+    // HoTT Lua script is running
+    if (Multi_Buffer[4] == 0xFF) {
+      // Init
+      memset(&Multi_Buffer[4], 0x00, 1 + 7 + 1 + 160);           // Clear the buffer
+    }
+    if ((packet[0] >> 4) != Multi_Buffer[12]) {// page change
+      memset(&Multi_Buffer[13], 0x00, 160);                      // Clear the buffer
+      Multi_Buffer[12] = (packet[0] >> 4);                       //Save the page number
+    }
+    memcpy(&Multi_Buffer[13 + (packet[0] & 0x0F) * 20], &packet[1], 20); // Store the received page in the buffer
+  }
+}
+#endif
+
 static void processMultiTelemetryPaket(const uint8_t * packet, uint8_t module)
 {
   uint8_t type = packet[0];
   uint8_t len = packet[1];
   const uint8_t * data = packet + 2;
 
+
+#if !defined(DEBUG) && defined(USB_SERIAL)
+  if (getSelectedUsbMode() == USB_TELEMETRY_MIRROR_MODE) {
+    for (uint8_t c = 0; c < len + 2; c++)
+      usbSerialPutc(packet[c]);
+  }
+#endif
+
 #if defined(AUX_SERIAL)
   if (g_eeGeneral.auxSerialMode == UART_MODE_TELEMETRY_MIRROR) {
-    for (uint8_t c=0; c < len; c++)
+    for (uint8_t c = 0; c < len + 2; c++)
       auxSerialPutc(packet[c]);
+  }
+#endif
+#if defined(AUX2_SERIAL)
+  if (g_eeGeneral.aux2SerialMode == UART_MODE_TELEMETRY_MIRROR) {
+    for (uint8_t c = 0; c < len + 2; c++)
+      aux2SerialPutc(packet[c]);
   }
 #endif
 
@@ -377,6 +389,22 @@ static void processMultiTelemetryPaket(const uint8_t * packet, uint8_t module)
         TRACE("[MP] Received HoTT telemetry len %d < 14", len);
       break;
 
+    case MLinkTelemetry:
+      if (len > 6)
+        processMLinkPacket(data);
+      else
+        TRACE("[MP] Received M-Link telemetry len %d <= 6", len);
+      break;
+
+#if defined(LUA)
+    case ConfigTelemetry:
+      if (len >= 21)
+        processConfigPacket(data, len);
+      else
+        TRACE("[MP] Received Config telemetry len %d < 20", len);
+      break;
+#endif
+
     case FrSkyHubTelemetry:
       if (len >= 4)
         frskyDProcessPacket(data);
@@ -412,7 +440,7 @@ static void processMultiTelemetryPaket(const uint8_t * packet, uint8_t module)
 #endif
     case SpectrumScannerPacket:
       if (len == 6)
-        processMultiScannerPacket(data);
+        processMultiScannerPacket(data, module);
       else
         TRACE("[MP] Received spectrum scanner len %d != 6", len);
       break;
@@ -462,7 +490,7 @@ void MultiModuleStatus::getStatusString(char * statusText) const
     return;
   }
 
-  if (major <= 1 && minor <= 3 && revision <= 0 && patch <= 47 && SLOW_BLINK_ON_PHASE) {
+  if ((((major << 24) | (minor << 16) | (revision << 8) | patch) < MULTI_DESIRED_VERSION) && SLOW_BLINK_ON_PHASE) {
     strcpy(statusText, STR_MODULE_UPGRADE);
   }
   else {
@@ -494,28 +522,10 @@ void MultiModuleStatus::getStatusString(char * statusText) const
   }
 }
 
-static uint8_t * getRxBuffer(uint8_t moduleIdx)
-{
-#if defined(INTERNAL_MODULE_MULTI)
-  if (moduleIdx == INTERNAL_MODULE)
-    return intTelemetryRxBuffer;
-#endif
-  return telemetryRxBuffer;
-}
-
-static uint8_t &getRxBufferCount(uint8_t moduleIdx)
-{
-#if defined(INTERNAL_MODULE_MULTI)
-  if (moduleIdx == INTERNAL_MODULE)
-    return intTelemetryRxBufferCount;
-#endif
-  return telemetryRxBufferCount;
-}
-
 static void processMultiTelemetryByte(const uint8_t data, uint8_t module)
 {
-  uint8_t * rxBuffer = getRxBuffer(module);
-  uint8_t &rxBufferCount = getRxBufferCount(module);
+  uint8_t * rxBuffer = getTelemetryRxBuffer(module);
+  uint8_t &rxBufferCount = getTelemetryRxBufferCount(module);
 
   if (rxBufferCount < TELEMETRY_RX_PACKET_SIZE) {
     rxBuffer[rxBufferCount++] = data;
@@ -545,8 +555,8 @@ static void processMultiTelemetryByte(const uint8_t data, uint8_t module)
 
 void processMultiTelemetryData(uint8_t data, uint8_t module)
 {
-  uint8_t * rxBuffer = getRxBuffer(module);
-  uint8_t &rxBufferCount = getRxBufferCount(module);
+  uint8_t * rxBuffer = getTelemetryRxBuffer(module);
+  uint8_t &rxBufferCount = getTelemetryRxBufferCount(module);
 
   uint16_t &lastRxTS = getMultiTelemetryLastRxTS(module);
   uint16_t nowMs = (uint16_t)RTOS_GET_MS();

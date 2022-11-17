@@ -24,7 +24,7 @@
 #include <keys.h>
 
 #define MESSAGEBOX_X                   10
-#if defined(PCBTANGO)
+#if LCD_H > 64
 #define MESSAGEBOX_Y                   25
 #else
 #define MESSAGEBOX_Y                   16
@@ -37,13 +37,13 @@
 
 #define WARNING_LINE_LEN               20
 #define WARNING_LINE_X                 16
-#if defined(PCBTANGO)
+#if LCD_H > 64
 #define WARNING_LINE_Y                 4*FH
 #else
 #define WARNING_LINE_Y                 3*FH
 #endif
 
-#if defined(PCBTANGO)
+#if LCD_H > 64
 #define POPUP_MENU_MAX_LINES         24
 #else
 #define POPUP_MENU_MAX_LINES         12

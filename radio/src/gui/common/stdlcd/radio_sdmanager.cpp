@@ -188,7 +188,7 @@ void onSdManagerMenu(const char * result)
     audioQueue.stopAll();
     audioQueue.playFile(lfn, 0, ID_PLAY_FROM_SD_MANAGER);
   }
-#if LCD_DEPTH > 1 && !defined(PCBTANGO)
+#if LCD_DEPTH > 1 && !defined(MODEL_HAVE_NO_BITMAP)
   else if (result == STR_ASSIGN_BITMAP) {
     strAppendFilename(g_model.header.bitmap, line, sizeof(g_model.header.bitmap));
     memcpy(modelHeaders[g_eeGeneral.currModel].bitmap, g_model.header.bitmap, sizeof(g_model.header.bitmap));
@@ -199,13 +199,8 @@ void onSdManagerMenu(const char * result)
     getSelectionFullPath(lfn);
     pushMenuTextView(lfn);
   }
-#if defined(MULTIMODULE) && (defined(PCBMAMBO) || (defined(PCBTANGO) && !defined(DEBUG))) && !defined(SIMU)
-  else if (result == STR_FLASH_EXTERNAL_MULTI) {
-    getSelectionFullPath(lfn);
-    multiFlashFirmware(EXTERNAL_MODULE, lfn);
-  }
-#endif
 #if defined(PCBTARANIS)
+#if !defined(RADIO_FAMILY_TBS)
   else if (result == STR_FLASH_BOOTLOADER) {
     getSelectionFullPath(lfn);
     bootloaderFlash(lfn);
@@ -226,16 +221,21 @@ void onSdManagerMenu(const char * result)
     FrskyDeviceFirmwareUpdate device(SPORT_MODULE);
     device.flashFirmware(lfn);
   }
+#endif
 #if defined(MULTIMODULE)
 #if defined(INTERNAL_MODULE_MULTI)
   else if (result == STR_FLASH_INTERNAL_MULTI) {
     getSelectionFullPath(lfn);
-    multiFlashFirmware(INTERNAL_MODULE, lfn);
+    multiFlashFirmware(INTERNAL_MODULE, lfn, MULTI_TYPE_MULTIMODULE);
   }
 #endif
   else if (result == STR_FLASH_EXTERNAL_MULTI) {
     getSelectionFullPath(lfn);
-    multiFlashFirmware(EXTERNAL_MODULE, lfn);
+    multiFlashFirmware(EXTERNAL_MODULE, lfn, MULTI_TYPE_MULTIMODULE);
+  }
+  else if (result == STR_FLASH_EXTERNAL_ELRS) {
+    getSelectionFullPath(lfn);
+    multiFlashFirmware(EXTERNAL_MODULE, lfn, MULTI_TYPE_ELRS);
   }
 #endif
 #if defined(BLUETOOTH)
@@ -252,10 +252,16 @@ void onSdManagerMenu(const char * result)
   }
 #endif
 #if defined(PXX2)
-  else if (result == STR_FLASH_RECEIVER_OTA_BY_INTERNAL || result == STR_FLASH_RECEIVER_OTA_BY_EXTERNAL) {
+  else if (result == STR_FLASH_RECEIVER_BY_INTERNAL_MODULE_OTA || result == STR_FLASH_RECEIVER_BY_EXTERNAL_MODULE_OTA) {
     memclear(&reusableBuffer.sdManager.otaUpdateInformation, sizeof(OtaUpdateInformation));
     getSelectionFullPath(reusableBuffer.sdManager.otaUpdateInformation.filename);
-    reusableBuffer.sdManager.otaUpdateInformation.module = result == STR_FLASH_RECEIVER_OTA_BY_INTERNAL ? INTERNAL_MODULE : EXTERNAL_MODULE;
+    reusableBuffer.sdManager.otaUpdateInformation.module = (result == STR_FLASH_RECEIVER_BY_INTERNAL_MODULE_OTA ? INTERNAL_MODULE : EXTERNAL_MODULE);
+    moduleState[reusableBuffer.sdManager.otaUpdateInformation.module].startBind(&reusableBuffer.sdManager.otaUpdateInformation, onUpdateStateChanged);
+  }
+  else if (result == STR_FLASH_FLIGHT_CONTROLLER_BY_INTERNAL_MODULE_OTA || result == STR_FLASH_FLIGHT_CONTROLLER_BY_EXTERNAL_MODULE_OTA) {
+    memclear(&reusableBuffer.sdManager.otaUpdateInformation, sizeof(OtaUpdateInformation));
+    getSelectionFullPath(reusableBuffer.sdManager.otaUpdateInformation.filename);
+    reusableBuffer.sdManager.otaUpdateInformation.module = (result == STR_FLASH_FLIGHT_CONTROLLER_BY_INTERNAL_MODULE_OTA ? INTERNAL_MODULE : EXTERNAL_MODULE);
     moduleState[reusableBuffer.sdManager.otaUpdateInformation.module].startBind(&reusableBuffer.sdManager.otaUpdateInformation, onUpdateStateChanged);
   }
 #endif
@@ -288,16 +294,18 @@ void onUpdateReceiverSelection(const char * result)
 
 void menuRadioSdManager(event_t _event)
 {
-#if LCD_DEPTH > 1 && !defined(PCBTANGO)
+#if LCD_W >= 212
   int lastPos = menuVerticalPosition;
 #endif
 
-  if (moduleState[reusableBuffer.sdManager.otaUpdateInformation.module].mode == MODULE_MODE_BIND && EVT_KEY_MASK(_event) == KEY_EXIT) {
+#if defined(PXX2)
+  if (EVT_KEY_MASK(_event) == KEY_EXIT && moduleState[reusableBuffer.sdManager.otaUpdateInformation.module].mode == MODULE_MODE_BIND) {
     moduleState[reusableBuffer.sdManager.otaUpdateInformation.module].mode = MODULE_MODE_NORMAL;
     CLEAR_POPUP();
     killEvents(KEY_EXIT);
     _event = 0;
   }
+#endif
 
   event_t event = (EVT_KEY_MASK(_event) == KEY_ENTER ? 0 : _event);
   SIMPLE_MENU(SD_IS_HC() ? STR_SDHC_CARD : STR_SD_CARD, menuTabGeneral, MENU_RADIO_SD_MANAGER, HEADER_LINE + reusableBuffer.sdManager.count);
@@ -305,17 +313,17 @@ void menuRadioSdManager(event_t _event)
   switch (_event) {
     case EVT_ENTRY:
       f_chdir(ROOT_PATH);
-      REFRESH_FILES();
-#if LCD_DEPTH > 1 && !defined(PCBTANGO)
+#if LCD_W >= 212
       lastPos = -1;
 #endif
-      break;
+      // no break
 
     case EVT_ENTRY_UP:
+      memclear(&reusableBuffer.sdManager, sizeof(reusableBuffer.sdManager));
       REFRESH_FILES();
       break;
 
-#if defined(PCBX9) || defined(RADIO_X7) || defined(RADIO_X7ACCESS) || defined(PCBTANGO) || defined(PCBMAMBO) // TODO NO_MENU_KEY
+#if defined(PCBX9) || defined(RADIO_X7) || defined(RADIO_X7ACCESS)// TODO NO_MENU_KEY
     case EVT_KEY_LONG(KEY_MENU):
       if (SD_CARD_PRESENT() && !READ_ONLY() && s_editMode == 0) {
         killEvents(_event);
@@ -330,7 +338,7 @@ void menuRadioSdManager(event_t _event)
       REFRESH_FILES();
       break;
 
-#if !defined(PCBTARANIS) && !defined(PCBTANGO) && !defined(PCBMAMBO)
+#if !defined(PCBTARANIS)
     case EVT_KEY_FIRST(KEY_RIGHT):
 #endif
     case EVT_KEY_BREAK(KEY_ENTER):
@@ -351,7 +359,7 @@ void menuRadioSdManager(event_t _event)
       break;
 
     case EVT_KEY_LONG(KEY_ENTER):
-#if !defined(PCBX9) && !defined(RADIO_X7) && !defined(RADIO_X7ACCESS) && !defined(PCBTANGO) && !defined(PCBMAMBO)  // TODO NO_HEADER_LINE
+#if HEADER_LINE > 0
       if (menuVerticalPosition < HEADER_LINE) {
         killEvents(_event);
         POPUP_MENU_ADD_ITEM(STR_SD_INFO);
@@ -375,7 +383,7 @@ void menuRadioSdManager(event_t _event)
           if (!strcasecmp(ext, SOUNDS_EXT)) {
             POPUP_MENU_ADD_ITEM(STR_PLAY_FILE);
           }
-#if LCD_DEPTH > 1 && !defined(PCBTANGO)
+#if LCD_DEPTH > 1 && !defined(MODEL_HAVE_NO_BITMAP)
           else if (isExtensionMatching(ext, BITMAPS_EXT)) {
             if (!READ_ONLY() && (ext-line) <= (int)sizeof(g_model.header.bitmap)) {
               POPUP_MENU_ADD_ITEM(STR_ASSIGN_BITMAP);
@@ -397,8 +405,14 @@ void menuRadioSdManager(event_t _event)
               POPUP_MENU_ADD_ITEM(STR_FLASH_EXTERNAL_MULTI);
             }
           }
+
+          if (!READ_ONLY() && !strcasecmp(ext, ELRS_FIRMWARE_EXT)) {
+            TCHAR lfn[_MAX_LFN + 1];
+            getSelectionFullPath(lfn);
+            POPUP_MENU_ADD_ITEM(STR_FLASH_EXTERNAL_ELRS);
+          }
 #endif
-#if defined(PCBTARANIS)
+#if defined(PCBTARANIS) && !defined(RADIO_FAMILY_TBS)
           if (!READ_ONLY() && !strcasecmp(ext, FIRMWARE_EXT)) {
             if (isBootloader(lfn)) {
               POPUP_MENU_ADD_ITEM(STR_FLASH_BOOTLOADER);
@@ -407,14 +421,18 @@ void menuRadioSdManager(event_t _event)
           else if (!READ_ONLY() && !strcasecmp(ext, SPORT_FIRMWARE_EXT)) {
             if (HAS_SPORT_UPDATE_CONNECTOR())
               POPUP_MENU_ADD_ITEM(STR_FLASH_EXTERNAL_DEVICE);
+#if defined(INTERNAL_MODULE_PXX1) || defined(INTERNAL_MODULE_PXX2)
             POPUP_MENU_ADD_ITEM(STR_FLASH_INTERNAL_MODULE);
+#endif
             POPUP_MENU_ADD_ITEM(STR_FLASH_EXTERNAL_MODULE);
           }
           else if (!READ_ONLY() && !strcasecmp(ext, FRSKY_FIRMWARE_EXT)) {
             FrSkyFirmwareInformation information;
             if (readFrSkyFirmwareInformation(line, information) == nullptr) {
+#if defined(INTERNAL_MODULE_PXX1) || defined(INTERNAL_MODULE_PXX2)
               if (information.productFamily == FIRMWARE_FAMILY_INTERNAL_MODULE)
                 POPUP_MENU_ADD_ITEM(STR_FLASH_INTERNAL_MODULE);
+#endif
               if (information.productFamily == FIRMWARE_FAMILY_EXTERNAL_MODULE)
                 POPUP_MENU_ADD_ITEM(STR_FLASH_EXTERNAL_MODULE);
               if (information.productFamily == FIRMWARE_FAMILY_RECEIVER || information.productFamily == FIRMWARE_FAMILY_SENSOR) {
@@ -426,9 +444,13 @@ void menuRadioSdManager(event_t _event)
 #if defined(PXX2)
               if (information.productFamily == FIRMWARE_FAMILY_RECEIVER) {
                 if (isReceiverOTAEnabledFromModule(INTERNAL_MODULE, information.productId))
-                  POPUP_MENU_ADD_ITEM(STR_FLASH_RECEIVER_OTA_BY_INTERNAL);
+                  POPUP_MENU_ADD_ITEM(STR_FLASH_RECEIVER_BY_INTERNAL_MODULE_OTA);
                 if (isReceiverOTAEnabledFromModule(EXTERNAL_MODULE, information.productId))
-                  POPUP_MENU_ADD_ITEM(STR_FLASH_RECEIVER_OTA_BY_EXTERNAL);
+                  POPUP_MENU_ADD_ITEM(STR_FLASH_RECEIVER_BY_EXTERNAL_MODULE_OTA);
+              }
+              if (information.productFamily == FIRMWARE_FAMILY_FLIGHT_CONTROLLER) {
+                POPUP_MENU_ADD_ITEM(STR_FLASH_FLIGHT_CONTROLLER_BY_INTERNAL_MODULE_OTA);
+                POPUP_MENU_ADD_ITEM(STR_FLASH_FLIGHT_CONTROLLER_BY_EXTERNAL_MODULE_OTA);
               }
 #endif
 #if defined(BLUETOOTH)
@@ -580,11 +602,11 @@ void menuRadioSdManager(event_t _event)
         if (reusableBuffer.sdManager.otaUpdateInformation.candidateReceiversCount > 0) {
           if (reusableBuffer.sdManager.otaUpdateInformation.candidateReceiversCount != popupMenuItemsCount) {
             CLEAR_POPUP();
-            popupMenuItemsCount = min<uint8_t>(reusableBuffer.sdManager.otaUpdateInformation.candidateReceiversCount,PXX2_MAX_RECEIVERS_PER_MODULE);
+            popupMenuItemsCount = min<uint8_t>(reusableBuffer.sdManager.otaUpdateInformation.candidateReceiversCount, PXX2_MAX_RECEIVERS_PER_MODULE);
             for (auto rx = 0; rx < popupMenuItemsCount; rx++) {
               popupMenuItems[rx] = reusableBuffer.sdManager.otaUpdateInformation.candidateReceiversNames[rx];
             }
-            popupMenuTitle = STR_PXX2_SELECT_RX;
+            POPUP_MENU_TITLE(STR_PXX2_SELECT_RX);
             POPUP_MENU_START(onUpdateReceiverSelection);
           }
         }
@@ -595,7 +617,7 @@ void menuRadioSdManager(event_t _event)
     }
 #endif
 
-#if LCD_DEPTH > 1 && !defined(PCBTANGO)
+#if LCD_W >= 212
     const char * ext = getFileExtension(reusableBuffer.sdManager.lines[index]);
     if (ext && isExtensionMatching(ext, BITMAPS_EXT)) {
       if (lastPos != menuVerticalPosition) {

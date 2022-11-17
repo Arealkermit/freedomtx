@@ -26,7 +26,17 @@ constexpr coord_t CHANNEL_GAUGE_OFFSET = CHANNEL_VALUE_OFFSET;
 constexpr coord_t CHANNEL_BAR_WIDTH = 70;
 constexpr coord_t CHANNEL_PROPERTIES_OFFSET = CHANNEL_GAUGE_OFFSET + CHANNEL_BAR_WIDTH + 2;
 
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(RADIO_T8)
+#define EVT_KEY_PREVIOUS_VIEW          EVT_KEY_BREAK(KEY_PAGEUP)
+#define EVT_KEY_NEXT_VIEW              EVT_KEY_BREAK(KEY_PAGEDN)
+#define EVT_KEY_NEXT_PAGE              EVT_KEY_BREAK(KEY_PLUS)
+#define EVT_KEY_PREVIOUS_PAGE          EVT_KEY_BREAK(KEY_MINUS)
+#elif defined(NAVIGATION_X7_TX12)
+#define EVT_KEY_PREVIOUS_VIEW          EVT_KEY_BREAK(KEY_PAGEUP)
+#define EVT_KEY_NEXT_VIEW              EVT_KEY_BREAK(KEY_PAGEDN)
+#define EVT_KEY_NEXT_PAGE              EVT_ROTARY_RIGHT
+#define EVT_KEY_PREVIOUS_PAGE          EVT_ROTARY_LEFT
+#elif defined(NAVIGATION_X7)
 #define EVT_KEY_PREVIOUS_VIEW          EVT_KEY_LONG(KEY_PAGE)
 #define EVT_KEY_NEXT_VIEW              EVT_KEY_BREAK(KEY_PAGE)
 #define EVT_KEY_NEXT_PAGE              EVT_ROTARY_RIGHT
@@ -54,7 +64,7 @@ void menuChannelsViewCommon(event_t event)
       memclear(&reusableBuffer.viewChannels, sizeof(reusableBuffer.viewChannels));
       break;
 
-    case EVT_KEY_FIRST(KEY_ENTER):
+    case EVT_KEY_BREAK(KEY_ENTER):
       reusableBuffer.viewChannels.mixersView = !reusableBuffer.viewChannels.mixersView;
       break;
   }
@@ -70,7 +80,7 @@ void menuChannelsViewCommon(event_t event)
   // Channels
   for (uint8_t line = 0; line < 8; line++) {
     LimitData * ld = limitAddress(ch);
-#if defined(PCBTANGO)
+#if LCD_H > 64
     const uint8_t y = 11 + line * 11;
 #else
     const uint8_t y = 9 + line * 7;
@@ -131,10 +141,6 @@ void menuChannelsView(event_t event)
 
     case EVT_KEY_PREVIOUS_PAGE:
       g_eeGeneral.view = (g_eeGeneral.view + (4 * ALTERNATE_VIEW) - ALTERNATE_VIEW) % (4 * ALTERNATE_VIEW);
-      break;
-
-    case EVT_KEY_FIRST(KEY_ENTER):
-      reusableBuffer.viewChannels.mixersView = !reusableBuffer.viewChannels.mixersView;
       break;
   }
 

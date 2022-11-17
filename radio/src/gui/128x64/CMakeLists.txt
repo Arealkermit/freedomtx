@@ -1,13 +1,25 @@
+if(${EEPROM} STREQUAL SDCARD)
+  set(MODEL_SELECT_SRC model_select_sd.cpp)
+else()
+  set(MODEL_SELECT_SRC model_select.cpp)
+endif()
+
+if(RADIO_CALIBRATION_HALL)
+  set(RADIO_CALIBRATION_SRC radio_calibration_hall.cpp)
+else()
+  set(RADIO_CALIBRATION_SRC radio_calibration.cpp)
+endif()
+
 set(GUI_SRC
   ${GUI_SRC}
-  lcd.cpp
+  draw_functions.cpp
   splash.cpp
   fonts.cpp
   popups.cpp
   widgets.cpp
   startup_shutdown.cpp
+  ${MODEL_SELECT_SRC}
   menu_model.cpp
-  model_select.cpp
   model_setup.cpp
   model_failsafe.cpp
   model_logical_switches.cpp
@@ -17,32 +29,10 @@ set(GUI_SRC
   model_telemetry_sensor.cpp
   menu_radio.cpp
   radio_setup.cpp
-  radio_calibration.cpp
+  ${RADIO_CALIBRATION_SRC}
   view_main.cpp
   view_statistics.cpp
   )
-
-if(PCB STREQUAL TANGO)
-  list(REMOVE_ITEM GUI_SRC 
-    lcd.cpp
-    model_select.cpp
-    radio_calibration.cpp)
-  set(GUI_SRC
-    ${GUI_SRC}
-    lcd_4bits.cpp
-    radio_calibration_hall.cpp
-    model_select_tango.cpp
-    )
-elseif(PCB STREQUAL MAMBO)
-  list(REMOVE_ITEM GUI_SRC 
-    model_select.cpp
-    radio_calibration.cpp)
-  set(GUI_SRC
-    ${GUI_SRC}
-    radio_calibration_hall.cpp
-    model_select_tango.cpp
-    )
-endif()
 
 if(FLIGHT_MODES)
   set(GUI_SRC

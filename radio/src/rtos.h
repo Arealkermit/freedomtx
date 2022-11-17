@@ -158,7 +158,7 @@ template<int SIZE>
   {
     return (uint32_t)(simuTimerMicros() / 1000);
   }
-  
+
 #elif defined(RTOS_COOS)
 #ifdef __cplusplus
   extern "C" {
@@ -168,7 +168,7 @@ template<int SIZE>
   }
 #endif
 
-  #define RTOS_MS_PER_TICK              ((CFG_CPU_FREQ / CFG_SYSTICK_FREQ) / (CFG_CPU_FREQ / 1000))  // RTOS timer tick length in ms (currently 2)
+  #define RTOS_MS_PER_TICK              (1000 / CFG_SYSTICK_FREQ)  // RTOS timer tick length in ms (currently 1 for STM32, 2 for others)
 
   typedef OS_TID RTOS_TASK_HANDLE;
   typedef OS_MutexID RTOS_MUTEX_HANDLE;
@@ -250,17 +250,17 @@ template<int SIZE>
 
   static inline void RTOS_ISR_SET_FLAG(RTOS_FLAG_HANDLE flag)
   {
-  #if !defined(CROSSFIRE_TASK) 
+  #if !defined(INTERNAL_MODULE_CRSF)
     CoEnterISR();
     CoSchedLock();
   #endif
     isr_SetFlag(flag);
-  #if !defined(CROSSFIRE_TASK) 
+  #if !defined(INTERNAL_MODULE_CRSF)
     CoSchedUnlock();
     CoExitISR();
   #endif
   }
-  
+
 #ifdef __cplusplus
   template<int SIZE>
   class TaskStack

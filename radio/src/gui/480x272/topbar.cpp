@@ -61,6 +61,11 @@ void drawTopBar()
     lcdDrawBitmapPattern(LCD_W-98, 8, LBM_TOPMENU_USB, MENU_TITLE_COLOR);
   }
 
+  // Logs
+  if (isFunctionActive(FUNCTION_LOGS) && !usbPlugged() && BLINK_ON_PHASE) {
+    lcdDrawBitmapPattern(LCD_W-98, 6, LBM_DOT, MENU_TITLE_COLOR);
+  }
+
   // RSSI
   const uint8_t rssiBarsValue[] = {30, 40, 50, 60, 80};
   const uint8_t rssiBarsHeight[] = {5, 10, 15, 21, 31};
@@ -91,15 +96,18 @@ void drawTopBar()
   /* Tx battery */
   uint8_t bars = GET_TXBATT_BARS(5);
 #if defined(USB_CHARGER)
-  if(usbChargerLed())
-    lcdDrawBitmapPattern(LCD_W-130, 24, LBM_TOPMENU_TXBATT_CHARGING, MENU_TITLE_COLOR);
-  else
-#endif
-    lcdDrawBitmapPattern(LCD_W-130, 24, LBM_TOPMENU_TXBATT, MENU_TITLE_COLOR);
-  for (unsigned int i = 0; i < 5; i++) {
-    lcdDrawSolidFilledRect(LCD_W-122+4*i, 30, 2, 8, i >= bars ? MENU_TITLE_DISABLE_COLOR : MENU_TITLE_COLOR);
+  if (usbChargerLed()) {
+    lcdDrawBitmapPattern(LCD_W - 130, 25, LBM_TOPMENU_TXBATT_CHARGING, MENU_TITLE_COLOR);
   }
-
+  else {
+    lcdDrawBitmapPattern(LCD_W - 130, 25, LBM_TOPMENU_TXBATT, MENU_TITLE_COLOR);
+  }
+#else
+  lcdDrawBitmapPattern(LCD_W - 130, 25, LBM_TOPMENU_TXBATT, MENU_TITLE_COLOR);
+#endif
+  for (unsigned int i = 0; i < 5; i++) {
+    lcdDrawSolidFilledRect(LCD_W - 128 + 4 * i, 30, 2, 8, i >= bars ? MENU_TITLE_DISABLE_COLOR : MENU_TITLE_COLOR);
+  }
   topbar->refresh();
 
 #if 0

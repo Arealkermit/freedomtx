@@ -53,7 +53,10 @@ enum Capability {
   VoicesAsNumbers,
   VoicesMaxLength,
   MultiLangVoice,
-  ModelImage,
+  HasModelImage,
+  ModelImageNameLen,
+  ModelImageFilters,
+  ModelImageKeepExtn,
   CustomFunctions,
   SafetyChannelCustomFunction,
   LogicalSwitches,
@@ -100,6 +103,8 @@ enum Capability {
   GvarsName,
   NoTelemetryProtocol,
   TelemetryCustomScreens,
+  TelemetryCustomScreensBars,
+  TelemetryCustomScreensLines,
   TelemetryCustomScreensFieldsPerLine,
   TelemetryMaxMultiplier,
   HasVario,
@@ -132,7 +137,6 @@ enum Capability {
   VirtualInputs,
   InputsLength,
   TrainerInputs,
-  RtcTime,
   SportTelemetry,
   LuaScripts,
   LuaInputsPerScript,
@@ -149,7 +153,15 @@ enum Capability {
   DangerousFunctions,
   HasModelCategories,
   HasSwitchableJack,
-  PwrButtonPress
+  HasSportConnector,
+  PwrButtonPress,
+  Sensors,
+  HasAuxSerialMode,
+  HasAux2SerialMode,
+  HasBluetooth,
+  HasAntennaChoice,
+  HasADCJitterFilter,
+  HasTelemetryBaudrate
 };
 
 class EEPROMInterface
@@ -232,10 +244,7 @@ enum EepromLoadErrors {
   WRONG_SIZE,
   WRONG_FILE_SYSTEM,
   NOT_OPENTX,
-  NOT_TH9X,
-  NOT_GRUVIN9X,
   NOT_ERSKY9X,
-  NOT_ER9X,
   UNKNOWN_BOARD,
   WRONG_BOARD,
   BACKUP_NOT_SUPPORTED,
@@ -340,6 +349,8 @@ class Firmware
     }
 
     virtual int getCapability(Capability) = 0;
+
+    virtual QString getCapabilityStr(Capability) = 0;
 
     virtual QString getAnalogInputName(unsigned int index) = 0;
 

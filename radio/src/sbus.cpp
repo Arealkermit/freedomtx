@@ -43,7 +43,7 @@ void processSbusFrame(uint8_t * sbus, int16_t * pulses, uint32_t size)
   if ((sbus[SBUS_FLAGS_IDX] & (1<<SBUS_FAILSAFE_BIT)) || (sbus[SBUS_FLAGS_IDX] & (1<<SBUS_FRAMELOST_BIT))) {
     return; // SBUS invalid frame or failsafe mode
   }
-#if !defined (PCBMAMBO)
+
   sbus++; // skip start byte
 
   uint32_t inputbitsavailable = 0;
@@ -59,7 +59,6 @@ void processSbusFrame(uint8_t * sbus, int16_t * pulses, uint32_t size)
   }
 
   ppmInputValidityTimer = PPM_IN_VALID_TIMEOUT;
-#endif
 }
 
 void processSbusInput()

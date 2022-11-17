@@ -33,7 +33,7 @@ class hapticQueue
     // interupt queue (Now) and the other queues for playing ASAP.
     void play(uint8_t tLen, uint8_t tPause, uint8_t tRepeat=0);
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_FAMILY_TBS)
     void stop();
 #endif
 
@@ -53,7 +53,7 @@ class hapticQueue
 
   protected:
     inline uint8_t getHapticLength(uint8_t tLen) {
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
       return ((g_eeGeneral.hapticLength * 2) + tLen);
 #else
       return ((g_eeGeneral.hapticLength * 2) + tLen) * 2;

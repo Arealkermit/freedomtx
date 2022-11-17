@@ -89,7 +89,7 @@ const char * writeScreenshot()
     }
   }
 #else
-#if defined(PCBTANGO)
+#if LCD_H > 64
   for (int y=0; y<LCD_H; y++) {
     for (int x=LCD_W-2; x>=0; x-=2) {
 #else

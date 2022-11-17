@@ -38,6 +38,7 @@ extern "C" {
 #endif
 
 uint8_t auxSerialTracesEnabled();
+uint8_t aux2SerialTracesEnabled();
 
 #if defined(SIMU)
   typedef void (*traceCallbackFunc)(const char * text);
@@ -285,7 +286,7 @@ enum InterruptNames {
 #endif // #if defined(DEBUG_USB_INTERRUPTS)
   INT_LAST
 };
-#elif defined(PCBTANGO) || defined(PCBMAMBO)
+#elif defined(RADIO_FAMILY_TBS)
 enum InterruptNames {
   INT_TICK,
   INT_1MS,

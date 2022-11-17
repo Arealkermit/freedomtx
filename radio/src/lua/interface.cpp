@@ -467,7 +467,8 @@ int luaLoadScriptFileToState(lua_State * L, const char * filename, const char * 
     if (scriptNeedsCompile || !strchr(lmode, 'b')) {
       // text version needs compilation or forced by mode
       loadFileType = 1;
-    } else {
+    }
+    else {
       // use binary file
       loadFileType = 2;
     }
@@ -666,7 +667,7 @@ bool luaLoadFunctionScript(uint8_t index, uint8_t ref)
   return true;
 }
 
-#if defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS)
 bool luaLoadTelemetryScript(uint8_t index)
 {
   TelemetryScreenType screenType = TELEMETRY_SCREEN_TYPE(index);
@@ -727,7 +728,7 @@ void luaLoadPermanentScripts()
     }
   }
 
-#if defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS)
   // Load custom telemetry scripts
   for (int i=0; i<MAX_TELEMETRY_SCREENS; i++) {
     if (!luaLoadTelemetryScript(i)) {
@@ -745,11 +746,23 @@ void displayLuaError(const char * title)
   if (lua_warning_info[0]) {
     char * split = strstr(lua_warning_info, ": ");
     if (split) {
-      lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y+FH+3, lua_warning_info, split-lua_warning_info, SMLSIZE);
-      lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y+2*FH+2, split+2, lua_warning_info+LUA_WARNING_INFO_LEN-split, SMLSIZE);
+#if LCD_W == 128
+      if (strlen(split + 2) <= 20) {
+        lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + FH + 3, lua_warning_info, split - lua_warning_info, SMLSIZE);
+        lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + 2 * FH + 2, split + 2, strlen(split + 2), SMLSIZE);
+      }
+      else {
+        lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + FH, lua_warning_info, split - lua_warning_info, SMLSIZE);
+        lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + 2 * FH, split + 2, 20, SMLSIZE);
+        lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + 3 * FH, split + 22, strlen(split + 22), SMLSIZE);
+      }
+#else
+      lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + FH + 3, lua_warning_info, split - lua_warning_info, SMLSIZE);
+      lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + 2 * FH + 2, split + 2, lua_warning_info + LUA_WARNING_INFO_LEN - split, SMLSIZE);
+#endif
     }
     else {
-      lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y+FH+3, lua_warning_info, 40, SMLSIZE);
+      lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + FH + 3, lua_warning_info, 40, SMLSIZE);
     }
   }
 }
@@ -787,7 +800,12 @@ void luaError(lua_State * L, uint8_t error, bool acknowledge)
 #if defined(SIMU)
     if (!strncmp(msg, ".", 2)) msg += 1;
 #endif
+#if LCD_W == 128
+    const char * tmp = strrchr(msg, '/');
+    if (tmp) msg = tmp + 1;
+#else
     if (!strncmp(msg, "/SCRIPTS/", 9)) msg += 9;
+#endif
     strncpy(lua_warning_info, msg, LUA_WARNING_INFO_LEN);
     lua_warning_info[LUA_WARNING_INFO_LEN] = '\0';
   }
@@ -947,7 +965,7 @@ bool luaDoOneRunPermanentScript(event_t evt, int i, uint32_t scriptType)
       return false;
   }
   else {
-#if defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS)
 #if defined(SIMU) || defined(DEBUG)
     TelemetryScriptData & script = g_model.screens[sid.reference-SCRIPT_TELEMETRY_FIRST].script;
     filename = script.file;

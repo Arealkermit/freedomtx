@@ -76,9 +76,8 @@ void ledSetColour(uint8_t Red, uint8_t Green, uint8_t Blue)
 
   RGB_Buffer = RGB2BUFFER(Red,Green,Blue);
   Shift_Reg_Mask = 1 << (RGB_LED_RGB_BITS - 1);
-  for( i = 0; i < RGB_LED_RGB_BITS; i++ ) 
-  {
-    if (( RGB_Buffer & Shift_Reg_Mask ) != 0 )
+  for (i = 0; i < RGB_LED_RGB_BITS; i++) {
+    if ((RGB_Buffer & Shift_Reg_Mask) != 0)
       rgb_led_bit_buffer[i] = RGB_LED_CODE_1_TIME;
     else
       rgb_led_bit_buffer[i] = RGB_LED_CODE_0_TIME;

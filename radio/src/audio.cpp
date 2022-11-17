@@ -161,10 +161,10 @@ const char * const unitsFilenames[] = {
   "ml",
   "founce",
   "mlpm",
-  "spare1",
-  "spare2",
-  "spare3",
-  "spare4",
+  "hertz",
+  "ms",
+  "us",
+  "km",
   "spare5",
   "spare6",
   "spare7",
@@ -210,12 +210,16 @@ const char * const audioFilenames[] = {
   "midstck2",
   "midstck3",
   "midstck4",
-#if defined(PCBTANGO)
+#if !defined(HARDWARE_TRIMS)
   "aileron_trim",
   "elevator_trim",
   "throttle_trim",
   "rudder_trim",
   "main_page",
+#endif
+#if defined(RADIO_FAMILY_TBS)
+  "category_enabled",
+  "category_disabled",
 #endif
 #if defined(PCBTARANIS) || defined(PCBHORUS)
   "midpot1",
@@ -327,7 +331,7 @@ void getSwitchAudioFile(char * filename, swsrc_t index)
 {
   char * str = getModelAudioPath(filename);
 
-#if defined(PCBTARANIS) || defined(PCBHORUS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS) || defined(PCBHORUS)
   if (index <= SWSRC_LAST_SWITCH) {
     div_t swinfo = switchInfo(index);
     *str++ = 'S';
@@ -335,7 +339,7 @@ void getSwitchAudioFile(char * filename, swsrc_t index)
     const char * positions[] = { "-up", "-mid", "-down" };
     strcpy(str, positions[swinfo.rem]);
   }
-  #if defined(SWSRC_FIRST_MULTIPOS_SWITCH)
+  #if NUM_XPOTS > 0
   else {
     div_t swinfo = div(int(index - SWSRC_FIRST_MULTIPOS_SWITCH), XPOTS_MULTIPOS_COUNT);
     *str++ = 'S';
@@ -357,7 +361,7 @@ void getLogicalSwitchAudioFile(char * filename, int index, unsigned int event)
 {
   char * str = getModelAudioPath(filename);
 
-#if defined(PCBTARANIS) || defined(PCBHORUS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS) || defined(PCBHORUS)
   *str++ = 'L';
   if (index >= 9) {
     div_t qr = div(index+1, 10);
@@ -536,7 +540,7 @@ void audioTask(void * pdata)
 
   setSampleRate(AUDIO_SAMPLE_RATE);
 
-#if defined(PCBX12S)
+#if defined(PCBX12S) || defined(RADIO_TX16S)
   // The audio amp needs ~2s to start
   RTOS_WAIT_MS(1000); // 1s
 #endif

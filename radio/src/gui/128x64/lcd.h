@@ -38,17 +38,19 @@ typedef uint8_t display_t;
 #define LCD_LINES                      (LCD_H/FH)
 #define LCD_COLS                       (LCD_W/FW)
 
+#if LCD_DEPTH == 4
 #define COLOUR_MASK(x)                 ((x) & 0x0F0000)
-
-#if LCD_DEPTH > 1
 #define FILL_WHITE                     0x10
+#define BITMAP_BUFFER_SIZE(w, h)       (2 + (w) * (((h)+7)/8)*4)
+#else
+#define BITMAP_BUFFER_SIZE(w, h)       (2 + (w) * (((h)+7)/8))
 #endif
 
 /* lcdDrawText flags */
 #define BLINK                          0x01
 #define INVERS                         0x02
 #if defined(BOLD_FONT)
-  #define BOLD                         0x40
+  #define BOLD                         0x40u
 #else
   #define BOLD                         0x00
 #endif
@@ -59,7 +61,7 @@ typedef uint8_t display_t;
 #define FIXEDWIDTH                     0x10
 /* no 0x80 here because of "GV"1 which is aligned LEFT */
 /* no 0x10 here because of "MODEL"01 which uses LEADING0 */
-#define ZCHAR                          0x80
+#define ZCHAR                          0x80u
 
 /* lcdDrawNumber additional flags */
 #define LEADING0                       0x10
@@ -67,8 +69,8 @@ typedef uint8_t display_t;
 #define PREC2                          0x30
 #define MODE(flags)                    ((((int8_t)(flags) & 0x30) - 0x10) >> 4)
 
-#define IS_LEFT_ALIGNED(att)           !((att) & RIGHT)
-#define IS_RIGHT_ALIGNED(att)          (!IS_LEFT_ALIGNED(att))
+#define IS_RIGHT_ALIGNED(att)          ((att) & RIGHT)
+#define IS_LEFT_ALIGNED(att)           (!((att) & (RIGHT | CENTERED)))
 
 /* line, rect, square flags */
 #define FORCE                          0x02
@@ -94,10 +96,8 @@ typedef uint8_t display_t;
 
 #if LCD_DEPTH == 4
   #define DISPLAY_BUFFER_SIZE            (LCD_W*LCD_H*4/8)
-  #define BITMAP_BUFFER_SIZE(w, h)       (2 + (w) * (((h)+7)/8)*4)
 #else
   #define DISPLAY_BUFFER_SIZE            (LCD_W*((LCD_H+7)/8))
-  #define BITMAP_BUFFER_SIZE(w, h)       (2 + (w) * (((h)+7)/8))
 #endif
 
 extern display_t displayBuf[DISPLAY_BUFFER_SIZE];
@@ -127,9 +127,8 @@ void drawTimerWithMode(coord_t x, coord_t y, uint8_t index, LcdFlags att);
 void lcdDrawHexNumber(coord_t x, coord_t y, uint32_t val, LcdFlags mode=0);
 void lcdDrawHexChar(coord_t x, coord_t y, uint8_t val, LcdFlags flags=0);
 
-void lcdDrawNumber(coord_t x, coord_t y, int val, LcdFlags mode, uint8_t len);
-void lcdDrawNumber(coord_t x, coord_t y, int val, LcdFlags mode=0);
-void lcdDraw8bitsNumber(coord_t x, coord_t y, int8_t val);
+void lcdDrawNumber(coord_t x, coord_t y, int32_t val, LcdFlags mode, uint8_t len);
+void lcdDrawNumber(coord_t x, coord_t y, int32_t val, LcdFlags mode=0);
 
 void putsModelName(coord_t x, coord_t y, char * name, uint8_t id, LcdFlags att);
 #if !defined(BOOT) // TODO not here ...
@@ -172,6 +171,8 @@ inline void lcdDrawSquare(coord_t x, coord_t y, coord_t w, LcdFlags att=0)
 }
 
 void drawTelemetryTopBar();
+void drawChargingState(void);
+void drawFullyCharged(void);
 
 #define V_BAR(xx, yy, ll)    \
   lcdDrawSolidVerticalLine(xx-1,yy-ll,ll);  \
@@ -191,8 +192,9 @@ uint8_t * lcdLoadBitmap(uint8_t * dest, const char * filename, uint8_t width, ui
 #if defined(BOOT)
   #define BLINK_ON_PHASE               (0)
 #else
-  #define BLINK_ON_PHASE               (g_blinkTmr10ms & (1<<6))
   #define SLOW_BLINK_ON_PHASE          (g_blinkTmr10ms & (1<<7))
+  #define BLINK_ON_PHASE               (g_blinkTmr10ms & (1<<6))
+  #define FAST_BLINK_ON_PHASE          (g_blinkTmr10ms & (1<<4))
 #endif
 
 inline display_t getPixel(uint8_t x, uint8_t y)
@@ -212,11 +214,5 @@ inline display_t getPixel(uint8_t x, uint8_t y)
 }
 
 uint8_t getTextWidth(const char * s, uint8_t len=0, LcdFlags flags=0);
-
-#if defined(PCBMAMBO)
-void drawChargingState(void);
-void drawFullyCharged(void);
-void runFatalErrorScreen(const char * message);
-#endif
 
 #endif // _LCD_H_

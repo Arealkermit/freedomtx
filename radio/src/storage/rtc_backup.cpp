@@ -32,7 +32,7 @@ PACK(struct RamBackupUncompressed {
 
 #include "datacopy.cpp"
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_FAMILY_TBS)
 Backup::RamBackupUncompressed ramBackupUncompressed;
 #else
 Backup::RamBackupUncompressed ramBackupUncompressed __DMA;
@@ -41,7 +41,7 @@ Backup::RamBackupUncompressed ramBackupUncompressed __DMA;
 #if defined(SIMU)
 RamBackup _ramBackup;
 RamBackup * ramBackup = &_ramBackup;
-#elif defined(PCBTANGO) || defined(PCBMAMBO)
+#elif defined(RADIO_FAMILY_TBS)
 RamBackup * ramBackup = (RamBackup *)(BKPSRAM_BASE + 0x800);
 #else
 RamBackup * ramBackup = (RamBackup *)BKPSRAM_BASE;
@@ -49,7 +49,7 @@ RamBackup * ramBackup = (RamBackup *)BKPSRAM_BASE;
 
 void rambackupWrite()
 {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_FAMILY_TBS)
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
   PWR_BackupRegulatorCmd(ENABLE);
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_BKPSRAM, ENABLE);
@@ -64,7 +64,8 @@ void rambackupWrite()
 
 bool rambackupRestore()
 {
-  if (ramBackup->size == 0)    return false;
+  if (ramBackup->size == 0)
+    return false;
 
   if (uncompress((uint8_t *)&ramBackupUncompressed, sizeof(ramBackupUncompressed), ramBackup->data, ramBackup->size) != sizeof(ramBackupUncompressed))
     return false;

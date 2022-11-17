@@ -46,11 +46,10 @@ void drawMessageBoxBackground(coord_t top, coord_t height)
   lcdDrawRect(MESSAGEBOX_X, top, MESSAGEBOX_W, height, SOLID, FORCE);
 }
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-#if defined(PCBTANGO)
+#if LCD_H > 64
   #define MSG_BOX_HEIGHT    60
   #define WARNING_LINE_NUM  4
-#else   // defined(PCBMAMBO)
+#else
   #define MSG_BOX_HEIGHT    40
   #define WARNING_LINE_NUM  2
 #endif
@@ -96,18 +95,6 @@ void drawMessageBox(const char * title)
     lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y + line_index + line_index * FH, title_buf + space_cnt, WARNING_LINE_LEN);
   }
 }
-#else
-void drawMessageBox(const char * title)
-{
-  // background + border
-  drawMessageBoxBackground(MESSAGEBOX_Y, 40);
-
-  // title
-  lcdDrawSizedText(WARNING_LINE_X, WARNING_LINE_Y, title, WARNING_LINE_LEN);
-
-  // could be a place for a warningInfoText
-}
-#endif
 
 void showMessageBox(const char * title)
 {
@@ -212,17 +199,6 @@ const char * runPopupMenu(event_t event)
       popupMenuTitle = nullptr;
       break;
   }
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-  if (popupMenuHandler == onUSBConnectMenu && !usbPlugged())
-  {
-    result = STR_EXIT;
-    popupMenuItemsCount = 0;
-    popupMenuSelectedItem = 0;
-    popupMenuOffset = 0;
-    popupMenuTitle = nullptr;
-  }
-#endif
-
   return result;
 }
 
@@ -240,8 +216,8 @@ void runPopupWarning(event_t event)
     case WARNING_TYPE_WAIT:
       return;
 
-#if defined(PCBTANGO)
-      case WARNING_TYPE_INFO:
+#if defined(RADIO_TANGO)
+    case WARNING_TYPE_INFO:
       lcdDrawText(WARNING_LINE_X, WARNING_LINE_Y+5*FH, STR_OK);
       break;
 

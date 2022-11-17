@@ -91,7 +91,7 @@ void hapticQueue::play(uint8_t tLen, uint8_t tPause, uint8_t tFlags)
   }
 }
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_FAMILY_TBS)
 void hapticQueue::stop()
 {
   buzzTimeLeft = 0;

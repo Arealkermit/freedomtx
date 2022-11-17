@@ -34,7 +34,10 @@ enum NavigationDirection {
 #if defined(NAVIGATION_XLITE)
   #define EVT_KEY_PREVIOUS_VIEW(evt)         (evt == EVT_KEY_LONG(KEY_LEFT) && IS_SHIFT_PRESSED())
   #define EVT_KEY_NEXT_VIEW(evt)             (evt == EVT_KEY_LONG(KEY_RIGHT) && IS_SHIFT_PRESSED())
-#elif defined(NAVIGATION_X7) || defined(NAVIGATION_X9D) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#elif defined(KEYS_GPIO_REG_PAGEDN)
+  #define EVT_KEY_PREVIOUS_VIEW(evt)         (evt == EVT_KEY_FIRST(KEY_PAGEUP))
+  #define EVT_KEY_NEXT_VIEW(evt)             (evt == EVT_KEY_FIRST(KEY_PAGEDN))
+#elif defined(NAVIGATION_X7) || defined(NAVIGATION_X9D)
   #define EVT_KEY_PREVIOUS_VIEW(evt)         (evt == EVT_KEY_LONG(KEY_PAGE))
   #define EVT_KEY_NEXT_VIEW(evt)             (evt == EVT_KEY_BREAK(KEY_PAGE))
 #elif defined(NAVIGATION_9X)
@@ -92,7 +95,7 @@ void menuViewTelemetry(event_t event)
   }
 
   drawTelemetryTopBar();
-  lcdDrawText(LCD_W / 2, 3 * FH, "No Telemetry Screens", CENTERED);
+  lcdDrawText(LCD_W / 2, 3 * FH, STR_NO_TELEMETRY_SCREENS, CENTERED);
   displayRssiLine();
 }
 

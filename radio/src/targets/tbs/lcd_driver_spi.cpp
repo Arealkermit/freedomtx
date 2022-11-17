@@ -19,7 +19,7 @@
  */
 
 #include "opentx.h"
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 #define WAIT_FOR_DMA_END()             do { } while (lcd_busy)
 
 #define LCD_CS_HIGH()                 LCD_NCS_GPIO->BSRRL = LCD_NCS_GPIO_PIN
@@ -312,7 +312,7 @@ void lcdRefresh(bool wait)
 
   WAIT_FOR_DMA_END();
 }
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
 
 #define LCD_CONTRAST_OFFSET            127
 #define RESET_WAIT_DELAY_MS            300 // Wait time after LCD reset before first command

@@ -24,8 +24,6 @@ set(COMPANION_OSX_APP_BUNDLE_NAME "OpenTX Companion ${VERSION_MAJOR}.${VERSION_M
 # On OS X we copy dfu-util to the application bundle. This the path from which we copy
 # the binary (default homebrew path)
 set(DFU_UTIL_PATH "/usr/local/bin/dfu-util")
-set(AVRDUDE_PATH "/usr/local/bin/avrdude")
-set(AVRDUDE_CONF "/usr/local/etc/avrdude.conf")
 
 option(ALLOW_NIGHTLY_BUILDS "Allow nightly builds download / update") # Disabled by default
 if(ALLOW_NIGHTLY_BUILDS)
@@ -239,7 +237,6 @@ set(companion_SRCS
   flasheepromdialog.cpp
   printdialog.cpp
   modelprinter.cpp
-  fusesdialog.cpp
   logsdialog.cpp
   downloaddialog.cpp
   splashlibrarydialog.cpp
@@ -250,6 +247,7 @@ set(companion_SRCS
   wizarddialog.cpp
   styleeditdialog.cpp
   dialogs/filesyncdialog.cpp         # TODO move to own lib with other dialogs
+  profilechooser.cpp
   )
 
 set(companion_MOC_HDRS
@@ -258,7 +256,6 @@ set(companion_MOC_HDRS
   burnconfigdialog.h
   comparedialog.h
   printdialog.h
-  fusesdialog.h
   logsdialog.h
   creditsdialog.h
   releasenotesdialog.h
@@ -284,12 +281,12 @@ set(companion_MOC_HDRS
   styleeditdialog.h
   helpers_html.h
   dialogs/filesyncdialog.h
+  profilechooser.h
   )
 
 set(companion_UIS
   mdichild.ui
   comparedialog.ui
-  fusesdialog.ui
   logsdialog.ui
   apppreferencesdialog.ui
   fwpreferencesdialog.ui
@@ -305,6 +302,7 @@ set(companion_UIS
   flasheepromdialog.ui
   radionotfound.ui
   styleeditdialog.ui
+  profilechooser.ui
   )
 
 if(WIN32)
@@ -345,6 +343,20 @@ if(PCB STREQUAL X7 AND PCBREV STREQUAL ACCESS)
   set(FLAVOUR x7access)
 elseif(PCB STREQUAL X7 AND PCBREV STREQUAL T12)
   set(FLAVOUR t12)
+elseif(PCB STREQUAL X7 AND PCBREV STREQUAL TLITE)
+  set(FLAVOUR tlite)
+elseif(PCB STREQUAL X7 AND PCBREV STREQUAL TPRO)
+  set(FLAVOUR tpro)
+elseif(PCB STREQUAL X7 AND PCBREV STREQUAL TX12)
+  set(FLAVOUR tx12)
+elseif(PCB STREQUAL X7 AND PCBREV STREQUAL ZORRO)
+  set(FLAVOUR zorro)
+elseif(PCB STREQUAL X7 AND PCBREV STREQUAL T8)
+  set(FLAVOUR t8)
+elseif(PCB STREQUAL TANGO)
+  set(FLAVOUR tango)
+elseif(PCB STREQUAL MAMBO)
+  set(FLAVOUR mambo)
 elseif(PCB STREQUAL X9D+ AND PCBREV STREQUAL 2019)
   set(FLAVOUR x9d+2019)
 elseif(PCB STREQUAL X10 AND PCBREV STREQUAL EXPRESS)
@@ -353,6 +365,8 @@ elseif(PCB STREQUAL X10 AND PCBREV STREQUAL T16)
   set(FLAVOUR t16)
 elseif(PCB STREQUAL X10 AND PCBREV STREQUAL TX16S)
   set(FLAVOUR tx16s)
+elseif(PCB STREQUAL X10 AND PCBREV STREQUAL T18)
+  set(FLAVOUR t18)
 else()
   string(TOLOWER ${PCB} FLAVOUR)
 endif()
@@ -404,7 +418,7 @@ elseif(WIN32)
     install(TARGETS ${SIMULATOR_NAME} DESTINATION ${INSTALL_DESTINATION})
     install(FILES ${simulator_plugins} DESTINATION "${INSTALL_DESTINATION}")
     # supporting utilities
-    set(INSTALL_TEMP_FILES avrdude.exe avrdude.conf dfu-util.exe libusb0.dll libusb-1.0.dll license.txt)
+    set(INSTALL_TEMP_FILES dfu-util.exe libusb0.dll libusb-1.0.dll license.txt)
     foreach(tmpfile ${INSTALL_TEMP_FILES})
       install(FILES "${COMPANION_SRC_DIRECTORY}/../targets/windows/${tmpfile}" DESTINATION ${INSTALL_DESTINATION})
     endforeach()
@@ -513,6 +527,8 @@ IF(APPLE)
   # Use a non standard Info.plist that adds Retina support flags
   set_target_properties(${COMPANION_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/companion/targets/mac/MacOSXBundleInfo.plist.in)
   set_target_properties(${SIMULATOR_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/companion/targets/mac/MacOSXBundleInfo.plist.in)
+  
+  set(MACOSX_BUNDLE_GUI_IDENTIFIER "org.opentx.companion")
 
   INSTALL(TARGETS ${COMPANION_NAME}
       BUNDLE DESTINATION . COMPONENT Runtime
@@ -551,14 +567,11 @@ IF(APPLE)
   set(${COMPANION_SOURCES} ${COMPANION_SOURCES} ${PROJECT_SOURCE_DIR}/images/${MACOSX_BUNDLE_ICON_FILE})
   install(FILES ${MAC_ICON_FILE} DESTINATION ${companion_res_dir} COMPONENT Runtime)
 
-  # Copy dfu-util and avrdude, resolve symlink first
+  # Copy dfu-util, resolve symlink first
   get_filename_component(DFU_UTIL_ABSOLUTE_PATH ${DFU_UTIL_PATH} REALPATH)
-  get_filename_component(AVRDUDE_ABSOLUTE_PATH ${AVRDUDE_PATH} REALPATH)
-  get_filename_component(AVRDUDECONF_ABSOLUTE_PATH ${AVRDUDE_CONF} REALPATH)
-  install(PROGRAMS ${DFU_UTIL_ABSOLUTE_PATH} ${AVRDUDE_ABSOLUTE_PATH} DESTINATION ${companion_res_dir} COMPONENT Runtime)
-  install(FILES ${AVRDUDECONF_ABSOLUTE_PATH} DESTINATION ${companion_res_dir} COMPONENT Runtime)
+  install(PROGRAMS ${DFU_UTIL_ABSOLUTE_PATH} DESTINATION ${companion_res_dir} COMPONENT Runtime)
 
-  set(bundle_tools_path "\${CMAKE_INSTALL_PREFIX}/${companion_res_dir}/dfu-util;\${CMAKE_INSTALL_PREFIX}/${companion_res_dir}/avrdude")
+  set(bundle_tools_path "\${CMAKE_INSTALL_PREFIX}/${companion_res_dir}/dfu-util;")
 
 
   # Include depencies (adding frameworks, fixing the embbeded libraries)

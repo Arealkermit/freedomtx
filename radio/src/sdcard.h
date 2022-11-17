@@ -52,7 +52,7 @@
 
 #define LEN_FILE_PATH_MAX   (sizeof(SCRIPTS_TELEM_PATH)+1)  // longest + "/"
 
-#if defined(COLORLCD) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(COLORLCD) || defined(EEPROM_SDCARD)
 const char RADIO_MODELSLIST_PATH[] = RADIO_PATH "/models.txt";
 const char RADIO_SETTINGS_PATH[] = RADIO_PATH "/radio.bin";
 #define    SPLASH_FILE             "splash.png"
@@ -72,10 +72,11 @@ const char RADIO_SETTINGS_PATH[] = RADIO_PATH "/radio.bin";
 #define SPORT_FIRMWARE_EXT  ".frk"
 #define FRSKY_FIRMWARE_EXT  ".frsk"
 #define MULTI_FIRMWARE_EXT  ".bin"
+#define ELRS_FIRMWARE_EXT   ".elrs"
 
 #define LEN_FILE_EXTENSION_MAX  5  // longest used, including the dot, excluding null term.
 
-#if defined(PCBHORUS)  || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBHORUS) || defined(EEPROM_SDCARD)
 #define BITMAPS_EXT         BMP_EXT JPG_EXT PNG_EXT
 #define LEN_BITMAPS_EXT     4
 #else
@@ -128,22 +129,34 @@ const char * getBasename(const char * path);
   #define OTX_FOURCC 0x3478746F // otx for X12S
 #elif defined(RADIO_T16)
   #define OTX_FOURCC 0x3F78746F // otx for Jumper T16
+#elif defined(RADIO_T18)
+  #define OTX_FOURCC 0x4078746F // otx for Jumper T18
 #elif defined(RADIO_TX16S)
   #define OTX_FOURCC 0x3878746F // otx for Radiomaster TX16S
 #elif defined(PCBX10)
   #define OTX_FOURCC 0x3778746F // otx for X10
 #elif defined(PCBX9E)
   #define OTX_FOURCC 0x3578746F // otx for Taranis X9E
-#elif defined(PCBTANGO)
-  #define OTX_FOURCC 0x3578746F // otx for Tango
-#elif defined(PCBMAMBO)
-  #define OTX_FOURCC 0x3578746F // otx for Mambo
+#elif defined(RADIO_TANGO)
+  #define OTX_FOURCC 0x4478746F // otx for Tango
+#elif defined(RADIO_MAMBO)
+  #define OTX_FOURCC 0x4578746F // otx for Mambo
 #elif defined(PCBXLITES)
   #define OTX_FOURCC 0x3B78746F // otx for Taranis X-Lite S
 #elif defined(PCBXLITE)
   #define OTX_FOURCC 0x3978746F // otx for Taranis X-Lite
 #elif defined(RADIO_T12)
   #define OTX_FOURCC 0x3D78746F // otx for Jumper T12
+#elif defined(RADIO_TLITE)
+  #define OTX_FOURCC 0x4278746F // otx for Jumper TLite
+#elif defined(RADIO_TPRO)
+  #define OTX_FOURCC 0x4678746F // otx for Jumper TPro
+#elif defined(RADIO_TX12)
+  #define OTX_FOURCC 0x4178746F // otx for Radiomaster TX12
+#elif defined(RADIO_ZORRO)
+  #define OTX_FOURCC 0x4778746F // otx for Radiomaster Zorro
+#elif defined(RADIO_T8)
+  #define OTX_FOURCC 0x4378746F // otx for Radiomaster T8
 #elif defined(PCBX7)
   #define OTX_FOURCC 0x3678746F // otx for Taranis X7 / X7S / X7 Express / X7S Express
 #elif defined(PCBX9LITES)

@@ -22,6 +22,8 @@
 
 uint8_t currentSpeakerVolume = 255;
 uint8_t requiredSpeakerVolume = 255;
+uint8_t currentBacklightBright = 0;
+uint8_t requiredBacklightBright = 0;
 uint8_t mainRequestFlags = 0;
 
 #if defined(STM32)
@@ -33,7 +35,8 @@ void onUSBConnectMenu(const char *result)
   else if (result == STR_USB_JOYSTICK) {
     setSelectedUsbMode(USB_JOYSTICK_MODE);
   }
-#if defined(AGENT)
+
+#if defined(RADIO_FAMILY_TBS)
   else if (result == STR_USB_AGENT) {
     setSelectedUsbMode(USB_AGENT_MODE);
   }
@@ -41,79 +44,95 @@ void onUSBConnectMenu(const char *result)
     setSelectedUsbMode(USB_CHARGING_MODE);
   }
 #endif
+#if defined(DEBUG)
   else if (result == STR_USB_SERIAL) {
     setSelectedUsbMode(USB_SERIAL_MODE);
   }
+#else
+  else if (result == STR_USB_TELEMETRY) {
+    setSelectedUsbMode(USB_TELEMETRY_MIRROR_MODE);
+  }
+#endif
 }
 #endif
 
 void handleUsbConnection()
 {
 #if defined(STM32) && !defined(SIMU)
-#if defined(AGENT)
+#if defined(RADIO_FAMILY_TBS)
   static bool additional_popup_trigger = true;
 #endif
-
-  if (!usbStarted() && usbPlugged()) {
-#if defined(AGENT)
-    if (getSelectedUsbMode() == USB_UNSELECTED_MODE || additional_popup_trigger) {
-      additional_popup_trigger = false;
+  if (!usbStarted()) {
+    if (usbPlugged()) {
+#if defined(RADIO_FAMILY_TBS)
+      if (getSelectedUsbMode() == USB_UNSELECTED_MODE || additional_popup_trigger) {
+        additional_popup_trigger = false;
 #else
-    if (getSelectedUsbMode() == USB_UNSELECTED_MODE) {
+        if (getSelectedUsbMode() == USB_UNSELECTED_MODE) {
 #endif
-      if (g_eeGeneral.USBMode == USB_UNSELECTED_MODE && popupMenuItemsCount == 0) {
-        POPUP_MENU_ADD_ITEM(STR_USB_JOYSTICK);
-#if defined(AGENT)
-        POPUP_MENU_ADD_ITEM(STR_USB_AGENT);
-        POPUP_MENU_ADD_ITEM(STR_USB_CHARGE);
+        if (g_eeGeneral.USBMode == USB_UNSELECTED_MODE && popupMenuItemsCount == 0) {
+          POPUP_MENU_ADD_ITEM(STR_USB_JOYSTICK);
+#if defined(RADIO_FAMILY_TBS)
+          POPUP_MENU_ADD_ITEM(STR_USB_AGENT);
+          POPUP_MENU_ADD_ITEM(STR_USB_CHARGE);
 #endif
-        POPUP_MENU_ADD_ITEM(STR_USB_MASS_STORAGE);
+          POPUP_MENU_ADD_ITEM(STR_USB_MASS_STORAGE);
 #if defined(DEBUG)
-        POPUP_MENU_ADD_ITEM(STR_USB_SERIAL);
+          POPUP_MENU_ADD_ITEM(STR_USB_SERIAL);
 #endif
-        POPUP_MENU_START(onUSBConnectMenu);
+#if defined(USB_SERIAL)
+        POPUP_MENU_ADD_ITEM(STR_USB_TELEMETRY);
+#endif
+          POPUP_MENU_TITLE(STR_SELECT_MODE);
+          POPUP_MENU_START(onUSBConnectMenu);
+        }
+        else {
+          setSelectedUsbMode(g_eeGeneral.USBMode);
+        }
       }
-      else {
-        setSelectedUsbMode(g_eeGeneral.USBMode);
+
+      if (getSelectedUsbMode() != USB_UNSELECTED_MODE) {
+        if (getSelectedUsbMode() == USB_MASS_STORAGE_MODE) {
+          opentxClose(false);
+          usbPluggedIn();
+#if defined(INTERNAL_MODULE_CRSF)
+          crossfireTasksStop();
+          ledOff();
+#endif
+        }
+        else if (getSelectedUsbMode() == USB_JOYSTICK_MODE) {
+#if defined(INTERNAL_MODULE_CRSF)
+          if (g_model.moduleData[INTERNAL_MODULE].type == MODULE_TYPE_CROSSFIRE)
+            crossfireTurnOffRf(true);
+#endif
+        }
+        usbStart();
       }
     }
-
-    if (getSelectedUsbMode() != USB_UNSELECTED_MODE) {
-      if (getSelectedUsbMode() == USB_MASS_STORAGE_MODE) {
-        opentxClose(false);
-        usbPluggedIn();
-#if defined(CROSSFIRE_TASK)
-        crossfireTasksStop();
-        ledOff();
-#endif
-      }
-      else if (getSelectedUsbMode() == USB_JOYSTICK_MODE) {
-#if defined(CROSSFIRE_TASK)
-        crossfireTurnOffRf(true);
-#endif
-      }
-      usbStart();
+    else if (popupMenuHandler == onUSBConnectMenu) {
+      CLEAR_POPUP();
     }
   }
-
-  if (usbStarted() && !usbPlugged()) {
-    usbStop();
-    if (getSelectedUsbMode() == USB_MASS_STORAGE_MODE) {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-      boardSetSkipWarning();
-      NVIC_SystemReset();
+  else {
+    if (!usbPlugged()) {
+      usbStop();
+      if (getSelectedUsbMode() == USB_MASS_STORAGE_MODE) {
+#if defined(RADIO_FAMILY_TBS)
+        boardSetSkipWarning();
+        NVIC_SystemReset();
 #else
-      opentxResume();
-      putEvent(EVT_ENTRY);
+        opentxResume();
+        putEvent(EVT_ENTRY);
 #endif
-    }
-#if defined(CROSSFIRE_TASK)
-    else if (getSelectedUsbMode() == USB_JOYSTICK_MODE) {
-      if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_NONE)
-        crossfireTurnOnRf();
-    }
+      }
+#if defined(INTERNAL_MODULE_CRSF)
+      else if (getSelectedUsbMode() == USB_JOYSTICK_MODE) {
+        if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_NONE)
+          crossfireTurnOnRf();
+      }
 #endif
-    setSelectedUsbMode(USB_UNSELECTED_MODE);
+      setSelectedUsbMode(USB_UNSELECTED_MODE);
+    }
   }
 #endif // defined(STM32) && !defined(SIMU)
 }
@@ -241,20 +260,20 @@ void checkBatteryAlarms()
   static uint8_t counter = 0, last_counter = 0;
   static char warning[sizeof(TR_SHUTDOWNINXXS)];
   char counter_str[3];
-  bool forced_shutdown = false;
+  bool forceShutdown = false;
   if (IS_TXBATT_CRITICAL()) {
     if (!last_warning_time || (get_tmr10ms() - last_warning_time) / 100 >= WARNING_PERIOD) {
       last_warning_time = get_tmr10ms();
       counter = DOWNCOUNT_PERIOD;
     }
-    
+
     while (counter){
       if ((get_tmr10ms() - last_warning_time) / 100 < DOWNCOUNT_PERIOD) {
         counter = DOWNCOUNT_PERIOD - (get_tmr10ms() - last_warning_time) / 100;
       }
       else {
         counter = 0;
-        forced_shutdown = true;
+        forceShutdown = true;
       }
 
       if (last_counter != counter) {
@@ -278,16 +297,16 @@ void checkBatteryAlarms()
 
       if (warningResult) {
         warningResult = 0;
-        forced_shutdown = true;
+        forceShutdown = true;
         counter = 0;
       }
       else if (!warningText) {
-        forced_shutdown = false;
+        forceShutdown = false;
         counter = 0;
       }
     }
 
-    if (forced_shutdown) {
+    if (forceShutdown) {
       TRACE("checkBatteryAlarms(): shutdown due to critical battery level");
       boardOff();
     }
@@ -584,8 +603,8 @@ void perMain()
     logsWrite();
   }
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-  if (!IS_EXTERNAL_MODULE_ENABLED())
+#if defined(RADIO_TANGO) || defined(RADIO_MAMBO)
+  if (IS_INTERNAL_MODULE_ENABLED())
   {
     if (IS_CROSSFIRE_RX_STATE())
       handleUsbConnection();
@@ -619,7 +638,7 @@ void perMain()
 
 #if defined(RTC_BACKUP_RAM)
   if (globalData.unexpectedShutdown) {
-#if defined(PCBMAMBO)
+#if defined(RADIO_MAMBO)
     BACKLIGHT_ENABLE();
 #endif
     drawFatalErrorScreen(STR_EMERGENCY_MODE);
@@ -649,6 +668,10 @@ void perMain()
     lcdRefresh();
     return;
   }
+#endif
+
+#if defined(KEYS_GPIO_REG_BIND) && defined(BIND_KEY)
+  bindButtonHandler(evt);
 #endif
 
 #if defined(GUI)

@@ -36,13 +36,10 @@ namespace Conversion_130 {
 #define MAX_CURVES_V130              16
 #define LEN_BITMAP_NAME              10
 
-#if defined(PCBTARANIS)
-  #define N_TARANIS_FIELD_V130(x)
-  #define TARANIS_FIELD_V130(x) x;
-#else
-  #define N_TARANIS_FIELD_V130(x) x;
-  #define TARANIS_FIELD_V130(x)
-#endif
+
+#define N_TARANIS_FIELD_V130(x) x;
+#define TARANIS_FIELD_V130(x)
+
 
 #if defined(PCBX9E)
   #define TARANIS_PCBX9E_FIELD_V130(x)       x;
@@ -64,7 +61,7 @@ namespace Conversion_130 {
   #define NOBACKUP(...)                __VA_ARGS__
 #endif
 
-#if defined(PCBTARANIS) || defined(PCBHORUS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS) || defined(PCBHORUS)
 typedef uint16_t source_t;
 #else
 typedef uint8_t source_t;
@@ -154,11 +151,8 @@ PACK(struct LogicalSwitchData {
  */
 
 
-#if defined(PCBTARANIS)
-  #define CFN_SPARE_TYPE_V130               int32_t
-#else
-  #define CFN_SPARE_TYPE_V130               int16_t
-#endif
+#define CFN_SPARE_TYPE_V130               int16_t
+
 
 PACK(struct CustomFunctionData {
   int16_t  swtch:9;
@@ -299,7 +293,7 @@ PACK(struct FrSkyLineData {
   source_t sources[NUM_LINE_ITEMS];
 });
 
-#if defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS)
 PACK(struct TelemetryScriptData {
   char    file[LEN_SCRIPT_FILENAME];
   int16_t inputs[MAX_TELEM_SCRIPT_INPUTS];
@@ -309,7 +303,7 @@ PACK(struct TelemetryScriptData {
 union TelemetryScreenData {
   FrSkyBarData  bars[4];
   FrSkyLineData lines[4];
-#if defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS)
   TelemetryScriptData script;
 #endif
 };
@@ -522,10 +516,6 @@ typedef uint16_t swarnenable_t; // TODO remove it in 2.4
 typedef uint16_t swconfig_t;
 typedef uint16_t swarnstate_t;
 typedef uint8_t swarnenable_t; // TODO remove it in 2.4
-#elif defined(PCBTANGO) || defined(PCBMAMBO)
-typedef uint16_t swconfig_t;
-typedef uint16_t swarnstate_t;
-typedef uint8_t swarnenable_t;
 #else
 typedef uint8_t swarnstate_t;
 typedef uint8_t swarnenable_t;
@@ -567,7 +557,7 @@ PACK(struct CustomScreenData {
   #define TOPBAR_DATA
 #endif
 
-#if defined(PCBHORUS) || defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBHORUS) || defined(PCBTARANIS)
   #define SCRIPT_DATA \
     NOBACKUP(ScriptData scriptsData[MAX_SCRIPTS]);
 #else
@@ -690,6 +680,27 @@ PACK(struct TrainerData {
     NOBACKUP(uint8_t spare5:1); \
     NOBACKUP(uint8_t blOffBright:7); \
     NOBACKUP(char bluetoothName[LEN_BLUETOOTH_NAME]);
+#elif defined(RADIO_TANGO)
+  #define EXTRA_GENERAL_FIELDS_V130 \
+      uint8_t  auxSerialMode:4; \
+      uint8_t  slidersConfig:4; \
+      uint8_t  potsConfig; /* two bits per pot */\
+      uint8_t  backlightColor; \
+      swarnstate_t switchUnlockStates; \
+      swconfig_t switchConfig; \
+      char switchNames[STORAGE_NUM_SWITCHES][LEN_SWITCH_NAME]; \
+      char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME]; \
+      NOBACKUP(char currModelFilename[LEN_MODEL_FILENAME+1]);
+#elif defined(RADIO_MAMBO)
+  #define EXTRA_GENERAL_FIELDS_V130 \
+      uint8_t  auxSerialMode:4; \
+      uint8_t  slidersConfig:4; \
+      uint16_t  potsConfig; /* two bits per pot */\
+      swarnstate_t switchUnlockStates; \
+      swconfig_t switchConfig; \
+      char switchNames[STORAGE_NUM_SWITCHES][LEN_SWITCH_NAME]; \
+      char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME]; \
+      NOBACKUP(char currModelFilename[LEN_MODEL_FILENAME+1]);    
 #elif defined(PCBTARANIS)
   #if defined(STORAGE_BLUETOOTH)
     #define BLUETOOTH_FIELDS_V130 \
@@ -708,27 +719,6 @@ PACK(struct TrainerData {
     char switchNames[STORAGE_NUM_SWITCHES][LEN_SWITCH_NAME]; \
     char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME]; \
     BLUETOOTH_FIELDS_V130
-#elif defined(PCBTANGO)
-  #define EXTRA_GENERAL_FIELDS_V130 \
-      uint8_t  auxSerialMode:4; \
-      uint8_t  slidersConfig:4; \
-      uint8_t  potsConfig; /* two bits per pot */\
-      uint8_t  backlightColor; \
-      swarnstate_t switchUnlockStates; \
-      swconfig_t switchConfig; \
-      char switchNames[STORAGE_NUM_SWITCHES][LEN_SWITCH_NAME]; \
-      char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME]; \
-      NOBACKUP(char currModelFilename[LEN_MODEL_FILENAME+1]);
-#elif defined(PCBMAMBO)
-  #define EXTRA_GENERAL_FIELDS_V130 \
-      uint8_t  auxSerialMode:4; \
-      uint8_t  slidersConfig:4; \
-      uint16_t  potsConfig; /* two bits per pot */\
-      swarnstate_t switchUnlockStates; \
-      swconfig_t switchConfig; \
-      char switchNames[STORAGE_NUM_SWITCHES][LEN_SWITCH_NAME]; \
-      char anaNames[NUM_STICKS+STORAGE_NUM_POTS+STORAGE_NUM_SLIDERS][LEN_ANA_NAME]; \
-      NOBACKUP(char currModelFilename[LEN_MODEL_FILENAME+1]);
 #elif defined(PCBSKY9X)
   #define EXTRA_GENERAL_FIELDS_V130 \
     int8_t   txCurrentCalibration; \
@@ -789,6 +779,7 @@ PACK(struct RadioData_v130 {
   NOBACKUP(uint8_t alarmsFlash:1);
   NOBACKUP(uint8_t disableMemoryWarning:1);
   NOBACKUP(uint8_t disableAlarmWarning:1);
+
   uint8_t stickMode:2;
   int8_t timezone:5;
   uint8_t adjustRTC:1;
@@ -833,6 +824,7 @@ PACK(struct RadioData_v130 {
   NOBACKUP(int8_t   varioPitch);
   NOBACKUP(int8_t   varioRange);
   NOBACKUP(int8_t   varioRepeat);
+
   CustomFunctionData customFn[MAX_SPECIAL_FUNCTIONS];
 
   EXTRA_GENERAL_FIELDS_V130
@@ -881,7 +873,35 @@ static inline void check_struct()
 
   CHKSIZE(VarioData, 5);
 
-#if defined(PCBX7) || defined(PCBXLITE) || defined(PCBX9LITE)
+#if defined(RADIO_TANGO)
+  CHKSIZE(MixData, 20);
+  CHKSIZE(ExpoData, 17);
+  CHKSIZE(LimitData, 11);
+  CHKSIZE(LogicalSwitchData, 9);
+  CHKSIZE(CustomFunctionData, 9);
+  CHKSIZE(FlightModeData, 36);
+  CHKSIZE(TimerData, 11);
+  CHKSIZE(SwashRingData, 8);
+  CHKSIZE(FrSkyBarData, 6);
+  CHKSIZE(FrSkyLineData, 4);
+  CHKTYPE(union TelemetryScreenData, 24);
+  CHKSIZE(ModelHeader, 22);
+  CHKSIZE(CurveData, 4);
+#elif defined(RADIO_MAMBO)
+  CHKSIZE(MixData, 20);
+  CHKSIZE(ExpoData, 17);
+  CHKSIZE(LimitData, 11);
+  CHKSIZE(LogicalSwitchData, 9);
+  CHKSIZE(CustomFunctionData, 9);
+  CHKSIZE(FlightModeData, 36);
+  CHKSIZE(TimerData, 11);
+  CHKSIZE(SwashRingData, 8);
+  CHKSIZE(FrSkyBarData, 6);
+  CHKSIZE(FrSkyLineData, 4);
+  CHKTYPE(union TelemetryScreenData, 24);
+  CHKSIZE(ModelHeader, 22);
+  CHKTYPE(CurveData, 4);
+#elif defined(PCBX7) || defined(PCBXLITE) || defined(PCBX9LITE)
   CHKSIZE(MixData, 20);
   CHKSIZE(ExpoData, 17);
   CHKSIZE(LimitData, 11);
@@ -933,34 +953,6 @@ static inline void check_struct()
   CHKSIZE(FrSkyLineData, 2);
   CHKSIZE(ModelHeader, 12);
   CHKTYPE(CurveData, 4);
-#elif defined(PCBTANGO)
-  CHKSIZE(MixData, 20);
-  CHKSIZE(ExpoData, 17);
-  CHKSIZE(LimitData, 11);
-  CHKSIZE(LogicalSwitchData, 9);
-  CHKSIZE(CustomFunctionData, 9);
-  CHKSIZE(FlightModeData, 36);
-  CHKSIZE(TimerData, 11);
-  CHKSIZE(SwashRingData, 8);
-  CHKSIZE(FrSkyBarData, 6);
-  CHKSIZE(FrSkyLineData, 4);
-  CHKTYPE(union TelemetryScreenData, 24);
-  CHKSIZE(ModelHeader, 22);
-  CHKSIZE(CurveData, 4);
-#elif defined(PCBMAMBO)
-  CHKSIZE(MixData, 20);
-  CHKSIZE(ExpoData, 17);
-  CHKSIZE(LimitData, 11);
-  CHKSIZE(LogicalSwitchData, 9);
-  CHKSIZE(CustomFunctionData, 9);
-  CHKSIZE(FlightModeData, 36);
-  CHKSIZE(TimerData, 11);
-  CHKSIZE(SwashRingData, 8);
-  CHKSIZE(FrSkyBarData, 6);
-  CHKSIZE(FrSkyLineData, 4);
-  CHKTYPE(union TelemetryScreenData, 24);
-  CHKSIZE(ModelHeader, 22);
-  CHKTYPE(CurveData, 4);
 #else
   // Common for all variants
   CHKSIZE(LimitData, 5);
@@ -988,7 +980,13 @@ static inline void check_struct()
   CHKSIZE(RssiAlarmData, 2);
   CHKSIZE(TrainerData, 16);
 
-#if defined(PCBXLITES)
+#if defined(RADIO_TANGO)
+  CHKSIZE(RadioData_v130, 721);
+  CHKSIZE(ModelData_v130, 6253);
+#elif defined(RADIO_MAMBO)
+  CHKSIZE(RadioData_v130, 739);
+  CHKSIZE(ModelData_v130, 6255);  
+#elif defined(PCBXLITES)
   CHKSIZE(RadioData, 860);
   CHKSIZE(ModelData, 6157);
 #elif defined(PCBXLITE)
@@ -1009,9 +1007,6 @@ static inline void check_struct()
 #elif defined(PCBHORUS)
   CHKSIZE(RadioData, 881);
   CHKSIZE(ModelData, 9736);
-#elif defined(PCBTANGO)
-  CHKSIZE(RadioData, 847);
-  CHKSIZE(ModelData, 6155);
 #endif
 
 #undef CHKSIZE

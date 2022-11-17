@@ -48,17 +48,18 @@ Bluetooth bluetooth;
 
 void Bluetooth::write(const uint8_t * data, uint8_t length)
 {
-  BLUETOOTH_TRACE("BT>");
-  for (int i=0; i<length; i++) {
-    BLUETOOTH_TRACE(" %02X", data[i]);
-    while (btTxFifo.isFull()) {
-      if (!bluetoothIsWriting())
-        bluetoothWriteWakeup();
-      RTOS_WAIT_MS(1);
+  if (btTxFifo.hasSpace(length)) {
+    BLUETOOTH_TRACE("BT>");
+    for (int i = 0; i < length; i++) {
+      BLUETOOTH_TRACE(" %02X", data[i]);
+      btTxFifo.push(data[i]);
     }
-    btTxFifo.push(data[i]);
+    BLUETOOTH_TRACE(CRLF);
   }
-  BLUETOOTH_TRACE(CRLF);
+  else {
+    BLUETOOTH_TRACE("[BT] TX fifo full!" CRLF);
+  }
+
   bluetoothWriteWakeup();
 }
 
@@ -175,7 +176,7 @@ void Bluetooth::processTrainerByte(uint8_t data)
   switch (dataState) {
     case STATE_DATA_START:
       if (data == START_STOP) {
-        dataState = STATE_DATA_IN_FRAME ;
+        dataState = STATE_DATA_IN_FRAME;
         bufferIndex = 0;
       }
       else {
@@ -188,7 +189,7 @@ void Bluetooth::processTrainerByte(uint8_t data)
         dataState = STATE_DATA_XOR; // XOR next byte
       }
       else if (data == START_STOP) {
-        dataState = STATE_DATA_IN_FRAME ;
+        dataState = STATE_DATA_IN_FRAME;
         bufferIndex = 0;
       }
       else {
@@ -249,7 +250,7 @@ void Bluetooth::sendTrainer()
 
   buffer[bufferIndex++] = START_STOP; // start byte
   pushByte(0x80); // trainer frame type?
-  for (int channel=0; channel<lastCh; channel+=2, cur+=3) {
+  for (int channel = firstCh; channel < lastCh; channel += 2, cur += 3) {
     uint16_t channelValue1 = PPM_CH_CENTER(channel) + limit((int16_t)-PPM_range, channelOutputs[channel], (int16_t)PPM_range) / 2;
     uint16_t channelValue2 = PPM_CH_CENTER(channel+1) + limit((int16_t)-PPM_range, channelOutputs[channel+1], (int16_t)PPM_range) / 2;
     pushByte(channelValue1 & 0x00ff);

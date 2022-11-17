@@ -24,6 +24,8 @@
 #include "pulses_common.h"
 
 void multiPatchCustom(uint8_t moduleIdx);
+void convertOtxProtocolToMulti(int *protocol, int *subprotocol);
+void convertMultiProtocolToOtx(int *protocol, int *subprotocol);
 
 class UartMultiPulses: public DataBuffer<uint8_t, 64>
 {

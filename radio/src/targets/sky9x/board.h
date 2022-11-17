@@ -54,6 +54,10 @@ void rotaryEncoderEnd();
 #define STORAGE_NUM_SWITCHES           NUM_SWITCHES
 #define NUM_SWITCHES_POSITIONS         9
 
+#if !defined(NUM_FUNCTIONS_SWITCHES)
+#define NUM_FUNCTIONS_SWITCHES          0
+#endif
+
 enum EnumKeys
 {
   KEY_MENU,
@@ -230,7 +234,7 @@ uint32_t readTrims();
 #define KEYS_PRESSED()                 readKeys()
 
 // Pulses driver
-void extmoduleSerialStart(uint32_t baudrate, bool inverted);
+void extmoduleSerialStart(uint32_t baudrate, uint32_t period_half_us, bool inverted);
 void extmoduleSendNextFrame();
 void module_output_active();
 inline void EXTERNAL_MODULE_ON()
@@ -269,11 +273,12 @@ extern "C" {
 #endif
 
 // Backlight driver
-#define backlightEnable()              (PWM->PWM_CH_NUM[0].PWM_CDTY = g_eeGeneral.backlightBright)
+#define backlightEnable(x)             (PWM->PWM_CH_NUM[0].PWM_CDTY = currentBacklightBright)
 #define backlightDisable()             (PWM->PWM_CH_NUM[0].PWM_CDTY = 100)
 #define isBacklightEnabled()           (PWM->PWM_CH_NUM[0].PWM_CDTY != 100)
 #define BACKLIGHT_ENABLE()             backlightEnable()
 #define BACKLIGHT_DISABLE()            backlightDisable()
+#define BACKLIGHT_FORCED_ON            101
 
 // ADC driver
 #define NUM_POTS                       3
@@ -377,6 +382,7 @@ void pwrOn();
 uint32_t pwrCheck();
 bool pwrPressed();
 #define UNEXPECTED_SHUTDOWN()          (g_eeGeneral.unexpectedShutdown)
+#define pwrForcePressed()              (false)
 
 // EEPROM driver
 #define EEPROM_SIZE           (4*1024*1024/8)
@@ -393,13 +399,13 @@ void debugPutc(const char c);
 
 // Telemetry driver
 void telemetryPortInit(uint32_t baudrate, uint8_t mode);
-inline void telemetryPortSetDirectionOutput()
-{
-}
-uint32_t telemetryTransmitPending();
+void telemetryPortSetDirectionOutput();
+void telemetryPortSetDirectionInput();
 void telemetryTransmitBuffer(const uint8_t * buffer, uint32_t size);
 void rxPdcUsart( void (*pChProcess)(uint8_t x) );
 void sportSendBuffer(const uint8_t * buffer, uint32_t size);
+bool telemetryGetByte(uint8_t * byte);
+void telemetryClearFifo();
 
 // Second UART driver
 void auxSerialTelemetryInit(unsigned int protocol);
@@ -409,5 +415,8 @@ bool telemetrySecondPortReceive(uint8_t & data);
 #endif
 
 extern const uint8_t BootCode[];
+
+// Pulses driver
+#define HARDWARE_EXTRA_MODULE
 
 #endif // _BOARD_SKY9X_H_

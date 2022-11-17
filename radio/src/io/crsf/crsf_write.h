@@ -40,22 +40,22 @@ typedef enum {
   LIBCRSF_RC_RX_CMD                     = 0x10,
   LIBCRSF_WIFI_MODULE                   = 0x12,
   LIBCRSF_ACK                           = 0xFF,
-} libCrsf_Commands;
+} libCrsfCommands;
 
 typedef enum {
   LIBCRSF_FC_FORCE_DISARM_SUBCMD        = 0x01,
   LIBCRSF_FC_SCALE_CHANNEL_SUBCMD       = 0x02,
-} libCrsf_FC_Subcommands;
+} libCrsfFCSubCommands;
 
 typedef enum {
   LIBCRSF_BT_RESET_SUBCMD               = 0x01,
   LIBCRSF_BT_ENABLE_SUBCMD              = 0x02,
   LIBCRSF_BT_ECHO_SUBCMD                = 0x64,
-} libCrsf_BT_Subcommands;
+} libCrsfBTSubCommands;
 
 typedef enum {
   LIBCRSF_OSD_SEND_BUTTON_SUBCMD        = 0x01,
-} libCrsf_OSD_Subcommands;
+} libCrsfOSDSubCommands;
 
 typedef enum {
   LIBCRSF_VTX_CHANGE_CHANNEL_SUBCMD         = 0x01,
@@ -63,7 +63,7 @@ typedef enum {
   LIBCRSF_VTX_CHANGE_POWER_SUBCMD           = 0x03,
   LIBCRSF_VTX_CHANGE_PITMODE_SUBCMD         = 0x04,
   LIBCRSF_VTX_POWER_UP_FROM_PITMODE_SUBCMD  = 0x05,
-} libCrsf_VTX_Subcommands;
+} libCrsfVTXSubCommands;
 
 typedef enum {
   LIBCRSF_LED_SET_DEFAULT_SUBCMD        = 0x01,
@@ -71,7 +71,7 @@ typedef enum {
   LIBCRSF_LED_OVERRIDE_PULSE_SUBCMD     = 0x03,
   LIBCRSF_LED_OVERRIDE_BLINK_SUBCMD     = 0x04,
   LIBCRSF_LED_OVERRIDE_SHIFT_SUBCMD     = 0x05,
-} libCrsf_LED_Subcommands;
+} libCrsfLEDSubcommands;
 
 typedef enum {
   LIBCRSF_RC_RX_SET_TO_BIND_MODE_SUBCMD         = 0x01,
@@ -79,24 +79,24 @@ typedef enum {
   LIBCRSF_RC_RX_MODEL_SELECTION_SUBCMD          = 0x05,
   LIBCRSF_RC_RX_CURRENT_MODEL_SELECTION_SUBCMD  = 0x06,
   LIBCRSF_RC_RX_REPLY_CURRENT_MODEL_SUBCMD      = 0x07,
-} libCrsf_RC_RX_Subcommands;
+} libCrsfRCRxSubCommands;
 
 typedef enum {
   LIBCRSF_GENERAL_START_BOOTLOADER_SUBCMD     = 0x0A,
   LIBCRSF_GENERAL_ERASE_MEMORY_SUBCMD         = 0x0B,
   LIBCRSF_GENERALSOFTWARE_PRODUCT_KEY_SUBCMD  = 0x60,
   LIBCRSF_GENERALPRODUCT_FEEDBACK_SUBCMD      = 0x61,
-} libCrsf_GENERAL_Subcommands;
+} libCrsfGENERALSubCommands;
 
 typedef enum {
   LIBCRSF_WIFI_FIRMWARE_FILE_URL_SUBCMD       = 0x01,
-} libCrsf_WIFI_Subcommands;
+} libCrsfWIFISubCommands;
 
 typedef struct {
-  libCrsf_Commands command_id;
-  uint8_t sub_command_id;
+  libCrsfCommands commandId;
+  uint8_t subCommandId;
   uint8_t *payload;
-} libCrsf_command_s;
+} libCrsfCommandS;
 #endif
 
 #ifdef LIBCRSF_ENABLE_OPENTX_RELATED
@@ -115,62 +115,60 @@ typedef enum {
   LIBCRSF_REMOTE_SD_ERASE_FILE              = 0x06,
   LIBCRSF_REMOTE_SD_MOUNT_STATUS            = 0x07,
   LIBCRSF_REMOTE_CRSF_TIMING_CORRECTION     = 0x10,
-} libCrsf_Remote_Frame;
+} libCrsfRemoteFrame;
 
 typedef union {
   struct {
-    char path[ LIBCRSF_MAX_SD_PATH_SIZE ];
+    char path[LIBCRSF_MAX_SD_PATH_SIZE];
     uint32_t size;
   } info;
   struct {
     uint32_t addr;
     uint32_t size;
-    uint32_t chunk_addr;
-    uint8_t is_reply;
-    uint8_t payload[ LIBCRSF_MAX_SD_PAYLOAD_SIZE ];
+    uint32_t chunkAddr;
+    uint8_t isReply;
+    uint8_t payload[LIBCRSF_MAX_SD_PAYLOAD_SIZE];
   } data;
   struct {
-    uint32_t chunk_addr;
+    uint32_t chunkAddr;
   } ack;
   struct {
-    uint8_t is_mounted;
-  } mount_status;
+    uint8_t isMounted;
+  } mountStatus;
   struct {
     uint32_t interval;
     int32_t offset;
-  } sync_time_Data;
-} libCrsf_Remote_Data_u;
+  } syncTimeData;
+} libCrsfRemoteDataU;
 #endif
 
 /* Checking and Setup Function*********************************************** */
-bool libCrsf_checkif_devicecalled( uint8_t *p_arr, bool General_Call );
+bool libCrsfCheckIfDeviceCalled(uint8_t * pArr, bool generalCall);
 
 /* Write Command************************************************************* */
-void libCrsf_crsfwrite( uint8_t frameType, uint8_t *p_arr, ... );
+void libCrsfWrite(uint8_t frameType, uint8_t * pArr, ... );
 
 /* Extended Header Frames**************************************************** */
-void libCrsf_packpingcommand( uint8_t *p_arr, uint32_t *i );
-void libCrsf_packdeviceinfo( uint8_t *p_arr, uint32_t *i );
+void libCrsfPackPingCommand(uint8_t * pArr, uint32_t * i);
+void libCrsfPackDeviceInfo(uint8_t * pArr, uint32_t * i);
 
 #ifdef LIBCRSF_ENABLE_COMMAND
 /* CRSF Command************************************************************** */
-void libCrsf_packcommandframe( uint8_t *p_arr, uint32_t *i
-    , uint8_t target_address, libCrsf_command_s *command );
+void libCrsfPackCommandFrame(uint8_t * pArr, uint32_t * i, uint8_t target_address, libCrsfCommandS * command);
 
-void libCrsf_pack_fc_sub_command( uint8_t *p_arr, uint32_t *i, libCrsf_FC_Subcommands sub_command_id, uint8_t *payload );
-void libCrsf_pack_bt_sub_command( uint8_t *p_arr, uint32_t *i, libCrsf_BT_Subcommands sub_command_id, uint8_t *payload );
-void libCrsf_pack_osd_sub_command( uint8_t *p_arr, uint32_t *i, libCrsf_OSD_Subcommands sub_command_id, uint8_t *payload );
-void libCrsf_pack_vtx_sub_command( uint8_t *p_arr, uint32_t *i, libCrsf_VTX_Subcommands sub_command_id, uint8_t *payload );
-void libCrsf_pack_led_sub_command( uint8_t *p_arr, uint32_t *i, libCrsf_LED_Subcommands sub_command_id, uint8_t *payload );
-void libCrsf_pack_general_sub_command( uint8_t *p_arr, uint32_t *i, libCrsf_GENERAL_Subcommands sub_command_id, uint8_t *payload );
-void libCrsf_pack_rc_rx_sub_command( uint8_t *p_arr, uint32_t *i, libCrsf_RC_RX_Subcommands sub_command_id, uint8_t *payload );
-void libCrsf_pack_wifi_sub_command( uint8_t *p_arr, uint32_t *i, libCrsf_WIFI_Subcommands sub_command_id, uint8_t *payload );
-void libCrsf_pack_ack_sub_command( uint8_t *p_arr, uint32_t *i, uint8_t *payload );
+void libCrsfPackFcSubCommand(uint8_t * pArr, uint32_t * i, libCrsfFCSubCommands sub_command_id, uint8_t * payload);
+void libCrsfPackBtSubCommand(uint8_t * pArr, uint32_t * i, libCrsfBTSubCommands sub_command_id, uint8_t * payload);
+void libCrsfPackOsdSubCommand(uint8_t * pArr, uint32_t * i, libCrsfOSDSubCommands sub_command_id, uint8_t * payload);
+void libCrsfPackVtxSubCommand(uint8_t * pArr, uint32_t * i, libCrsfVTXSubCommands sub_command_id, uint8_t * payload);
+void libCrsfPackLedSubCommand(uint8_t * pArr, uint32_t * i, libCrsfLEDSubcommands sub_command_id, uint8_t * payload);
+void libCrsfPackGeneralSubCommand(uint8_t * pArr, uint32_t * i, libCrsfGENERALSubCommands sub_command_id, uint8_t * payload);
+void libCrsfPackRcRxSubCommand(uint8_t * pArr, uint32_t * i, libCrsfRCRxSubCommands sub_command_id, uint8_t * payload);
+void libCrsfPackWifiSubCommand(uint8_t * pArr, uint32_t * i, libCrsfWIFISubCommands sub_command_id, uint8_t * payload);
+void libCrsfPackAckSubCommand(uint8_t * pArr, uint32_t * i, uint8_t * payload);
 #endif
 
 #ifdef LIBCRSF_ENABLE_OPENTX_RELATED
-void libCrsf_packremote( uint8_t *p_arr, uint32_t *i
-        , uint8_t target_device, uint8_t remote_command_id, libCrsf_Remote_Data_u *remote_data );
+void libCrsfPackRemote(uint8_t * pArr, uint32_t * i, uint8_t targetDevice, uint8_t remoteCommandId, libCrsfRemoteDataU * remoteData);
 #endif
 
 /* ************************************************************************** */

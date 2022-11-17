@@ -27,7 +27,7 @@
 #define CROSSFIRE_SUBSET_CHANNELS_MAX         12
 
 
-uint8_t createCrossfireModelIDFrame(uint8_t * frame)
+uint8_t createCrossfireModelIDFrame(uint8_t idx, uint8_t * frame)
 {
   uint8_t * buf = frame;
   *buf++ = UART_SYNC;                                 /* device address */
@@ -37,7 +37,7 @@ uint8_t createCrossfireModelIDFrame(uint8_t * frame)
   *buf++ = RADIO_ADDRESS;                             /* Origin Address */
   *buf++ = SUBCOMMAND_CRSF;                           /* sub command */
   *buf++ = COMMAND_MODEL_SELECT_ID;                   /* command of set model/receiver id */
-  *buf++ = g_model.header.modelId[EXTERNAL_MODULE];   /* model ID */
+  *buf++ = g_model.header.modelId[idx];               /* model ID */
   *buf++ = command_crc8(frame + 2, 6);
   *buf++ = crc8(frame + 2, 7);
   return buf - frame;
@@ -54,9 +54,9 @@ uint8_t createCrossfireSeedProposalFrame(uint8_t * frame)
   *buf++ = RADIO_ADDRESS;                             /* Origin Address */
   *buf++ = SUBCOMMAND_GENERAL;                        /* sub command */
   *buf++ = COMMAND_CRSF_SPEED_RESPONSE;               /* response to the proposed CRSF port speed */
-  *buf++ = crsfSpeed.portID;                          /* port id */
+  *buf++ = crsfFrameStatus.portID;                    /* port id */
 
-  if ((1 << crsfSpeed.baudIndex) & crsfSpeed.invalidFlags) {
+  if ((1 << crsfFrameStatus.baudIndex) & crsfFrameStatus.invalidFlags) {
     response = 0;
   }
   else {
@@ -79,7 +79,7 @@ uint8_t createCrossfireChannelsFrame(uint8_t * frame, int16_t * pulses)
   uint32_t bits = 0;
   uint8_t bitsavailable = 0;
   for (int i=0; i<CROSSFIRE_CHANNELS_COUNT; i++) {
-    uint32_t val = limit(0, CROSSFIRE_CH_CENTER + (((pulses[i]) * 4) / 5), 2*CROSSFIRE_CH_CENTER);
+    uint32_t val = limit(0, CROSSFIRE_CH_CENTER + (((pulses[i]) * 4) / 5), 2 * CROSSFIRE_CH_CENTER);
     bits |= val << bitsavailable;
     bitsavailable += CROSSFIRE_CH_BITS;
     while (bitsavailable >= 8) {
@@ -146,43 +146,61 @@ uint8_t createCrossfireSubsetChannelsFrame(uint8_t * frame, int16_t * pulses, ui
   return buf - frame;
 }
 
-void setupPulsesCrossfire()
+static void setupPulsesCrossfire(uint8_t idx, CrossfirePulsesData* p_data, uint8_t endpoint)
 {
   if (telemetryProtocol == PROTOCOL_TELEMETRY_CROSSFIRE) {
     uint8_t * pulses = extmodulePulsesData.crossfire.pulses;
 
 #if defined(LUA)
-    if (outputTelemetryBuffer.destination == TELEMETRY_ENDPOINT_SPORT) {
-      memcpy(pulses, outputTelemetryBuffer.data, outputTelemetryBuffer.size);
-      extmodulePulsesData.crossfire.length = outputTelemetryBuffer.size;
-      outputTelemetryBuffer.reset();
-    }
-    else
+  if (outputTelemetryBuffer.destination == endpoint) {
+    memcpy(p_data->pulses, outputTelemetryBuffer.data, outputTelemetryBuffer.size);
+    p_data->length = outputTelemetryBuffer.size;
+    outputTelemetryBuffer.reset();
+  } else
 #endif
     {
-      switch (moduleState[EXTERNAL_MODULE].counter) {
+      switch (moduleState[idx].counter) {
         case CRSF_FRAME_MODELID:
-          extmodulePulsesData.crossfire.length = createCrossfireModelIDFrame(pulses);
-          crsfSpeed.invalidFlags = 0;
-          moduleState[EXTERNAL_MODULE].counter = CRSF_FRAME_MODELID_SENT;
+          extmodulePulsesData.crossfire.length = createCrossfireModelIDFrame(idx, pulses);
+          crsfFrameStatus.invalidFlags = 0;
+          moduleState[idx].counter = CRSF_FRAME_MODELID_SENT;
           break;
         case CRSF_FRAME_SPEED_PROPOSAL:
           extmodulePulsesData.crossfire.length = createCrossfireSeedProposalFrame(pulses);
-          moduleState[EXTERNAL_MODULE].counter = CRSF_FRAME_SPEED_PROPOSAL_SENT;
+          moduleState[idx].counter = CRSF_FRAME_SPEED_PROPOSAL_SENT;
           break;
         case CRSF_FRAME_SPEED_PROPOSAL_SENT:
-          if (!(1 << crsfSpeed.baudIndex & crsfSpeed.invalidFlags)) {
+          if (!(1 << crsfFrameStatus.baudIndex & crsfFrameStatus.invalidFlags)) {
             telemetryProtocol = 0xFF;
-            crsfSpeed.newSpeedRequest = true;
+            crsfFrameStatus.newSpeedRequest = true;
           }
-          moduleState[EXTERNAL_MODULE].counter = CRSF_FRAME_CHANNEL;
+          moduleState[idx].counter = CRSF_FRAME_CHANNEL;
           break;
         default:
-          if (isCrossfireInHighSpeed(EXTERNAL_MODULE))
-            extmodulePulsesData.crossfire.length = createCrossfireSubsetChannelsFrame(pulses, channelOutputs, g_model.moduleData[EXTERNAL_MODULE].channelsStart, 8 + g_model.moduleData[EXTERNAL_MODULE].channelsCount);
+          if (isCrossfireInHighSpeed(idx))
+            extmodulePulsesData.crossfire.length = createCrossfireSubsetChannelsFrame(pulses, channelOutputs, g_model.moduleData[idx].channelsStart, 8 + g_model.moduleData[idx].channelsCount);
           else
-            extmodulePulsesData.crossfire.length = createCrossfireChannelsFrame(pulses, &channelOutputs[g_model.moduleData[EXTERNAL_MODULE].channelsStart]);
+            extmodulePulsesData.crossfire.length = createCrossfireChannelsFrame(pulses, &channelOutputs[g_model.moduleData[idx].channelsStart]);
       }
     }
   }
+}
+
+void setupPulsesCrossfire(uint8_t idx)
+{
+#if !defined(PCBSKY9X)
+  if (idx == INTERNAL_MODULE) {
+    auto* p_data = &intmodulePulsesData.crossfire;
+    setupPulsesCrossfire(idx, p_data, 0);
+  }
+  else if (telemetryProtocol == PROTOCOL_TELEMETRY_CROSSFIRE) {
+    auto* p_data = &extmodulePulsesData.crossfire;
+    setupPulsesCrossfire(idx, p_data, TELEMETRY_ENDPOINT_SPORT);
+  }
+#else
+  if (telemetryProtocol == PROTOCOL_TELEMETRY_CROSSFIRE) {
+    auto * p_data = &extmodulePulsesData.crossfire;
+    setupPulsesCrossfire(idx, p_data, TELEMETRY_ENDPOINT_SPORT);
+  }
+#endif
 }

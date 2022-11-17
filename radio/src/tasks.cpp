@@ -30,7 +30,7 @@ RTOS_DEFINE_STACK(mixerStack, MIXER_STACK_SIZE);
 RTOS_TASK_HANDLE audioTaskId;
 RTOS_DEFINE_STACK(audioStack, AUDIO_STACK_SIZE);
 
-#if defined(CROSSFIRE_TASK)
+#if defined(INTERNAL_MODULE_CRSF)
 RTOS_TASK_HANDLE crossfireTaskId;
 RTOS_DEFINE_STACK(crossfireStack, CROSSFIRE_STACK_SIZE);
 
@@ -41,20 +41,6 @@ RTOS_DEFINE_STACK(systemStack, SYSTEM_STACK_SIZE);
 RTOS_MUTEX_HANDLE audioMutex;
 RTOS_MUTEX_HANDLE mixerMutex;
 
-enum TaskIndex {
-  MENU_TASK_INDEX,
-  MIXER_TASK_INDEX,
-  AUDIO_TASK_INDEX,
-  CLI_TASK_INDEX,
-  BLUETOOTH_TASK_INDEX,
-#if defined(CROSSFIRE_TASK)
-  CROSSFIRE_TASK_INDEX,
-  SYSTEM_TASK_INDEX,
-#endif
-  TASK_INDEX_COUNT,
-  MAIN_TASK_INDEX = 255
-};
-
 void stackPaint()
 {
   menusStack.paint();
@@ -63,7 +49,7 @@ void stackPaint()
 #if defined(CLI)
   cliStack.paint();
 #endif
-#if defined(CROSSFIRE_TASK)
+#if defined(INTERNAL_MODULE_CRSF)
   crossfireStack.paint();
   systemStack.paint();
 #endif
@@ -90,13 +76,14 @@ bool isForcePowerOffRequested()
   return false;
 }
 
-bool isModuleSynchronous(uint8_t module)
+bool isModuleSynchronous(uint8_t moduleIdx)
 {
-  switch(moduleState[module].protocol) {
-
+  switch(moduleState[moduleIdx].protocol) {
     case PROTOCOL_CHANNELS_PXX2_HIGHSPEED:
     case PROTOCOL_CHANNELS_PXX2_LOWSPEED:
     case PROTOCOL_CHANNELS_CROSSFIRE:
+    case PROTOCOL_CHANNELS_GHOST:
+    case PROTOCOL_CHANNELS_AFHDS3:
     case PROTOCOL_CHANNELS_NONE:
 
 #if defined(MULTIMODULE)
@@ -105,6 +92,8 @@ bool isModuleSynchronous(uint8_t module)
 #if defined(INTMODULE_USART) || defined(EXTMODULE_USART)
     case PROTOCOL_CHANNELS_PXX1_SERIAL:
 #endif
+    // case PROTOCOL_CHANNELS_PPM:
+    case PROTOCOL_CHANNELS_PXX1_PULSES:
 #if defined(DSM2)
     case PROTOCOL_CHANNELS_SBUS:
     case PROTOCOL_CHANNELS_DSM2_LP45:
@@ -125,15 +114,12 @@ void sendSynchronousPulses(uint8_t runMask)
   }
 #endif
 
+#if defined(HARDWARE_EXTERNAL_MODULE)
   if ((runMask & (1 << EXTERNAL_MODULE)) && isModuleSynchronous(EXTERNAL_MODULE)) {
     if (setupPulsesExternalModule())
-#if defined(PCBTANGO)
-      if (!IS_PCBREV_01() && IS_EXTERNAL_MODULE_ENABLED())
-#elif defined(PCBMAMBO)
-      if (IS_EXTERNAL_MODULE_ENABLED())
-#endif
       extmoduleSendNextFrame();
   }
+#endif
 }
 
 constexpr uint8_t MIXER_FREQUENT_ACTIONS_PERIOD = 5 /*ms*/;
@@ -146,6 +132,7 @@ void execMixerFrequentActions()
     telemetryWakeup();
     DEBUG_TIMER_STOP(debugTimerTelemetryWakeup);
   }
+
 #if defined(SBUS_TRAINER)
   // SBUS trainer
   processSbusInput();
@@ -177,20 +164,8 @@ TASK_FUNCTION(mixerTask)
       execMixerFrequentActions();
       bool interruptedByTimeout = mixerSchedulerWaitForTrigger(MIXER_FREQUENT_ACTIONS_PERIOD);
       if (!interruptedByTimeout) {
-#if defined(CROSSFIRE_TASK) && !defined(SIMU)
-      if (!IS_EXTERNAL_MODULE_ENABLED()) {
-        if (isMixerTaskScheduled()) {
-          clearMixerTaskSchedule();
-          break;
-        }
-      }
-      else {
         break;
       }
-#else
-        break;
-#endif
-      }  
     }
 
 #if defined(DEBUG_MIXER_SCHEDULER)
@@ -213,11 +188,18 @@ TASK_FUNCTION(mixerTask)
     }
 #endif
 
+#if defined(INTERNAL_MODULE_CRSF) && !defined(SIMU)
+    if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_CROSSFIRE && isMixerTaskScheduled()) {
+      clearMixerTaskSchedule();
+    }
+#endif
+
     if (!s_pulses_paused) {
       uint16_t t0 = getTmr2MHz();
 
       DEBUG_TIMER_START(debugTimerMixer);
       RTOS_LOCK_MUTEX(mixerMutex);
+
       doMixerCalculations();
 
 #if defined(HARDWARE_INTERNAL_MODULE) && defined(HARDWARE_EXTERNAL_MODULE)
@@ -229,6 +211,7 @@ TASK_FUNCTION(mixerTask)
 #endif
 
       doMixerPeriodicUpdates();
+
       DEBUG_TIMER_START(debugTimerMixerCalcToUsage);
       DEBUG_TIMER_SAMPLE(debugTimerMixerIterval);
       RTOS_UNLOCK_MUTEX(mixerMutex);
@@ -238,10 +221,10 @@ TASK_FUNCTION(mixerTask)
       if (getSelectedUsbMode() == USB_JOYSTICK_MODE) {
         usbJoystickUpdate();
       }
-#if defined(CROSSFIRE_TASK)
-      if (!IS_EXTERNAL_MODULE_ENABLED())
-        UpdateCrossfireChannels();
-#endif
+  #if defined(INTERNAL_MODULE_CRSF)
+      if (IS_INTERNAL_MODULE_ENABLED())
+        updateIntCrossfireChannels();
+  #endif
 #endif
 
 #if defined(PCBSKY9X) && !defined(SIMU)
@@ -292,6 +275,7 @@ bool perMainEnabled = true;
 TASK_FUNCTION(menusTask)
 {
   opentxInit();
+
 #if defined(PWR_BUTTON_PRESS)
   while (true) {
     uint32_t pwr_check = pwrCheck();
@@ -326,12 +310,12 @@ TASK_FUNCTION(menusTask)
     resetForcePowerOffRequest();
   }
 
-#if defined(CROSSFIRE_TASK) && defined(LIBCRSF_ENABLE_OPENTX_RELATED) && defined(LIBCRSF_ENABLE_SD)
-  if((*(uint32_t *)CROSSFIRE_TASK_ADDRESS != 0xFFFFFFFF) &&
-    getSelectedUsbMode() != USB_MASS_STORAGE_MODE && sdMounted()){
-    set_crsf_flag( CRSF_FLAG_EEPROM_SAVE );
+#if defined(INTERNAL_MODULE_CRSF) && defined(LIBCRSF_ENABLE_OPENTX_RELATED) && defined(LIBCRSF_ENABLE_SD) & !defined(SIMU)
+  if ((*(uint32_t *)CROSSFIRE_TASK_ADDRESS != 0xFFFFFFFF) &&
+    getSelectedUsbMode() != USB_MASS_STORAGE_MODE && sdMounted()) {
+    setCrsfFlag( CRSF_FLAG_EEPROM_SAVE);
     uint32_t time = get_tmr10ms();
-    while( get_crsf_flag( CRSF_FLAG_EEPROM_SAVE ) && get_tmr10ms() - time <= 100 ){
+    while (getCrsfFlag(CRSF_FLAG_EEPROM_SAVE) && get_tmr10ms() - time <= 100) {
       // with 1s timeout
       RTOS_WAIT_TICKS(1);
     }
@@ -353,16 +337,16 @@ TASK_FUNCTION(menusTask)
   TASK_RETURN();
 }
 
-#if defined(CROSSFIRE_TASK) && !defined(SIMU)
+#if defined(INTERNAL_MODULE_CRSF) && !defined(SIMU)
 TASK_FUNCTION(systemTask)
 {
-  static uint32_t get_modelid_delay = 0;
+  static uint32_t getModelIdDelay = 0;
   volatile uint32_t delayCount = 0;
-  set_model_id_needed = true;
+  bkregSetStatusFlag(CRSF_SET_MODEL_ID_PENDING);
 
-  while(1) {
-    if( get_crsf_flag( CRSF_FLAG_SHOW_BOOTLOADER_ICON )){
-      if(delayCount == 0){
+  while (1) {
+    if (getCrsfFlag(CRSF_FLAG_SHOW_BOOTLOADER_ICON)) {
+      if (delayCount == 0) {
         delayCount = RTOS_GET_TIME();
         RTOS_DEL_TASK(menusTaskId);
         lcdOn();
@@ -371,27 +355,25 @@ TASK_FUNCTION(systemTask)
         storageCheck(true);
         sdDone();
       }
-      if(RTOS_GET_TIME() - delayCount >= 200){
+      if (RTOS_GET_TIME() - delayCount >= 200) {
         NVIC_SystemReset();
       }
     }
+
     crsfSharedFifoHandler();
-#if defined(AGENT)
-    AgentHandler();
-#endif
-    if (set_model_id_needed && get_tmr10ms() - get_modelid_delay > 100 ) {
+    agentHandler();
+
+    if (bkregGetStatusFlag(CRSF_SET_MODEL_ID_PENDING) && get_tmr10ms() - getModelIdDelay > 100) {
       crsfSetModelID();
       crsfGetModelID();
-      if(current_crsf_model_id == g_model.header.modelId[EXTERNAL_MODULE])
-        set_model_id_needed = false;
-      get_modelid_delay = get_tmr10ms();
+      if (currentCrsfModelId == g_model.header.modelId[INTERNAL_MODULE])
+        bkregClrStatusFlag(CRSF_SET_MODEL_ID_PENDING);
+      getModelIdDelay = get_tmr10ms();
     }
-#if defined(CROSSFIRE_TASK)
     if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_NONE && isMixerTaskScheduled()) {
       clearMixerTaskSchedule();
       mixerSchedulerISRTrigger();
     }
-#endif
   }
   TASK_RETURN();
 }
@@ -406,13 +388,13 @@ void crossfireTasksStart()
 {
   uint8_t taskFlag[TASK_FLAG_MAX] = {0};
   // Test if crossfire task is available and start it
-  if (*(uint32_t *)CROSSFIRE_TASK_ADDRESS != 0xFFFFFFFF ) {
+  if (*(uint32_t *)CROSSFIRE_TASK_ADDRESS != 0xFFFFFFFF) {
     crossfireTasksCreate();
-    RTOS_CREATE_FLAG( taskFlag[XF_TASK_FLAG] );
-    RTOS_CREATE_FLAG( taskFlag[CRSF_SD_TASK_FLAG] );
-    RTOS_CREATE_FLAG( taskFlag[BOOTLOADER_ICON_WAIT_FLAG] );
+    RTOS_CREATE_FLAG( taskFlag[XF_TASK_FLAG]);
+    RTOS_CREATE_FLAG( taskFlag[CRSF_SD_TASK_FLAG]);
+    RTOS_CREATE_FLAG( taskFlag[BOOTLOADER_ICON_WAIT_FLAG]);
 
-    for( uint8_t i = 0; i < TASK_FLAG_MAX; i++ ){
+    for (uint8_t i = 0; i < TASK_FLAG_MAX; i++) {
       crossfireSharedData.taskFlag[i] = taskFlag[i];
     }
   }
@@ -438,7 +420,7 @@ void tasksStart()
   RTOS_CREATE_TASK(mixerTaskId, mixerTask, "mixer", mixerStack, MIXER_STACK_SIZE, MIXER_TASK_PRIO);
   RTOS_CREATE_TASK(menusTaskId, menusTask, "menus", menusStack, MENUS_STACK_SIZE, MENUS_TASK_PRIO);
 
-#if defined(CROSSFIRE_TASK) && !defined(SIMU)
+#if defined(INTERNAL_MODULE_CRSF) && !defined(SIMU)
   crossfireTasksStart();
 #endif
 

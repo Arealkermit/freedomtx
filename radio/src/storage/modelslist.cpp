@@ -24,7 +24,7 @@ using std::list;
 ModelsList modelslist;
 
 ModelCell::ModelCell(const char * name)
-#if !defined(PCBTANGO) && !defined (PCBMAMBO)
+#if !defined(MODEL_HAVE_NO_BITMAP)
   : buffer(NULL), valid_rfData(false)
 #else
   : valid_rfData(false)
@@ -58,7 +58,7 @@ void ModelCell::setModelId(uint8_t moduleIdx, uint8_t id)
   modelId[moduleIdx] = id;
 }
 
-#if !defined(PCBTANGO) && !defined (PCBMAMBO)
+#if !defined(MODEL_HAVE_NO_BITMAP)
 void ModelCell::resetBuffer()
 {
   if (buffer) {
@@ -116,7 +116,7 @@ void ModelCell::loadBitmap()
     getTimerString(timer, 0);
     for (uint8_t i = 0; i < MAX_TIMERS; i++) {
       if (partialmodel.timers[i].mode != 0 && partialmodel.timers[i].persistent) {
-        getTimerString(timer, partialmodel.timers[i].value);
+        getTimerString(timer, partialmodel.timers[i].value, 1);
         break;
       }
     }
@@ -299,8 +299,8 @@ ModelsList::~ModelsList()
 void ModelsList::init()
 {
   loaded = false;
-  currentCategory = NULL;
-  currentModel = NULL;
+  currentCategory = nullptr;
+  currentModel = nullptr;
   modelsCount = 0;
 }
 
@@ -313,13 +313,13 @@ void ModelsList::clear()
   init();
 }
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_FAMILY_TBS)
 bool ModelsList::load()
 {
   char line[LEN_MODELS_IDX_LINE+1];
   ModelsCategory * category = NULL;
 
-  //load models every time for TANGO
+  //load models every time for TBS radios
   categories.clear();
   FRESULT result = f_open(&file, RADIO_MODELSLIST_PATH, FA_OPEN_EXISTING | FA_READ);
   if (result == FR_OK) {
@@ -342,8 +342,6 @@ bool ModelsList::load()
           currentCategory = category;
           currentModel = model;
         }
-        //parseModulesData(model, rf_data_str);
-        //TRACE("model=<%s>, valid_rfData=<%i>",model->modelFilename,model->valid_rfData);
         if (model->fetchRfData()) {
           category->push_back(model);
           modelsCount += 1;
@@ -419,6 +417,7 @@ bool ModelsList::load()
 
   loaded = true;
   return true;
+
 }
 #endif
 
@@ -436,12 +435,12 @@ void ModelsList::save()
   f_close(&file);
 }
 
-void ModelsList::setCurrentCategorie(ModelsCategory* cat)
+void ModelsList::setCurrentCategory(ModelsCategory * cat)
 {
   currentCategory = cat;
 }
 
-void ModelsList::setCurrentModel(ModelCell* cell)
+void ModelsList::setCurrentModel(ModelCell * cell)
 {
   currentModel = cell;
   if (!currentModel->valid_rfData)

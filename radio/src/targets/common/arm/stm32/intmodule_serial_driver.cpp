@@ -21,12 +21,18 @@
 #include "opentx.h"
 
 ModuleFifo intmoduleFifo;
+#if !defined(INTMODULE_DMA_STREAM)
+uint8_t * intmoduleTxBufferData;
+volatile uint8_t intmoduleTxBufferRemaining;
+#endif
 
 void intmoduleStop()
 {
   GPIO_ResetBits(INTMODULE_PWR_GPIO, INTMODULE_PWR_GPIO_PIN);
 
+#if defined(INTMODULE_DMA_STREAM)
   INTMODULE_DMA_STREAM->CR &= ~DMA_SxCR_EN; // Disable DMA
+#endif
 
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Pin = INTMODULE_TX_GPIO_PIN | INTMODULE_RX_GPIO_PIN;
@@ -51,7 +57,11 @@ void intmoduleSerialStart(uint32_t baudrate, uint8_t rxEnable, uint16_t parity, 
   INTERNAL_MODULE_ON();
 
   NVIC_InitTypeDef NVIC_InitStructure;
+#if defined(INTMODULE_DMA_STREAM)
   NVIC_InitStructure.NVIC_IRQChannel = INTMODULE_DMA_STREAM_IRQ;
+#else
+  NVIC_InitStructure.NVIC_IRQChannel = INTMODULE_USART_IRQn;
+#endif
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0; /* Not used as 4 bits are used for the pre-emption priority. */;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
@@ -65,7 +75,7 @@ void intmoduleSerialStart(uint32_t baudrate, uint8_t rxEnable, uint16_t parity, 
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(INTMODULE_GPIO, &GPIO_InitStructure);
 
   USART_DeInit(INTMODULE_USART);
@@ -90,8 +100,22 @@ void intmoduleSerialStart(uint32_t baudrate, uint8_t rxEnable, uint16_t parity, 
 #define USART_FLAG_ERRORS (USART_FLAG_ORE | USART_FLAG_NE | USART_FLAG_FE | USART_FLAG_PE)
 extern "C" void INTMODULE_USART_IRQHandler(void)
 {
-  uint32_t status = INTMODULE_USART->SR;
+#if !defined(INTMODULE_DMA_STREAM)
+  // Send
+  if (USART_GetITStatus(INTMODULE_USART, USART_IT_TXE) != RESET) {
+    if (intmoduleTxBufferRemaining) {
+      USART_SendData(INTMODULE_USART, intmoduleTxBufferData[0]);
+      intmoduleTxBufferData++;
+      intmoduleTxBufferRemaining--;
+    }
+    else {
+      USART_ITConfig(INTMODULE_USART, USART_IT_TXE, DISABLE);
+    }
+  }
+#endif
 
+  // Receive
+  uint32_t status = INTMODULE_USART->SR;
   while (status & (USART_FLAG_RXNE | USART_FLAG_ERRORS)) {
     uint8_t data = INTMODULE_USART->DR;
     if (status & USART_FLAG_ERRORS) {
@@ -115,6 +139,7 @@ void intmoduleSendBuffer(const uint8_t * data, uint8_t size)
   if (size == 0)
     return;
 
+#if defined(INTMODULE_DMA_STREAM)
   DMA_InitTypeDef DMA_InitStructure;
   DMA_DeInit(INTMODULE_DMA_STREAM);
   DMA_InitStructure.DMA_Channel = INTMODULE_DMA_CHANNEL;
@@ -135,26 +160,49 @@ void intmoduleSendBuffer(const uint8_t * data, uint8_t size)
   DMA_Init(INTMODULE_DMA_STREAM, &DMA_InitStructure);
   DMA_Cmd(INTMODULE_DMA_STREAM, ENABLE);
   USART_DMACmd(INTMODULE_USART, USART_DMAReq_Tx, ENABLE);
+#else
+  intmoduleTxBufferData = (uint8_t *)data;
+  intmoduleTxBufferRemaining = size;
+  USART_ITConfig(INTMODULE_USART, USART_IT_TXE, ENABLE);
+#endif
 }
 
 void intmoduleSendNextFrame()
 {
-  switch(moduleState[INTERNAL_MODULE].protocol) {
+  switch (moduleState[INTERNAL_MODULE].protocol) {
 #if defined(PXX2)
     case PROTOCOL_CHANNELS_PXX2_HIGHSPEED:
       intmoduleSendBuffer(intmodulePulsesData.pxx2.getData(), intmodulePulsesData.pxx2.getSize());
       break;
 #endif
 
+#if defined(INTERNAL_MODULE_PPM)
+    case PROTOCOL_CHANNELS_PPM:
+      intmoduleSendNextFramePPM(intmodulePulsesData.ppm.pulses, intmodulePulsesData.ppm.ptr - intmodulePulsesData.ppm.pulses);
+      break;
+#endif
+
 #if defined(PXX1)
+#if defined(INTMODULE_USART)
     case PROTOCOL_CHANNELS_PXX1_SERIAL:
       intmoduleSendBuffer(intmodulePulsesData.pxx_uart.getData(), intmodulePulsesData.pxx_uart.getSize());
       break;
+#else
+    case PROTOCOL_CHANNELS_PXX1_PULSES:
+      intmoduleSendNextFramePxx1(intmodulePulsesData.pxx.getData(), intmodulePulsesData.pxx.getSize());
+      break;
+#endif
 #endif
 
 #if defined(INTERNAL_MODULE_MULTI)
     case PROTOCOL_CHANNELS_MULTIMODULE:
       intmoduleSendBuffer(intmodulePulsesData.multi.getData(), intmodulePulsesData.multi.getSize());
+      break;
+#endif
+
+#if defined(INTERNAL_MODULE_ELRS)
+    case PROTOCOL_CHANNELS_CROSSFIRE:
+      intmoduleSendBuffer(intmodulePulsesData.crossfire.pulses,intmodulePulsesData.crossfire.length);
       break;
 #endif
   }

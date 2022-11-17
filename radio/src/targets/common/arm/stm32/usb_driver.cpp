@@ -30,19 +30,13 @@ extern "C" {
 #include "opentx.h"
 #include "debug.h"
 
-#if defined(AGENT)
-#include "io/crsf/crsf.h"
-#endif
-
 static bool usbDriverStarted = false;
 #if defined(BOOT)
-static usbMode selectedUsbMode = USB_MASS_STORAGE_MODE;
+usbMode selectedUsbMode = USB_MASS_STORAGE_MODE;
+#elif defined(USB_FIRMWARE_DEFAULT_MODE)
+usbMode selectedUsbMode = USB_FIRMWARE_DEFAULT_MODE;
 #else
-#if defined(AGENT)
-static usbMode selectedUsbMode = USB_AGENT_MODE;
-#else
-static usbMode selectedUsbMode = USB_UNSELECTED_MODE;
-#endif
+usbMode selectedUsbMode = USB_UNSELECTED_MODE;
 #endif
 
 int getSelectedUsbMode()
@@ -52,17 +46,13 @@ int getSelectedUsbMode()
 
 void setSelectedUsbMode(int mode)
 {
-#if defined(AGENT)
   usbMode selectedUsbModePrev = selectedUsbMode;
-#endif
   selectedUsbMode = usbMode(mode);
 
-#if defined(AGENT)
   // for disconnecting usb from host without unplugging
-  if(selectedUsbModePrev != selectedUsbMode){
+  if (selectedUsbModePrev != selectedUsbMode) {
     usbStop();
   }
-#endif
 }
 
 int usbPlugged()
@@ -94,8 +84,7 @@ void usbStart()
       // initialize USB as HID device
       USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_HID_cb, &USR_cb);
       break;
-#endif
-#if defined(AGENT) && !defined(BOOT)
+#if defined(RADIO_FAMILY_TBS)
     case USB_AGENT_MODE:
       // initialize USB as HID device
       USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_AGENT_cb, &USR_cb);
@@ -105,10 +94,15 @@ void usbStart()
       break;
 #endif
 #if defined(USB_SERIAL)
+#if defined(DEBUG)
     case USB_SERIAL_MODE:
+#else
+    case USB_TELEMETRY_MIRROR_MODE:
+#endif
       // initialize USB as CDC device (virtual serial port)
       USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
       break;
+#endif
 #endif
     default:
     case USB_MASS_STORAGE_MODE:
@@ -121,7 +115,7 @@ void usbStart()
 
 void usbStop()
 {
-#if defined(AGENT)
+#if defined(RADIO_FAMILY_TBS)
   // facilitate switching usb mode in runtime
   USB_OTG_WRITE_REG32(&USB_OTG_dev.regs.GREGS->GCCFG, 0);
 #endif
@@ -137,7 +131,6 @@ bool usbStarted()
 #if !defined(BOOT)
 /*
   Prepare and send new USB data packet
-
   The format of HID_Buffer is defined by
   USB endpoint description can be found in
   file usb_hid_joystick.c, variable HID_JOYSTICK_ReportDesc
@@ -178,100 +171,4 @@ void usbJoystickUpdate()
     USBD_HID_SendReport(&USB_OTG_dev, HID_Buffer, HID_IN_PACKET);
   }
 }
-
-#if defined(AGENT)
-#define USB_HID_FIFO_SIZE                       128
-#define USB_HID_INEP1_NUM                       1
-#define USB_HID_INEP1_TXFIFO_EMPTY              0x80U
-#define USB_HID_INEP1_TXFIFO_FREE_WORD          0x80U
-#define USB_HID_INEP1_TXFIFO_FREE_WORD_MASK     0xFFFFU
-#define LIBCRSF_BF_LINK_STATISTICS              0x14
-
-static Fifo<uint8_t, USB_HID_FIFO_SIZE> *hidTxFifo = 0;
-
-void usbAgentWrite( uint8_t *pData )
-{
-  static uint8_t HID_Buffer[HID_AGENT_IN_PACKET];
-  memcpy(HID_Buffer, pData, HID_AGENT_IN_PACKET);
-  USBD_AGENT_SendReport(&USB_OTG_dev, HID_Buffer, HID_AGENT_IN_PACKET);
-}
-
-static uint8_t isUsbIdle(){
-  extern uint8_t ReportSent;
-  return ReportSent;
-  // workaround for usb stuck during send data but the host app is not ready to receive.
-  uint8_t idle = (ReportSent &&
-                (USB_OTG_dev.regs.INEP_REGS[USB_HID_INEP1_NUM]->DIEPINT & USB_HID_INEP1_TXFIFO_EMPTY) &&
-                ((USB_OTG_dev.regs.INEP_REGS[USB_HID_INEP1_NUM]->DTXFSTS & USB_HID_INEP1_TXFIFO_FREE_WORD_MASK ) == USB_HID_INEP1_TXFIFO_FREE_WORD)) ? 1 : 0;
-  return idle;
-}
-
-void usb_tx(){
-  static uint8_t isbusy = 0;
-  if(!isbusy){
-    isbusy = 1;
-    uint8_t sendData[HID_AGENT_IN_PACKET];
-    memset(sendData, 0, HID_AGENT_IN_PACKET);
-    if(hidTxFifo != 0 && hidTxFifo->size() > 0 && isUsbIdle()){
-      for(uint8_t i = 0; i < HID_AGENT_IN_PACKET; i++){
-        if(!hidTxFifo->pop(sendData[i])){
-          break;
-        }
-      }
-      USBD_AGENT_SendReport(&USB_OTG_dev, sendData, HID_AGENT_IN_PACKET);
-    }
-
-    memset(sendData, 0, HID_AGENT_IN_PACKET);
-    if(hidTxFifo != 0 && selectedUsbMode != USB_AGENT_MODE){
-      free(hidTxFifo);
-      hidTxFifo = 0;
-    }
-    isbusy = 0;
-  }
-}
-
-void CRSF_To_USB_HID( uint8_t *p_arr )
-{
-  *p_arr = LIBCRSF_UART_SYNC;
-  if(hidTxFifo == 0 && selectedUsbMode == USB_AGENT_MODE && usbStarted()){
-    hidTxFifo = (Fifo<uint8_t, USB_HID_FIFO_SIZE>*)malloc(sizeof(Fifo<uint8_t, USB_HID_FIFO_SIZE>));
-    if(hidTxFifo != 0){
-      memset(hidTxFifo, 0, sizeof(Fifo<uint8_t, USB_HID_FIFO_SIZE>));
-    }
-  }
-
-  // block sending telemetry and opentx related to usb
-  if( ( *(p_arr + LIBCRSF_TYPE_ADD ) != LIBCRSF_BF_LINK_STATISTICS ) && ( *(p_arr + LIBCRSF_TYPE_ADD) != LIBCRSF_OPENTX_RELATED ) ){
-    if(hidTxFifo != 0 && hidTxFifo->hasSpace(p_arr[LIBCRSF_LENGTH_ADD] + 2)){
-      for(uint8_t i = 0; i < HID_AGENT_IN_PACKET; i++){
-        hidTxFifo->push(p_arr[i]);
-      }
-    }
-  }
-  usb_tx();
-}
-
-void AgentHandler(){
-  /* handle TBS Agent requests */
-  extern uint8_t ReportReceived;
-  extern uint8_t HID_Buffer[HID_AGENT_OUT_PACKET];
-  static _libCrsf_CRSF_PARSE_DATA HID_CRSF_Data;
-  uint8_t hid_buffer[HID_AGENT_OUT_PACKET];
-
-  usb_tx();
-
-  while(ReportReceived){
-    // making a copy of HID_Buffer is a workaround for preventing changing data in hid_buffer during parsing crsf data,
-    ReportReceived = 2;
-    memcpy(hid_buffer, HID_Buffer, HID_AGENT_OUT_PACKET);
-    ReportReceived = 0;
-    for( uint8_t i = 0; i < HID_AGENT_OUT_PACKET; i++ ){
-      if ( libCrsf_CRSF_Parse( &HID_CRSF_Data, hid_buffer[i] )) {
-        libCrsf_CRSF_Routing( USB_HID, HID_CRSF_Data.Payload );
-        break;
-      }
-    }
-  }
-}
-#endif // AGENT
 #endif

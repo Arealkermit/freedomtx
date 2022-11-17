@@ -27,12 +27,20 @@
 
 void serialPutc(char c) {
 #if !defined(BOOT) && defined(USB_SERIAL)
+#if defined(DEBUG)
   if (getSelectedUsbMode() == USB_SERIAL_MODE)
+#else
+  if (getSelectedUsbMode() == USB_TELEMETRY_MIRROR_MODE)
+#endif
     usbSerialPutc(c);
 #endif
 #if defined(AUX_SERIAL)
   if (auxSerialTracesEnabled())
     auxSerialPutc(c);
+#endif
+#if defined(AUX2_SERIAL)
+  if (aux2SerialTracesEnabled())
+    aux2SerialPutc(c);
 #endif
 }
 

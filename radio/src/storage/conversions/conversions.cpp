@@ -23,9 +23,9 @@
 
 void convertRadioData(int version)
 {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_TANGO) || defined(RADIO_MAMBO)
   #if defined(CONVERT_FREEDOMTX_DATA_V130)
-    convertRadio_130_131();
+    convertRadio_130_137();
   #endif
 #endif
 
@@ -55,9 +55,9 @@ void convertRadioData(int version)
 
 void convertModelData(int version)
 {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_TANGO) || defined(RADIO_MAMBO)
   #if defined(CONVERT_FREEDOMTX_DATA_V130)
-      convertModels_130_131();
+      convertModels_130_137();
   #endif
 #endif
 

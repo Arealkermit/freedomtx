@@ -28,15 +28,15 @@ class ValueWidget: public Widget
     {
     }
 
-    virtual void refresh();
+    void refresh() override;
 
     static const ZoneOption options[];
 };
 
 const ZoneOption ValueWidget::options[] = {
-  { "Source", ZoneOption::Source, OPTION_VALUE_UNSIGNED(MIXSRC_Rud) },
-  { "Color", ZoneOption::Color, OPTION_VALUE_UNSIGNED(WHITE) },
-  { "Shadow", ZoneOption::Bool, OPTION_VALUE_BOOL(false)  },
+  { STR_SOURCE, ZoneOption::Source, OPTION_VALUE_UNSIGNED(MIXSRC_Rud) },
+  { STR_COLOR, ZoneOption::Color, OPTION_VALUE_UNSIGNED(WHITE) },
+  { STR_SHADOW, ZoneOption::Bool, OPTION_VALUE_BOOL(false)  },
   { NULL, ZoneOption::Bool }
 };
 
@@ -97,7 +97,7 @@ void ValueWidget::refresh()
   if (field >= MIXSRC_FIRST_TIMER && field <= MIXSRC_LAST_TIMER) {
     TimerState & timerState = timersStates[field-MIXSRC_FIRST_TIMER];
     if (timerState.val < 0) {
-      lcdSetColor(ALARM_COLOR_INDEX);
+      lcdSetColor(lcdColorTable[ALARM_COLOR_INDEX]);
     }
     drawSource(x+NUMBERS_PADDING, y+2, field, CUSTOM_COLOR);
     drawSource(x+NUMBERS_PADDING + 1, y + 3, field, BLACK);
@@ -108,7 +108,7 @@ void ValueWidget::refresh()
   if (field >= MIXSRC_FIRST_TELEM) {
     TelemetryItem & telemetryItem = telemetryItems[(field-MIXSRC_FIRST_TELEM)/3]; // TODO macro to convert a source to a telemetry index
     if (!telemetryItem.isAvailable() || telemetryItem.isOld()) {
-      lcdSetColor(ALARM_COLOR_INDEX);
+      lcdSetColor(lcdColorTable[TEXT_DISABLE_COLOR_INDEX]);
     }
   }
 

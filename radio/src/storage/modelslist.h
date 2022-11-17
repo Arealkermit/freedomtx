@@ -40,9 +40,9 @@ struct SimpleModuleData
 class ModelCell
 {
 public:
-  char modelFilename[LEN_MODEL_FILENAME+1];
-  char modelName[LEN_MODEL_NAME+1];
-#if !defined(PCBTANGO) && !defined (PCBMAMBO)
+  char modelFilename[LEN_MODEL_FILENAME + 1];
+  char modelName[LEN_MODEL_NAME + 1];
+#if !defined(MODEL_HAVE_NO_BITMAP)
   BitmapBuffer * buffer;
 #endif
   bool             valid_rfData;
@@ -52,10 +52,10 @@ public:
   ModelCell(const char * name);
   ~ModelCell();
 
-  void save(FIL* file);
+  void save(FIL * file);
 
-  void setModelName(char* name);
-  void setRfData(ModelData* model);
+  void setModelName(char * name);
+  void setRfData(ModelData * model);
 
   void setModelId(uint8_t moduleIdx, uint8_t id);
   void setRfModuleData(uint8_t moduleIdx, ModuleData* modData);
@@ -65,7 +65,7 @@ public:
   bool  forceFetchRfData();
 #endif
   void  loadBitmap();
-#if !defined(PCBTANGO) && !defined (PCBMAMBO)
+#if !defined(MODEL_HAVE_NO_BITMAP)
   const BitmapBuffer * getBuffer();
 #endif
   void  resetBuffer();
@@ -74,7 +74,7 @@ public:
 class ModelsCategory: public std::list<ModelCell *>
 {
 public:
-  char name[LEN_MODEL_FILENAME+1];
+  char name[LEN_MODEL_FILENAME + 1];
 
   ModelsCategory(const char * name);
   ~ModelsCategory();
@@ -107,21 +107,25 @@ public:
   void save();
   void clear();
 
-  const std::list<ModelsCategory *>& getCategories() const {
+  const std::list<ModelsCategory *> & getCategories() const
+  {
     return categories;
   }
   
-  void setCurrentCategorie(ModelsCategory* cat);
-  ModelsCategory* getCurrentCategory() const {
+  void setCurrentCategory(ModelsCategory * cat);
+  ModelsCategory * getCurrentCategory() const
+  {
     return currentCategory;
   }
 
-  void setCurrentModel(ModelCell* cell);
-  ModelCell* getCurrentModel() const {
+  void setCurrentModel(ModelCell * cell);
+  ModelCell * getCurrentModel() const
+  {
     return currentModel;
   }
 
-  unsigned int getModelsCount() const {
+  unsigned int getModelsCount() const
+  {
     return modelsCount;
   }
   
@@ -142,7 +146,6 @@ public:
 
 protected:
   FIL file;
-
 };
 
 extern ModelsList modelslist;

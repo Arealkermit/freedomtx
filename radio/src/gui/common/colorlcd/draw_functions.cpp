@@ -18,6 +18,7 @@
  * GNU General Public License for more details.
  */
 
+#include <math.h>
 #include "opentx.h"
 
 void drawStringWithIndex(coord_t x, coord_t y, const char * str, int idx, LcdFlags flags, const char * prefix, const char * suffix)
@@ -31,7 +32,7 @@ void drawStringWithIndex(coord_t x, coord_t y, const char * str, int idx, LcdFla
   lcdDrawText(x, y, s, flags);
 }
 
-void drawValueWithUnit(coord_t x, coord_t y, int val, uint8_t unit, LcdFlags att)
+void drawValueWithUnit(coord_t x, coord_t y, int32_t val, uint8_t unit, LcdFlags att)
 {
   // convertUnit(val, unit);
   if (!(att & NO_UNIT) && unit != UNIT_RAW) {
@@ -201,6 +202,11 @@ void drawSensorCustomValue(coord_t x, coord_t y, uint8_t sensor, int32_t value, 
     return;
   }
 
+  if (IS_FAI_FORBIDDEN(MIXSRC_FIRST_TELEM + 3 * sensor)) {
+    lcdDrawText(x, y, "FAI mode", flags);
+    return;
+  }
+
   TelemetryItem & telemetryItem = telemetryItems[sensor];
   TelemetrySensor & telemetrySensor = g_model.telemetrySensors[sensor];
 
@@ -245,6 +251,10 @@ void drawSensorCustomValue(coord_t x, coord_t y, uint8_t sensor, int32_t value, 
               "Rx2 Lost",
               "Rx1 NS",
               "Rx2 NS",
+              "Rx3 FS",
+              "Rx3 LF",
+              "Rx3 Lost",
+              "Rx3 NS"
             };
             for (uint8_t i=0; i<DIM(RXS_STATUS); i++) {
               if (value & (1<<i)) {

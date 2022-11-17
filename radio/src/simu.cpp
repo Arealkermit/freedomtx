@@ -255,7 +255,7 @@ void OpenTxSim::updateKeysAndSwitches(bool start)
     KEY_Down,      KEY_DOWN,
     KEY_Right,     KEY_RIGHT,
     KEY_Left,      KEY_LEFT,
-#elif defined(PCBXLITE) || defined(RADIO_T12)
+#elif defined(PCBXLITE) || defined(RADIO_FAMILY_JUMPER_T12)
   #if defined(KEYS_GPIO_REG_SHIFT)
     KEY_Shift_L,   KEY_SHIFT,
   #endif
@@ -265,7 +265,24 @@ void OpenTxSim::updateKeysAndSwitches(bool start)
     KEY_Left,      KEY_LEFT,
     KEY_Up,        KEY_UP,
     KEY_Down,      KEY_DOWN,
-#elif defined(PCBTARANIS)
+#elif defined(RADIO_TX12) || defined(RADIO_ZORRO)
+    KEY_Page_Up,   KEY_PAGEUP,
+    KEY_Page_Down, KEY_PAGEDN,
+    KEY_Return,    KEY_ENTER,
+    KEY_Up,        KEY_MODEL,
+    KEY_Down,      KEY_EXIT,
+    KEY_Right,     KEY_TELE,
+    KEY_Left,      KEY_SYS,
+#elif defined(RADIO_T8)
+    KEY_Page_Up,   KEY_PAGEUP,
+    KEY_Page_Down, KEY_PAGEDN,
+    KEY_Return,    KEY_ENTER,
+    KEY_Right,     KEY_MODEL,
+    KEY_BackSpace, KEY_EXIT,
+    KEY_Left,      KEY_SYS,
+    KEY_Up,        KEY_PLUS,
+    KEY_Down,      KEY_MINUS,
+#elif defined(RADIO_FAMILY_TBS)
     KEY_Page_Up,   KEY_MENU,
   #if defined(KEYS_GPIO_REG_PAGE)
     KEY_Page_Down, KEY_PAGE,
@@ -274,7 +291,7 @@ void OpenTxSim::updateKeysAndSwitches(bool start)
     KEY_BackSpace, KEY_EXIT,
     KEY_Up,        KEY_PLUS,
     KEY_Down,      KEY_MINUS,
-#elif defined(PCBTANGO) || defined(PCBMAMBO)
+#elif defined(PCBTARANIS)
     KEY_Page_Up,   KEY_MENU,
   #if defined(KEYS_GPIO_REG_PAGE)
     KEY_Page_Down, KEY_PAGE,
@@ -335,7 +352,7 @@ void OpenTxSim::updateKeysAndSwitches(bool start)
   SWITCH_KEY(5, 4, 2);
   SWITCH_KEY(6, 5, 2);
   SWITCH_KEY(7, 6, 2);
-#elif defined(PCBTANGO) || defined (PCBMAMBO)
+#elif defined(RADIO_FAMILY_TBS)
   SWITCH_KEY(A, 0, 2);
   SWITCH_KEY(B, 1, 3);
   SWITCH_KEY(C, 2, 3);
@@ -348,7 +365,14 @@ void OpenTxSim::updateKeysAndSwitches(bool start)
   SWITCH_KEY(C, 2, 3);
   SWITCH_KEY(D, 3, 3);
 
-  #if defined(HARDWARE_SWITCH_G) && defined(HARDWARE_SWITCH_H)
+  #if defined(RADIO_TPRO)
+    SWITCH_KEY(1, 4, 2);
+    SWITCH_KEY(2, 5, 2);
+    SWITCH_KEY(3, 6, 2);
+    SWITCH_KEY(4, 7, 2);
+    SWITCH_KEY(5, 8, 2);
+    SWITCH_KEY(6, 9, 2);
+  #elif defined(HARDWARE_SWITCH_G) && defined(HARDWARE_SWITCH_H)
     SWITCH_KEY(E, 4, 3);
     SWITCH_KEY(F, 5, 2);
     SWITCH_KEY(G, 6, 3);
@@ -452,7 +476,7 @@ void OpenTxSim::refreshDisplay()
             setPixel(x, y, color);
           }
     	}
-#elif defined(PCBTANGO)
+#elif defined(RADIO_TANGO)
         coord_t xx = LCD_W - x - 1;
         coord_t yy = LCD_H - y - 1;
         display_t * p = &simuLcdBuf[yy * (LCD_W / 2) + (xx / 2)];

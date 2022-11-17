@@ -69,7 +69,7 @@ void onCustomFunctionsFileSelectionMenu(const char * result)
 }
 #endif // SDCARD
 
-#if defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS)
 void onAdjustGvarSourceLongEnterPress(const char * result)
 {
   CustomFunctionData * cfn = &g_model.customFn[menuVerticalPosition];
@@ -145,9 +145,9 @@ void menuSpecialFunctions(event_t event, CustomFunctionData * functions, CustomF
 
   uint8_t eeFlags = (functions == g_model.customFn) ? EE_MODEL : EE_GENERAL;
 
-#if defined(PCBTARANIS) || defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(PCBTARANIS)
 #if defined(PCBXLITE)
-  // ENT LONG on xlite brings up switch type menu, so this menu is activated with SHIT + ENT LONG
+  // ENT LONG on xlite brings up switch type menu, so this menu is activated with SHIFT + ENT LONG
   if (menuHorizontalPosition==0 && event==EVT_KEY_LONG(KEY_ENTER) && IS_SHIFT_PRESSED() && !READ_ONLY()) {
 #else
   if (menuHorizontalPosition<0 && event==EVT_KEY_LONG(KEY_ENTER) && !READ_ONLY()) {
@@ -192,11 +192,7 @@ void menuSpecialFunctions(event_t event, CustomFunctionData * functions, CustomF
             if (active || AUTOSWITCH_ENTER_LONG()) CHECK_INCDEC_SWITCH(event, CFN_SWITCH(cfn), SWSRC_FIRST, SWSRC_LAST, eeFlags, isSwitchAvailableInCustomFunctions);
           }
           if (func == FUNC_OVERRIDE_CHANNEL && functions != g_model.customFn) {
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-            func = CFN_FUNC(cfn) = func+2;
-#else
-            func = CFN_FUNC(cfn) = func+1;
-#endif
+            func = CFN_FUNC(cfn) = func + 1;
           }
           break;
 
@@ -280,10 +276,12 @@ void menuSpecialFunctions(event_t event, CustomFunctionData * functions, CustomF
             lcdDrawNumber(MODEL_SPECIAL_FUNC_3RD_COLUMN, y, val_displayed, attr|LEFT);
           }
 #endif // OVERRIDE_CHANNEL_FUNCTION
-          else if (func >= FUNC_SET_FAILSAFE && func <= FUNC_BIND) {
+#if defined(DANGEROUS_MODULE_FUNCTIONS)
+          else if (func >= FUNC_RANGECHECK && func <= FUNC_BIND) {
             val_max = NUM_MODULES-1;
             lcdDrawTextAtIndex(MODEL_SPECIAL_FUNC_3RD_COLUMN, y, "\004Int.Ext.", CFN_PARAM(cfn), attr);
           }
+#endif
           else if (func == FUNC_SET_TIMER) {
             getMixSrcRange(MIXSRC_FIRST_TIMER, val_min, val_max);
             drawTimer(MODEL_SPECIAL_FUNC_3RD_COLUMN, y, val_displayed, attr|LEFT, attr);
@@ -335,6 +333,14 @@ void menuSpecialFunctions(event_t event, CustomFunctionData * functions, CustomF
           }
 #endif // SDCARD
           else if (func == FUNC_VOLUME) {
+            val_max = MIXSRC_LAST_CH;
+            drawSource(MODEL_SPECIAL_FUNC_3RD_COLUMN, y, val_displayed, attr);
+            if (active) {
+              INCDEC_SET_FLAG(eeFlags | INCDEC_SOURCE);
+              INCDEC_ENABLE_CHECK(isSourceAvailable);
+            }
+          }
+          else if (func == FUNC_BACKLIGHT) {
             val_max = MIXSRC_LAST_CH;
             drawSource(MODEL_SPECIAL_FUNC_3RD_COLUMN, y, val_displayed, attr);
             if (active) {
@@ -394,7 +400,7 @@ void menuSpecialFunctions(event_t event, CustomFunctionData * functions, CustomF
           else if (attr) {
             REPEAT_LAST_CURSOR_MOVE();
           }
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(NAVIGATION_X7)
           if (active || event==EVT_KEY_LONG(KEY_ENTER)) {
             CFN_PARAM(cfn) = CHECK_INCDEC_PARAM(event, val_displayed, val_min, val_max);
             if (func == FUNC_ADJUST_GVAR && attr && event==EVT_KEY_LONG(KEY_ENTER)) {
@@ -441,7 +447,7 @@ void menuSpecialFunctions(event_t event, CustomFunctionData * functions, CustomF
           break;
       }
     }
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(NAVIGATION_X7)
     if (sub==k && menuHorizontalPosition<0 && CFN_SWITCH(cfn)) {
       lcdInvertLine(i+1);
     }
@@ -451,7 +457,7 @@ void menuSpecialFunctions(event_t event, CustomFunctionData * functions, CustomF
 
 void menuModelSpecialFunctions(event_t event)
 {
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(NAVIGATION_X7)
   const CustomFunctionData * cfn = &g_model.customFn[menuVerticalPosition];
   if (!CFN_SWITCH(cfn) && menuHorizontalPosition < 0 && event==EVT_KEY_BREAK(KEY_ENTER)) {
     menuHorizontalPosition = 0;
@@ -461,7 +467,7 @@ void menuModelSpecialFunctions(event_t event)
 
   menuSpecialFunctions(event, g_model.customFn, &modelFunctionsContext);
 
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(NAVIGATION_X7)
   if (!CFN_SWITCH(cfn) && menuHorizontalPosition == 0 && s_editMode <= 0) {
     menuHorizontalPosition = -1;
   }

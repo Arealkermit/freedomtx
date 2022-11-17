@@ -171,7 +171,7 @@ void dumpTraceBuffer()
     " notd",  // INT_OTG_FS_RX_NOT_DEVICE,
 #endif // #if defined(DEBUG_USB_INTERRUPTS)
   };
-#elif defined(PCBTANGO) || defined(PCBMAMBO)
+#elif defined(RADIO_FAMILY_TBS)
   const char * const interruptNames[INT_LAST] = {
     "Tick ",   // INT_TICK,
     "1ms  ",   // INT_1MS,

@@ -28,17 +28,17 @@ class GaugeWidget: public Widget
     {
     }
 
-    virtual void refresh();
+    void refresh() override;
 
     static const ZoneOption options[];
 };
 
 const ZoneOption GaugeWidget::options[] = {
-  { "Source", ZoneOption::Source, OPTION_VALUE_UNSIGNED(1) },
-  { "Min", ZoneOption::Integer, OPTION_VALUE_SIGNED(-RESX), OPTION_VALUE_SIGNED(-RESX), OPTION_VALUE_SIGNED(RESX) },
-  { "Max", ZoneOption::Integer, OPTION_VALUE_SIGNED(RESX), OPTION_VALUE_SIGNED(-RESX), OPTION_VALUE_SIGNED(RESX) },
-  { "Color", ZoneOption::Color, OPTION_VALUE_UNSIGNED(RED) },
-  { NULL, ZoneOption::Bool }
+  { STR_SOURCE, ZoneOption::Source, OPTION_VALUE_UNSIGNED(1) },
+  { STR_MIN, ZoneOption::Integer, OPTION_VALUE_SIGNED(-RESX), OPTION_VALUE_SIGNED(-RESX), OPTION_VALUE_SIGNED(RESX) },
+  { STR_MAX, ZoneOption::Integer, OPTION_VALUE_SIGNED(RESX), OPTION_VALUE_SIGNED(-RESX), OPTION_VALUE_SIGNED(RESX) },
+  { STR_COLOR, ZoneOption::Color, OPTION_VALUE_UNSIGNED(RED) },
+  { nullptr, ZoneOption::Bool }
 };
 
 void GaugeWidget::refresh()
@@ -49,14 +49,16 @@ void GaugeWidget::refresh()
   uint16_t color = persistentData->options[3].unsignedValue;
 
   int32_t value = getValue(index);
-  int32_t value_in_range = value;
-  if (value < min)
-    value_in_range = min;
-  else if (value > max)
-    value_in_range = max;
 
-  int w = divRoundClosest(zone.w * (value_in_range - min), (max - min));
-  int percent = divRoundClosest(100 * (value_in_range - min), (max - min));
+  if (min > max) {
+    SWAP(min, max);
+    value = value - min - max;
+  }
+
+  value = limit(min, value, max);
+
+  int w = divRoundClosest(zone.w * (value - min), (max - min));
+  int percent = divRoundClosest(100 * (value - min), (max - min));
 
   // Gauge label
   drawSource(zone.x, zone.y, index, SMLSIZE | TEXT_INVERTED_COLOR);
@@ -64,7 +66,7 @@ void GaugeWidget::refresh()
   // Gauge
   lcdSetColor(color);
   lcdDrawSolidFilledRect(zone.x, zone.y + 16, zone.w, 16, TEXT_INVERTED_COLOR);
-  lcdDrawNumber(zone.x+zone.w/2, zone.y + 17, percent, SMLSIZE | CUSTOM_COLOR | CENTERED, 0, NULL, "%");
+  lcdDrawNumber(zone.x + zone.w/2, zone.y + 16, percent, SMLSIZE | CUSTOM_COLOR | CENTERED, 0, nullptr, "%");
   lcd->invertRect(zone.x + w, zone.y + 16, zone.w - w, 16, CUSTOM_COLOR);
 }
 

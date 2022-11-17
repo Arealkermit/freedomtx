@@ -80,7 +80,7 @@
   #endif
 
   // Switches
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define STORAGE_SWITCH_A
     #define HARDWARE_SWITCH_A
     #define HARDWARE_SWITCH_A
@@ -123,7 +123,7 @@
     #define KEYS_GPIOD_PINS                 (KEYS_GPIO_PIN_ENTER | KEYS_GPIO_PIN_MENU | KEYS_GPIO_PIN_PAGE | KEYS_GPIO_PIN_EXIT)
     #define KEYS_GPIOE_PINS                 (SWITCHES_GPIO_PIN_C_H | SWITCHES_GPIO_PIN_C_L | SWITCHES_GPIO_PIN_D | SWITCHES_GPIO_PIN_E)
     #define KEYS_GPIOF_PINS                 (0)
-  #elif defined(PCBMAMBO)
+  #elif defined(RADIO_MAMBO)
     #define HARDWARE_SWITCH_A
 
     #define HARDWARE_SWITCH_B
@@ -150,7 +150,7 @@
   #endif
 
   // ADC
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define ADC_MAIN                        ADC1
     #define ADC_DMA                         DMA2
     #define ADC_DMA_SxCR_CHSEL              0
@@ -164,7 +164,7 @@
     #define ADC_GPIOB_PINS                  ADC_GPIO_PIN_BATT
     #define ADC_CHANNEL_BATT                ADC_Channel_9  // ADC1_IN9
     #define ADC_VREF_PREC2                  307
-  #elif defined(PCBMAMBO)
+  #elif defined(RADIO_MAMBO)
     #define ADC_MAIN                        ADC1
     #define ADC_DMA                         DMA2
     #define ADC_DMA_SxCR_CHSEL              0
@@ -202,6 +202,9 @@
     #define ADC_CHANNEL_TRIM                ADC_Channel_11  // ADC1_IN11
   #endif
 
+  #define ADC_MAIN_SMPR1                    (ADC_SAMPTIME << 0) + (ADC_SAMPTIME << 3) + (ADC_SAMPTIME << 6) + (ADC_SAMPTIME << 9) + (ADC_SAMPTIME << 12) + (ADC_SAMPTIME << 15) + (ADC_SAMPTIME << 18) + (ADC_SAMPTIME << 21) + (ADC_SAMPTIME << 24);
+  #define ADC_MAIN_SMPR2                    (ADC_SAMPTIME << 0) + (ADC_SAMPTIME << 3) + (ADC_SAMPTIME << 6) + (ADC_SAMPTIME << 9) + (ADC_SAMPTIME << 12) + (ADC_SAMPTIME << 15) + (ADC_SAMPTIME << 18) + (ADC_SAMPTIME << 21) + (ADC_SAMPTIME << 24) + (ADC_SAMPTIME << 27);
+
   // PWR driver
   #define PWR_RCC_AHB1Periph                (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOE | RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD | RCC_AHB1Periph_GPIOE)
   #define PWR_SWITCH_GPIO                   GPIOB
@@ -211,12 +214,12 @@
   #define PWR_ON_GPIO_PIN                   GPIO_Pin_12 // PB.12
 
   // Charger
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define CHARGER_STATE_GPIO              GPIOD
     #define CHARGER_STATE_GPIO_PIN          GPIO_Pin_10 // PD.10
     #define CHARGER_FAULT_GPIO              GPIOD
     #define CHARGER_FAULT_GPIO_PIN          GPIO_Pin_11 // PD.11
-  #elif defined(PCBMAMBO)
+  #elif defined(RADIO_MAMBO)
     #define CHARGER_STATE_GPIO              GPIOD
     #define CHARGER_STATE_GPIO_PIN          GPIO_Pin_11 // PD.11
     #define CHARGER_FAULT_GPIO              0
@@ -227,9 +230,9 @@
   #define EXTMODULE_RCC_AHB1Periph          (RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOE | RCC_AHB1Periph_DMA2)
   #define EXTMODULE_RCC_APB2Periph          (RCC_APB2Periph_TIM8 | RCC_APB2Periph_USART6)
   #define EXTMODULE_PWR_GPIO                GPIOE
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define EXTMODULE_PWR_GPIO_PIN          GPIO_Pin_5 // PE.05
-  #elif defined(PCBMAMBO)
+  #elif defined(RADIO_MAMBO)
     #define EXTMODULE_PWR_GPIO_PIN          GPIO_Pin_2 // PE.02
   #endif
   #define EXTERNAL_MODULE_PWR_ON()          GPIO_SetBits(EXTMODULE_PWR_GPIO, EXTMODULE_PWR_GPIO_PIN)
@@ -262,7 +265,7 @@
   #define EXTMODULE_USART_RX_DMA_STREAM     DMA2_Stream1
 
   // Led
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define LED_RCC_AHB1Periph              (RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_DMA1)
     #define LED_RCC_APB1Periph              RCC_APB1Periph_TIM2
     #define LED_GPIO                        GPIOB
@@ -292,7 +295,7 @@
   #define AUX_SERIAL_DMA_Channel_RX         DMA_Channel_4
 
   // Telemetry
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define TELEMETRY_RCC_AHB1Periph        (RCC_AHB1Periph_GPIOD | RCC_AHB1Periph_GPIOE | RCC_AHB1Periph_DMA1)
     #define TELEMETRY_RCC_APB1Periph        RCC_APB1Periph_USART3
     #define TELEMETRY_DIR_GPIO              GPIOE
@@ -323,7 +326,7 @@
     #define TELEMETRY_EXTI_LINE             EXTI_Line9
     #define TELEMETRY_EXTI_IRQn             EXTI9_5_IRQn
     #define TELEMETRY_EXTI_TRIGGER          EXTI_Trigger_Rising
-  #elif defined(PCBMAMBO)
+  #elif defined(RADIO_MAMBO)
     #define TELEMETRY_RCC_AHB1Periph        (RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOD | RCC_AHB1Periph_DMA1)
     #define TELEMETRY_RCC_APB1Periph        RCC_APB1Periph_USART2
     #define TELEMETRY_DIR_GPIO              GPIOB
@@ -338,7 +341,7 @@
     #define TELEMETRY_RX_POLARITY_PIN       GPIO_Pin_11 // PB.11
     #define TELEMETRY_RX_POLARITY_INVERT()  TELEMETRY_RX_POLARITY_GPIO->BSRRL = TELEMETRY_RX_POLARITY_PIN
     #define TELEMETRY_RX_POLARITY_NORMAL()  TELEMETRY_RX_POLARITY_GPIO->BSRRH = TELEMETRY_RX_POLARITY_PIN
-    
+
     #define TELEMETRY_GPIO                  GPIOD
     #define TELEMETRY_TX_GPIO_PIN           GPIO_Pin_5  // PD.05
     #define TELEMETRY_RX_GPIO_PIN           GPIO_Pin_6  // PD.06
@@ -360,12 +363,14 @@
     #define TELEMETRY_EXTI_TRIGGER          EXTI_Trigger_Rising
   #endif
 
+#if defined(RADIO_TANGO)
   #define TELEMETRY_EXTI_REUSE_INTERRUPT_ROTARY_ENCODER
+#endif
   #define TELEMETRY_TIMER                   TIM11
   #define TELEMETRY_TIMER_IRQn              TIM1_TRG_COM_TIM11_IRQn
   #define TELEMETRY_TIMER_IRQHandler        TIM1_TRG_COM_TIM11_IRQHandler
 
-  // RF state
+  // Internal RF state
   #define CROSSFIRE_STATE_GPIO              GPIOC
   #define CROSSFIRE_STATE_GPIO_PIN          GPIO_Pin_0
 
@@ -380,7 +385,7 @@
   #define USB_GPIO_AF                       GPIO_AF_OTG1_FS
 
   // BackLight
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define BACKLIGHT_RCC_AHB1Periph        0
     #define BACKLIGHT_RCC_APB1Periph        0
   #else
@@ -396,7 +401,7 @@
   #endif
 
   // LCD driver
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define LCD_RCC_AHB1Periph              (RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD | RCC_AHB1Periph_DMA1)
     #define LCD_RCC_APB1Periph              RCC_APB1Periph_SPI3
     #define LCD_SPI_GPIO                    GPIOB
@@ -418,7 +423,7 @@
     #define LCD_DMA_FLAG_INT                DMA_HIFCR_CTCIF7
     #define LCD_SPI                         SPI3
     #define LCD_GPIO_AF                     GPIO_AF_SPI3
-  #elif defined(PCBMAMBO)
+  #elif defined(RADIO_MAMBO)
     #define LCD_RCC_AHB1Periph              (RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOD | RCC_AHB1Periph_DMA1)
     #define LCD_RCC_APB1Periph              RCC_APB1Periph_SPI3
     #define LCD_SPI_GPIO                    GPIOB
@@ -472,10 +477,10 @@
   #define AUDIO_DMA_Stream_IRQHandler       DMA1_Stream5_IRQHandler
   #define AUDIO_TIMER                       TIM6
   #define AUDIO_DMA                         DMA1
-  #if defined(PCBTANGO)
+  #if defined(RADIO_TANGO)
     #define AUDIO_MUTE_GPIO                 GPIOD
     #define AUDIO_MUTE_GPIO_PIN             GPIO_Pin_5  // PD.05
-  #elif defined(PCBMAMBO)
+  #elif defined(RADIO_MAMBO)
     #define AUDIO_MUTE_GPIO                 GPIOE
     #define AUDIO_MUTE_GPIO_PIN             GPIO_Pin_0  // PE.00
   #endif
@@ -487,13 +492,13 @@
 
   // ESP
   #if defined(ESP_SERIAL)
-    #if defined(PCBTANGO)
+    #if defined(RADIO_TANGO)
       #define ESP_EN_GPIO                   GPIOA
       #define ESP_EN_GPIO_PIN               GPIO_Pin_3 // PA.03
       #define ESP_DMA_Stream_RX             DMA1_Stream2
       #define ESP_DMA_Stream_IRQHandler     DMA1_Stream2_IRQHandler
       #define ESP_DMA_RX_FLAG_TC            DMA_IT_TCIF2
-    #elif defined(PCBMAMBO)
+    #elif defined(RADIO_MAMBO)
       #define ESP_EN_GPIO                   GPIOA
       #define ESP_EN_GPIO_PIN               GPIO_Pin_15 // PA.15
       #define ESP_DMA_Stream_RX             DMA1_Stream2

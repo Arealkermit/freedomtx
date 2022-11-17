@@ -197,33 +197,19 @@ int main()
 
   RCC_AHB1PeriphClockCmd(PWR_RCC_AHB1Periph | KEYS_RCC_AHB1Periph |
                          LCD_RCC_AHB1Periph | BACKLIGHT_RCC_AHB1Periph |
-                         AUX_SERIAL_RCC_AHB1Periph | I2C_RCC_AHB1Periph |
+                         AUX_SERIAL_RCC_AHB1Periph | AUX2_SERIAL_RCC_AHB1Periph |
+                         I2C_RCC_AHB1Periph | KEYS_BACKLIGHT_RCC_AHB1Periph |
                          SD_RCC_AHB1Periph, ENABLE);
 
   RCC_APB1PeriphClockCmd(ROTARY_ENCODER_RCC_APB1Periph | LCD_RCC_APB1Periph | BACKLIGHT_RCC_APB1Periph |
                          INTERRUPT_xMS_RCC_APB1Periph | I2C_RCC_APB1Periph |
-                         AUX_SERIAL_RCC_APB1Periph |
+                         AUX_SERIAL_RCC_APB1Periph | AUX2_SERIAL_RCC_APB1Periph |
                          SD_RCC_APB1Periph, ENABLE);
 
-  RCC_APB2PeriphClockCmd(LCD_RCC_APB2Periph | BACKLIGHT_RCC_APB2Periph | RCC_APB2Periph_SYSCFG | AUX_SERIAL_RCC_APB2Periph, ENABLE);
+  RCC_APB2PeriphClockCmd(LCD_RCC_APB2Periph | BACKLIGHT_RCC_APB2Periph | RCC_APB2Periph_SYSCFG | AUX_SERIAL_RCC_APB2Periph  | AUX2_SERIAL_RCC_APB2Periph, ENABLE);
 
   pwrInit();
   keysInit();
-
-  // USB charger handling
-#if defined(USB_CHARGER)
-  if (!WAS_RESET_BY_WATCHDOG_OR_SOFTWARE() && !pwrPressed()) {
-    ledInit();
-    usbChargerInit();
-    ledOff();
-    while (!pwrPressed()) {
-      if(usbChargerLed())
-        GPIO_SetBits(LED_GPIO, LED_GREEN_GPIO_PIN);
-      else
-        ledOff();
-    }
-  }
-#endif
 
   // wait a bit for the inputs to stabilize...
   if (!WAS_RESET_BY_WATCHDOG_OR_SOFTWARE()) {
@@ -232,8 +218,13 @@ int main()
     }
   }
 
+#if defined(RADIO_T8) && !defined(RADIOMASTER_RELEASE)
+  // Bind button not pressed
+  if ((~KEYS_GPIO_REG_BIND & KEYS_GPIO_PIN_BIND) == false) {
+#else
   // LHR & RHL trims not pressed simultanously
   if (readTrims() != BOOTLOADER_KEYS) {
+#endif
     // Start main application
     jumpTo(APP_START_ADDRESS);
   }
@@ -249,6 +240,9 @@ int main()
 #if defined(DEBUG) && defined(AUX_SERIAL)
   auxSerialInit(UART_MODE_DEBUG, 0); // default serial mode (None if DEBUG not defined)
 #endif
+#if defined(DEBUG) && defined(AUX2_SERIAL)
+  aux2SerialInit(UART_MODE_DEBUG, 0); // default serial mode (None if DEBUG not defined)
+#endif
 
   __enable_irq();
 
@@ -258,7 +252,7 @@ int main()
   backlightInit();
   backlightEnable();
 
-#if defined(PCBX7) || defined(PCBXLITE)
+#if defined(BLUETOOTH)
   // we shutdown the bluetooth module now to be sure it will be detected on firmware start
   bluetoothInit(BLUETOOTH_DEFAULT_BAUDRATE, false);
 #endif

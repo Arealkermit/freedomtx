@@ -36,13 +36,13 @@ extern "C" {
 #endif
 
 
-void libCRC8_Reset( uint8_t *CRC8 );                                    
-void libCRC8_Calc( uint8_t Data_In, uint8_t *CRC8, uint8_t Polynom );   
-uint8_t Get_libCRC8( uint8_t *CRC8, uint8_t Polynom );                  
+void libCRC8Reset(uint8_t * crc8);
+void libCRC8Calc(uint8_t dataIn, uint8_t * crc8, uint8_t polynom);
+uint8_t getLibCRC8(uint8_t * crc8, uint8_t polynom);
 
 
-void libCRC8_Add_MBUS_CRC( uint8_t *pArr, uint8_t polynom );
-uint8_t libCRC8_Get_CRC_Arr( uint8_t *pArr, uint8_t Length, uint8_t polynom );
+void libCRC8AddMbusCRC(uint8_t * pArr, uint8_t polynom);
+uint8_t libCRC8GetCRCArr(uint8_t * pArr, uint8_t Length, uint8_t polynom);
 
 
 /* Provide C++ Compatibility */

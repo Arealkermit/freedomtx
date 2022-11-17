@@ -216,15 +216,15 @@ const char * loadModel(const char * filename, bool alarms)
     convertModelData(version);
     model_size = getModelSize(filename);
 
-    if (model_size == MODEL_DATA_SIZE_131) {
+    if (model_size == MODEL_DATA_SIZE_137) {
       //re-load model
       error = readModel(filename, (uint8_t *)&g_model, sizeof(g_model), &version);
       if (!error) {
-        TRACE("convert model data of v1.30 success");
+        ALERT(STR_CONVERT_WARNING, STR_CONVERT_SUSSESS, AU_WARNING1);
       }
     }
     else
-      TRACE("convert model data of v1.30 failed");
+      ALERT(STR_CONVERT_WARNING, STR_CONVERT_FAILED, AU_WARNING1);
   }
 #endif
 
@@ -234,18 +234,13 @@ const char * loadModel(const char * filename, bool alarms)
     alarms = false;
   }
 
-  if (version < EEPROM_VER) {
+  else if (version < EEPROM_VER) {
     convertModelData(version);
   }
 
   postModelLoad(alarms);
 
   return error;
-}
-
-const char * writeGeneralSettings()
-{
-  return writeFile(RADIO_SETTINGS_PATH, (uint8_t *)&g_eeGeneral, sizeof(g_eeGeneral));
 }
 
 const char * loadRadioSettings(const char * path)
@@ -262,7 +257,7 @@ const char * loadRadioSettings(const char * path)
       convertRadioData(version);
       radio_size = getRadioSize();
 
-      if (radio_size == RADIO_DATA_SIZE_131) {
+      if (radio_size == RADIO_DATA_SIZE_137) {
         //re-load
         error = loadFile(path, (uint8_t *) &g_eeGeneral, sizeof(g_eeGeneral), &version);
         if (!error) {
@@ -316,6 +311,10 @@ const char * loadRadioSettings()
   return loadRadioSettings(RADIO_SETTINGS_PATH);
 }
 
+const char * writeGeneralSettings()
+{
+  return writeFile(RADIO_SETTINGS_PATH, (uint8_t *)&g_eeGeneral, sizeof(g_eeGeneral));
+}
 
 void storageCheck(bool immediately)
 {
@@ -344,7 +343,7 @@ void storageReadAll()
 
   if (loadRadioSettings() != nullptr) {
     storageEraseAll(true);
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(RADIO_FAMILY_TBS)
     bkregSetStatusFlag(STORAGE_ERASE_STATUS);
 #if defined(SD_CONFIG_PROTECT) && !defined(SIMU)
   TRACE("set sd failed count as default");

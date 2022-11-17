@@ -56,6 +56,9 @@ typedef uint8_t display_t;
 #define PREC2                          0x30
 #define MODE(flags)                    ((((int8_t)(flags) & 0x30) - 0x10) >> 4)
 
+#define IS_RIGHT_ALIGNED(att)          ((att) & RIGHT)
+#define IS_LEFT_ALIGNED(att)           (!((att) & (RIGHT | CENTERED)))
+
 /* line, rect, square flags */
 #define FORCE                          0x02
 #define ERASE                          0x04
@@ -169,10 +172,10 @@ void lcdClear();
 uint8_t * lcdLoadBitmap(uint8_t * dest, const char * filename, uint16_t width, uint16_t height);
 
 #if defined(BOOT)
-  #define BLINK_ON_PHASE (0)
+  #define BLINK_ON_PHASE        (0)
 #else
-  #define BLINK_ON_PHASE (g_blinkTmr10ms & (1<<6))
-  #define SLOW_BLINK_ON_PHASE          (g_blinkTmr10ms & (1<<7))
+  #define BLINK_ON_PHASE        (g_blinkTmr10ms & (1 << 6))
+  #define SLOW_BLINK_ON_PHASE   (g_blinkTmr10ms & (1 << 7))
 #endif
 
 inline display_t getPixel(unsigned int x, unsigned int y)

@@ -28,26 +28,14 @@
 
 #define MENUS_SCROLLBAR_WIDTH          0
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
-#define DEFAULT_SCROLLBAR_X            (LCD_W-1)
-#define NUM_BODY_LINES                 (LCD_LINES-1)
-#define MENU_HEADER_HEIGHT             FH
-#define CHECK_FLAG_NO_SCREEN_INDEX     1
-
-#if LCD_DEPTH > 1
+#if LCD_DEPTH == 4
 #define GREY(x)                        ((x) * 0x010000)
 #define WHITE                          GREY(0xf)
 #define GREY_DEFAULT                   GREY(11)
-#endif
-
-#if LCD_DEPTH > 1
 #define FILL_WHITE                     0x10
 #endif
 
-void menuChannelsView(event_t event);
-#endif
-
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(NAVIGATION_X7)
   #define HEADER_LINE                  0
   #define HEADER_LINE_COLUMNS
 #else
@@ -55,22 +43,21 @@ void menuChannelsView(event_t event);
   #define HEADER_LINE_COLUMNS          0,
 #endif
 
-#define COLUMN_X                       0
 #define drawFieldLabel(x, y, str)      lcdDrawTextAlignedLeft(y, str)
 
 #define NUM_BODY_LINES                 (LCD_LINES-1)
+#define TEXT_VIEWER_LINES              NUM_BODY_LINES
 #define MENU_HEADER_HEIGHT             FH
 
-#if defined(PCBTANGO)
-#define CURVE_LCD_H                    (64)
-#define CURVE_SIDE_WIDTH               (CURVE_LCD_H/2)
-#define CURVE_CENTER_X                 (LCD_W-CURVE_SIDE_WIDTH-2)
-#define CURVE_CENTER_Y                 (LCD_H/2)
+#if LCD_H > 64
+#define CURVE_SIDE_WIDTH               (32)
+#define CURVE_SIDE_HEIGHT              (64)
 #else
-#define CURVE_SIDE_WIDTH               (LCD_H/2)
-#define CURVE_CENTER_X                 (LCD_W-CURVE_SIDE_WIDTH-2)
-#define CURVE_CENTER_Y                 (LCD_H/2)
+#define CURVE_SIDE_WIDTH               (LCD_H / 2)
+#define CURVE_SIDE_HEIGHT              LCD_H
 #endif
+#define CURVE_CENTER_X                 (LCD_W-CURVE_SIDE_WIDTH - 2)
+#define CURVE_CENTER_Y                 (LCD_H / 2)
 
 #define MIXES_2ND_COLUMN               (12*FW)
 
@@ -163,7 +150,7 @@ int checkIncDec(event_t event, int val, int i_min, int i_max, unsigned int i_fla
 #define CHECK_INCDEC_GENVAR(event, var, min, max) \
   var = checkIncDecGen(event, var, min, max)
 
-#if defined(PCBTARANIS) || defined (PCBMAMBO)
+#if defined(PCBTARANIS)
 #define CURSOR_ON_LINE()               (menuHorizontalPosition < 0)
 #else
 #define CURSOR_ON_LINE()               (0)
@@ -224,7 +211,7 @@ void editGVarValue(coord_t x, coord_t y, event_t event, uint8_t gvar, uint8_t fl
 #else
 int16_t editGVarFieldValue(coord_t x, coord_t y, int16_t value, int16_t min, int16_t max, LcdFlags attr, event_t event);
 #define GVAR_MENU_ITEM(x, y, v, min, max, attr, editflags, event) editGVarFieldValue(x, y, v, min, max, attr, event)
-#define displayGVar(x, y, v, min, max) lcdDraw8bitsNumber(x, y, v)
+#define displayGVar(x, y, v, min, max) lcdDrawNumber(x, y, v)
 #endif
 
 void gvarWeightItem(coord_t x, coord_t y, MixData * md, LcdFlags attr, event_t event);
@@ -241,7 +228,9 @@ extern uint8_t s_copyMode;
 extern int8_t s_copySrcRow;
 extern int8_t s_copyTgtOfs;
 extern uint8_t s_currIdx;
-extern uint8_t s_curveChan;
+extern uint8_t s_currIdxSubMenu;
+extern uint16_t s_currSrcRaw;
+extern uint16_t s_currScale;
 extern uint8_t s_copySrcIdx;
 extern uint8_t s_copySrcCh;
 extern int8_t s_currCh;
@@ -286,7 +275,7 @@ void menuChannelsViewCommon(event_t event);
 #endif
 
 // TODO enum
-#if defined(PCBX7) || defined(PCBX9LITE) || defined(PCBMAMBO)
+#if defined(PCBX7) || defined(PCBX9LITE)
 #define EDIT_MODE_INIT                 0
 #else
 #define EDIT_MODE_INIT                 -1
@@ -301,9 +290,6 @@ uint8_t getMixesCount();
 void insertMix(uint8_t idx);
 void deleteMix(uint8_t idx);
 
-typedef int (*FnFuncP) (int x);
-void drawFunction(FnFuncP fn, uint8_t offset=0);
-
 void onSourceLongEnterPress(const char *result);
 
 uint8_t switchToMix(uint8_t source);
@@ -315,17 +301,21 @@ extern const unsigned char sticks[] ;
 void drawSplash();
 void drawSecondSplash();
 void drawScreenIndex(uint8_t index, uint8_t count, uint8_t attr);
-#if (defined(PCBTANGO) || defined(PCBMAMBO)) && !defined(SIMU)
+#if defined(RADIO_CALIBRATION_HALL)
 typedef enum {
   MAINSCREEN_GRAPHICS_NONE = 0,
   MAINSCREEN_GRAPHICS_STICKS = 0x01,
   MAINSCREEN_GRAPHICS_POTS = 0x02,
   MAINSCREEN_GRAPHICS_ALL = 0xFF
 } MainScreenGraphicsView;
-void drawGauge(coord_t x, coord_t y, coord_t w, coord_t h, int32_t val, int32_t max);
-void drawDownload();
-void doMainScreenGraphics( uint8_t enable_view, uint32_t ptr );
+
+void doMainScreenGraphics(uint8_t viewMask, int16_t * sticksOverride);
 #endif
+
+#if defined(RADIO_FAMILY_TBS)
+void drawDownload();
+#endif
+
 void drawStick(coord_t centrex, int16_t xval, int16_t yval);
 void drawPotsBars();
 void doMainScreenGraphics();

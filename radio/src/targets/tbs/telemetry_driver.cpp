@@ -20,16 +20,17 @@
 
 #include "opentx.h"
 
+Fifo<uint8_t, TELEMETRY_FIFO_SIZE> intCrsfTelemetryFifo;
 Fifo<uint8_t, TELEMETRY_FIFO_SIZE> telemetryFifo;
 uint32_t telemetryErrors = 0;
 
-#if (defined(PCBTANGO) && !defined DEBUG) || defined(PCBMAMBO)
+#if (defined(RADIO_TANGO) && !defined DEBUG) || defined(RADIO_MAMBO)
 static void telemetryInitDirPin()
 {
   GPIO_InitTypeDef GPIO_InitStructure;
   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;//GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
   GPIO_InitStructure.GPIO_Pin   = TELEMETRY_DIR_GPIO_PIN;
   GPIO_Init(TELEMETRY_DIR_GPIO, &GPIO_InitStructure);
   TELEMETRY_DIR_INPUT();
@@ -213,6 +214,7 @@ void sportWaitTransmissionComplete()
 
 void telemetryPortSetDirectionInput()
 {
+  sportWaitTransmissionComplete();
   TELEMETRY_DIR_INPUT();
   TELEMETRY_USART->CR1 |= USART_CR1_RE; // turn on receiver
 }
@@ -296,6 +298,8 @@ extern "C" void TELEMETRY_DMA_TX_IRQHandler(void)
   DEBUG_INTERRUPT(INT_TELEM_DMA);
   if (DMA_GetITStatus(TELEMETRY_DMA_Stream_TX, TELEMETRY_DMA_TX_FLAG_TC)) {
     DMA_ClearITPendingBit(TELEMETRY_DMA_Stream_TX, TELEMETRY_DMA_TX_FLAG_TC);
+    // clear TC flag before enabling interrupt
+    TELEMETRY_USART->SR &= ~USART_SR_TC;
     TELEMETRY_USART->CR1 |= USART_CR1_TCIE;
     if (telemetryProtocol == PROTOCOL_TELEMETRY_FRSKY_SPORT) {
       outputTelemetryBuffer.reset();
@@ -394,27 +398,6 @@ void telemetryPortSetDirectionOutput()
 void sportSendBuffer(const uint8_t * buffer, uint32_t count)
 {
 }
-
-void sportSendByte(uint8_t byte)
-{
-
-}
-
-void telemetryClearFifo()
-{
-
-}
-
-void telemetryPortSetDirectionInput()
-{
-
-}
-
-void telemetryPortInvertedInit(uint32_t baudrate)
-{
-
-}
-
 
 bool telemetryGetByte(uint8_t * byte)
 {

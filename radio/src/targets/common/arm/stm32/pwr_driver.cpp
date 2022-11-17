@@ -55,6 +55,12 @@ void pwrInit()
   GPIO_InitStructure.GPIO_Pin = PWR_SWITCH_GPIO_PIN;
   GPIO_Init(PWR_SWITCH_GPIO, &GPIO_InitStructure);
 
+#if defined(PWR_EXTRA_SWITCH_GPIO)
+  // PWR Extra switch
+  GPIO_InitStructure.GPIO_Pin = PWR_EXTRA_SWITCH_GPIO_PIN;
+  GPIO_Init(PWR_EXTRA_SWITCH_GPIO, &GPIO_InitStructure);
+#endif
+
 #if defined(PCBREV_HARDCODED)
   hardwareOptions.pcbrev = PCBREV_HARDCODED;
 #elif defined(PCBREV_GPIO_PIN)
@@ -78,7 +84,7 @@ void pwrInit()
   GPIO_Init(SD_PRESENT_GPIO, &GPIO_InitStructure);
 #endif
 
-#if defined(INTMODULE_USART) && defined(TRAINER_MODULE_CPPM_GPIO_PIN)
+#if defined(INTMODULE_USART) && defined(TRAINER_MODULE_CPPM)
   GPIO_SetBits(TRAINER_MODULE_CPPM_GPIO, TRAINER_MODULE_CPPM_GPIO_PIN);
   GPIO_InitStructure.GPIO_Pin = TRAINER_MODULE_CPPM_GPIO_PIN;
   GPIO_Init(TRAINER_MODULE_CPPM_GPIO, &GPIO_InitStructure);
@@ -105,9 +111,18 @@ void pwrOff()
   GPIO_ResetBits(PWR_ON_GPIO, PWR_ON_GPIO_PIN);
 }
 
+#if defined(PWR_EXTRA_SWITCH_GPIO)
+bool pwrForcePressed()
+{
+  return (GPIO_ReadInputDataBit(PWR_SWITCH_GPIO, PWR_SWITCH_GPIO_PIN) == Bit_RESET && GPIO_ReadInputDataBit(PWR_EXTRA_SWITCH_GPIO, PWR_EXTRA_SWITCH_GPIO_PIN) == Bit_RESET);
+}
+#endif
+
 bool pwrPressed()
 {
-#if defined PWR_SWITCH_PIN_ACTIVE_HIGH
+#if defined(PWR_EXTRA_SWITCH_GPIO)
+  return (GPIO_ReadInputDataBit(PWR_SWITCH_GPIO, PWR_SWITCH_GPIO_PIN) == Bit_RESET || GPIO_ReadInputDataBit(PWR_EXTRA_SWITCH_GPIO, PWR_EXTRA_SWITCH_GPIO_PIN) == Bit_RESET);
+#elif defined(PWR_SWITCH_PIN_ACTIVE_HIGH)
   return GPIO_ReadInputDataBit(PWR_SWITCH_GPIO, PWR_SWITCH_GPIO_PIN) == Bit_SET;
 #else
   return GPIO_ReadInputDataBit(PWR_SWITCH_GPIO, PWR_SWITCH_GPIO_PIN) == Bit_RESET;

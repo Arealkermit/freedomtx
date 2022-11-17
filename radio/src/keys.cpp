@@ -31,8 +31,8 @@
   #define FILTERBITS                4   // defines how many bits are used for debounce
 #endif
 
-#if defined(PCBTANGO)
-  #define  ROTORY_FILTERBITS        1   // when make the rotary as the key, reduce the hold time
+#if !defined(HARDWARE_TRIMS)
+  #define  ROTARY_FILTERBITS        1   // when make the rotary as the key, reduce the hold time
 #endif
 
 #define KSTATE_OFF                  0
@@ -41,7 +41,7 @@
 #define KSTATE_PAUSE                98
 #define KSTATE_KILLED               99
 
-#if defined(PCBTANGO)
+#if !defined(HARDWARE_TRIMS)
 uint8_t g_trimEditMode = EDIT_TRIM_DISABLED;
 #endif
 
@@ -68,7 +68,7 @@ void Key::input(bool val)
 {
   // store new value in the bits that hold the key state history (used for debounce)
   uint8_t t_vals = m_vals ;
-#if defined(PCBTANGO) && !defined(BOOT)
+#if !defined(HARDWARE_TRIMS) && !defined(BOOT)
   uint8_t filterBits = 0;
 #endif
   t_vals <<= 1 ;
@@ -90,9 +90,9 @@ void Key::input(bool val)
 
   switch (m_state) {
     case KSTATE_OFF:
-#if defined(PCBTANGO) && !defined(BOOT)
+#if !defined(HARDWARE_TRIMS) && !defined(BOOT)
       if (g_trimEditMode != EDIT_TRIM_DISABLED) {
-        filterBits = ROTORY_FILTERBITS;
+        filterBits = ROTARY_FILTERBITS;
       }
       else {
         filterBits = FILTERBITS;
@@ -115,7 +115,7 @@ void Key::input(bool val)
       break;
 
     case KSTATE_RPTDELAY: // gruvin: delay state before first key repeat
-#if defined(PCBTANGO)
+#if !defined(HARDWARE_TRIMS)
       if (g_trimEditMode != EDIT_TRIM_DISABLED) {
   #if defined(SIMU)
         if (m_cnt == KEY_LONG_DELAY) {

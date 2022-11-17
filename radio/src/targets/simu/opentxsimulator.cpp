@@ -213,17 +213,7 @@ void OpenTxSimulator::setTrim(unsigned int idx, int value)
   if (i < 4)  // swap axes
     i = modn12x3[4 * getStickMode() + idx];
   uint8_t phase = getTrimFlightMode(getFlightMode(), i);
-
-  if (!setTrimValue(phase, i, value)) {
-    QTimer *timer = new QTimer(this);
-    timer->setSingleShot(true);
-    connect(timer, &QTimer::timeout, [=]() {
-      emit trimValueChange(idx, 0);
-      emit outputValueChange(OUTPUT_SRC_TRIM_VALUE, idx, 0);
-      timer->deleteLater();
-    });
-    timer->start(350);
-  }
+  setTrimValue(phase, i, value);
 }
 
 void OpenTxSimulator::setTrainerInput(unsigned int inputNumber, int16_t value)
@@ -613,10 +603,8 @@ class OpenTxSimulatorFactory: public SimulatorFactory
       return Board::BOARD_TARANIS_X9LITES;
 #elif defined(PCBX9LITE)
       return Board::BOARD_TARANIS_X9LITE;
-#elif defined(PCBTARANIS)
-      return Board::BOARD_TARANIS_X9D;
 #else
-      return Board::BOARD_9X_M64;
+      return Board::BOARD_TARANIS_X9D;
 #endif
     }
 };

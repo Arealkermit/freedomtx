@@ -36,6 +36,10 @@ void onModelSelectMenu(const char * result)
   int8_t sub = menuVerticalPosition;
 
   if (result == STR_SELECT_MODEL || result == STR_CREATE_MODEL) {
+    if (!g_eeGeneral.disableRssiPoweroffAlarm) {
+      if (!confirmModelChange())
+        return;
+    }
     selectModel(sub);
   }
   else if (result == STR_COPY_MODEL) {
@@ -79,7 +83,7 @@ void onModelSelectMenu(const char * result)
 void menuModelSelect(event_t event)
 {
   event_t _event_ = event;
-  if ((s_copyMode && EVT_KEY_MASK(event) == KEY_EXIT) || event == EVT_KEY_BREAK(KEY_EXIT) || IS_ROTARY_BREAK(event) || IS_ROTARY_LONG(event)) {
+  if ((s_copyMode && IS_KEY_EVT(event, KEY_EXIT)) || event == EVT_KEY_BREAK(KEY_EXIT) || IS_ROTARY_BREAK(event) || IS_ROTARY_LONG(event)) {
     _event_ = 0;
   }
 
@@ -199,7 +203,16 @@ void menuModelSelect(event_t event)
       }
       break;
 
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(KEYS_GPIO_REG_PAGEDN)
+    case EVT_KEY_FIRST(KEY_PAGEUP):
+      chainMenu(menuTabModel[DIM(menuTabModel)-1]);
+      killEvents(event);
+      break;
+
+    case EVT_KEY_FIRST(KEY_PAGEDN):
+      chainMenu(menuModelSetup);
+      break;
+#elif defined(KEYS_GPIO_REG_PAGE)
     case EVT_KEY_LONG(KEY_PAGE):
       chainMenu(menuTabModel[DIM(menuTabModel)-1]);
       killEvents(event);
@@ -231,7 +244,7 @@ void menuModelSelect(event_t event)
 #endif
 #endif
 
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(ROTARY_ENCODER_NAVIGATION) && defined(NAVIGATION_X7)
     case EVT_ROTARY_LEFT:
     case EVT_ROTARY_RIGHT:
 #endif
@@ -272,7 +285,7 @@ void menuModelSelect(event_t event)
   lcdDrawNumber(17*FW, 0, reusableBuffer.modelsel.eepromfree, RIGHT);
 #endif
 
-#if defined(NAVIGATION_X7) || defined(NAVIGATION_TANGO) || defined(NAVIGATION_MAMBO)
+#if defined(NAVIGATION_X7)
   drawScreenIndex(MENU_MODEL_SELECT, DIM(menuTabModel), 0);
 #elif defined(ROTARY_ENCODER_NAVIGATION)
   drawScreenIndex(MENU_MODEL_SELECT, DIM(menuTabModel), (sub == g_eeGeneral.currModel) ? ((IS_ROTARY_ENCODER_NAVIGATION_ENABLE() && s_editMode < 0) ? INVERS|BLINK : INVERS) : 0);

@@ -24,12 +24,18 @@
 #include "rtos.h"
 
 // stack sizes should be in multiples of 8 for better alignment
-#define MENUS_STACK_SIZE       2000
+#if defined (COLORLCD)
+  #define MENUS_STACK_SIZE     4000
+#else
+  #define MENUS_STACK_SIZE     2000
+#endif
 #define MIXER_STACK_SIZE       400
 #define AUDIO_STACK_SIZE       400
 #define CLI_STACK_SIZE         1000  // only consumed with CLI build option
+#if defined(INTERNAL_MODULE_CRSF)
 #define CROSSFIRE_STACK_SIZE   64
 #define SYSTEM_STACK_SIZE      504
+#endif
 
 #define MIXER_TASK_PRIO        5
 #define AUDIO_TASK_PRIO        7
@@ -50,7 +56,7 @@ extern RTOS_DEFINE_STACK(audioStack, AUDIO_STACK_SIZE);
 extern RTOS_MUTEX_HANDLE mixerMutex;
 extern RTOS_FLAG_HANDLE openTxInitCompleteFlag;
 
-#if defined(CROSSFIRE_TASK)
+#if defined(INTERNAL_MODULE_CRSF)
 extern RTOS_TASK_HANDLE crossfireTaskId;
 extern RTOS_DEFINE_STACK(crossfireStack, CROSSFIRE_STACK_SIZE);
 

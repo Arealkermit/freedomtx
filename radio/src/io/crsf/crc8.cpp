@@ -29,51 +29,56 @@
 #define MSB_FLAG_SET                ( uint8_t ) 0x01    /* MSB Bit flag is set*/
 
 
-uint8_t EXP_libCRC8 = CRC8_RESET_VALUE;
+uint8_t ExpLibCRC8 = CRC8_RESET_VALUE;
 
 
-void libCRC8_Reset( uint8_t *CRC8 ) {
-  ( *CRC8 ) = CRC8_RESET_VALUE;          
+void libCRC8Reset(uint8_t * CRC8)
+{
+  (*CRC8) = CRC8_RESET_VALUE;
 }
 
-void libCRC8_Calc( uint8_t Data_In, uint8_t *CRC8, uint8_t Polynom ) {
-  uint8_t Bit_Cnt;
-  uint8_t MSB_Flag;
+void libCRC8Calc(uint8_t dataIn, uint8_t * CRC8, uint8_t polynom)
+{
+  uint8_t bitCnt;
+  uint8_t msbFlag;
 
-  for ( Bit_Cnt = 0; Bit_Cnt < BYTE_SIZE; Bit_Cnt++ ) {
-    MSB_Flag = MSB_FLAG_CLEAR;
-    if ( ( *CRC8 ) & MSB_SET ) MSB_Flag = MSB_FLAG_SET;
-      ( *CRC8 ) <<= 1;
-    if ( Data_In & MSB_SET )
-      ( *CRC8 )++;
-    Data_In <<= 1;
-    if ( MSB_Flag == MSB_FLAG_SET )
-      ( *CRC8 ) ^= Polynom;
+  for (bitCnt = 0; bitCnt < BYTE_SIZE; bitCnt++) {
+    msbFlag = MSB_FLAG_CLEAR;
+    if ((*CRC8) & MSB_SET) msbFlag = MSB_FLAG_SET;
+      (*CRC8) <<= 1;
+    if (dataIn & MSB_SET)
+      (*CRC8)++;
+    dataIn <<= 1;
+    if (msbFlag == MSB_FLAG_SET)
+      (*CRC8) ^= polynom;
   }
 }
 
-uint8_t Get_libCRC8( uint8_t *CRC8, uint8_t Polynom ) {
+uint8_t getLibCRC8(uint8_t * CRC8, uint8_t polynom)
+{
   /* Finisch CRC calculation */
-  libCRC8_Calc( CRC8_FINISH_VALUE, CRC8, Polynom );
-  return ( *CRC8 );
+  libCRC8Calc(CRC8_FINISH_VALUE, CRC8, polynom);
+  return (*CRC8);
 }
 
 /* *pArr needs to point to lenght byte of array */
-void libCRC8_Add_MBUS_CRC( uint8_t *pArr, uint8_t polynom ) {
-  uint8_t Length;
+void libCRC8AddMbusCRC(uint8_t * pArr, uint8_t polynom)
+{
+  uint8_t length;
 
-  Length = *pArr++ - 1;
-  *( pArr + Length ) = libCRC8_Get_CRC_Arr( pArr, Length, polynom );
-  //printf( "CRC at: %03d; CRC: %02x\r\n", Length, *( pArr + Length ) );
+  length = *pArr++ - 1;
+  *(pArr + length) = libCRC8GetCRCArr(pArr, length, polynom);
+  //printf("CRC at: %03d; CRC: %02x\r\n", Length, *( pArr + Length ));
 }
 
-uint8_t libCRC8_Get_CRC_Arr( uint8_t *pArr, uint8_t Length, uint8_t polynom ) {
+uint8_t libCRC8GetCRCArr(uint8_t * pArr, uint8_t length, uint8_t polynom)
+{
   uint8_t i;
 
-  libCRC8_Reset( &EXP_libCRC8 );
-  for( i = 0; i < Length; i++ ) {
-    libCRC8_Calc( *( pArr + i ), &EXP_libCRC8, polynom );
+  libCRC8Reset(&ExpLibCRC8);
+  for (i = 0; i < length; i++) {
+    libCRC8Calc(*(pArr + i), &ExpLibCRC8, polynom);
   }
-  return Get_libCRC8( &EXP_libCRC8, polynom );
+  return getLibCRC8(&ExpLibCRC8, polynom);
 }
 

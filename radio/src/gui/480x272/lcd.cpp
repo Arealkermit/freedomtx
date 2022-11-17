@@ -20,6 +20,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <limits.h>
 #include "opentx.h"
 #include "strhelpers.h"
 
@@ -49,24 +50,24 @@ uint8_t getMappedChar(uint8_t c)
     result = 127 + c - 0x80;
   }
 #elif defined(TRANSLATIONS_ES)
-  else if (c >= 0x80 && c <= 0x81) {
+  else if (c >= 0x80 && c <= 0x80+12) {
     result = 157 + c - 0x80;
   }
 #elif defined(TRANSLATIONS_FI) || defined(TRANSLATIONS_SE)
   else if (c >= 0x80 && c <= 0x85) {
-    result = 159 + c - 0x80;
+    result = 169 + c - 0x80;
   }
 #elif defined(TRANSLATIONS_IT)
   else if (c >= 0x80 && c <= 0x81) {
-    result = 165 + c - 0x80;
+    result = 175 + c - 0x80;
   }
 #elif defined(TRANSLATIONS_PL)
   else if (c >= 0x80 && c <= 0x80+17) {
-    result = 167 + c - 0x80;
+    result = 177 + c - 0x80;
   }
 #elif defined(TRANSLATIONS_PT)
   else if (c >= 0x80 && c <= 0x80+21) {
-    result = 185 + c - 0x80;
+    result = 195 + c - 0x80;
   }
 #endif
   else if (c < 0xC0)
@@ -165,7 +166,19 @@ void lcdDrawNumber(coord_t x, coord_t y, int32_t val, LcdFlags flags, uint8_t le
   int idx = 0;
   int mode = MODE(flags);
   bool neg = false;
+
+  if (val == INT_MAX) {
+    flags &= ~(LEADING0 | PREC1 | PREC2);
+    lcdDrawText(x, y, "INT_MAX", flags);
+    return;
+  }
+
   if (val < 0) {
+    if (val == INT_MIN) {
+      flags &= ~(LEADING0 | PREC1 | PREC2);
+      lcdDrawText(x, y, "INT_MIN", flags);
+      return;
+    }
     val = -val;
     neg = true;
   }
@@ -339,9 +352,9 @@ void drawDate(coord_t x, coord_t y, TelemetryItem & telemetryItem, LcdFlags att)
     att &= ~FONTSIZE_MASK;
     lcdDrawNumber(x, y, telemetryItem.datetime.day, att|LEADING0|LEFT, 2);
     lcdDrawChar(lcdNextPos-1, y, '-', att);
-    lcdDrawNumber(lcdNextPos-1, y, telemetryItem.datetime.month, att|LEFT, 2);
+    lcdDrawNumber(lcdNextPos-1, y, telemetryItem.datetime.month, att|LEADING0|LEFT, 2);
     lcdDrawChar(lcdNextPos-1, y, '-', att);
-    lcdDrawNumber(lcdNextPos-1, y, telemetryItem.datetime.year-2000, att|LEFT);
+    lcdDrawNumber(lcdNextPos-1, y, telemetryItem.datetime.year-2000, att|LEADING0|LEFT);
     y += FH;
     lcdDrawNumber(x, y, telemetryItem.datetime.hour, att|LEADING0|LEFT, 2);
     lcdDrawChar(lcdNextPos, y, ':', att);
@@ -352,9 +365,9 @@ void drawDate(coord_t x, coord_t y, TelemetryItem & telemetryItem, LcdFlags att)
   else {
     lcdDrawNumber(x, y, telemetryItem.datetime.day, att|LEADING0|LEFT, 2);
     lcdDrawChar(lcdNextPos-1, y, '-', att);
-    lcdDrawNumber(lcdNextPos, y, telemetryItem.datetime.month, att|LEFT, 2);
+    lcdDrawNumber(lcdNextPos, y, telemetryItem.datetime.month, att|LEADING0|LEFT, 2);
     lcdDrawChar(lcdNextPos-1, y, '-', att);
-    lcdDrawNumber(lcdNextPos, y, telemetryItem.datetime.year-2000, att|LEFT);
+    lcdDrawNumber(lcdNextPos, y, telemetryItem.datetime.year-2000, att|LEADING0|LEFT);
     lcdDrawNumber(lcdNextPos+11, y, telemetryItem.datetime.hour, att|LEADING0|LEFT, 2);
     lcdDrawChar(lcdNextPos, y, ':', att);
     lcdDrawNumber(lcdNextPos, y, telemetryItem.datetime.min, att|LEADING0|LEFT, 2);
@@ -363,7 +376,7 @@ void drawDate(coord_t x, coord_t y, TelemetryItem & telemetryItem, LcdFlags att)
   }
 }
 
-void drawGPSCoord(coord_t x, coord_t y, int32_t value, const char * direction, LcdFlags flags, bool seconds=true)
+void drawGPSCoord(coord_t x, coord_t y, int32_t value, const char * direction, LcdFlags flags, bool seconds)
 {
   char s[32];
   uint32_t absvalue = abs(value);
@@ -422,7 +435,11 @@ void lcdDrawPoint(coord_t x, coord_t y, LcdFlags att)
 {
   display_t * p = PIXEL_PTR(x, y);
   display_t color = lcdColorTable[COLOR_IDX(att)];
+#if defined(PCBX10)
+  if (p >= displayBuf && x < LCD_W) {  // x10 screen is reversed, so overflow are happening the other way around
+#else
   if (p < DISPLAY_END) {
+#endif
     *p = color;
   }
 }
@@ -435,30 +452,31 @@ void lcdDrawBlackOverlay()
 #if defined(MULTIMODULE)
 void lcdDrawMultiProtocolString(coord_t x, coord_t y, uint8_t moduleIdx, uint8_t protocol, LcdFlags flags)
 {
-  if (protocol <= MODULE_SUBTYPE_MULTI_LAST) {
+  MultiModuleStatus & status = getMultiModuleStatus(moduleIdx);
+  if (status.protocolName[0] && status.isValid()) {
+    lcdDrawText(x, y, status.protocolName, flags);
+  }
+  else if (protocol <= MODULE_SUBTYPE_MULTI_LAST) {
     lcdDrawTextAtIndex(x, y, STR_MULTI_PROTOCOLS, protocol, flags);
   }
   else {
-    MultiModuleStatus &status = getMultiModuleStatus(moduleIdx);
-    if (status.protocolName[0] && status.isValid())
-      lcdDrawText(x, y, status.protocolName, flags);
-    else
-      lcdDrawNumber(x, y, protocol + 3, flags); // Convert because of OpenTX FrSky fidling (OpenTX protocol tables and Multiprotocol tables don't match)
+    lcdDrawNumber(x, y, protocol + 3, flags); // Convert because of OpenTX FrSky fidling (OpenTX protocol tables and Multiprotocol tables don't match)
   }
 }
 
 void lcdDrawMultiSubProtocolString(coord_t x, coord_t y, uint8_t moduleIdx, uint8_t subType, LcdFlags flags)
 {
-  const mm_protocol_definition *pdef = getMultiProtocolDefinition(g_model.moduleData[moduleIdx].getMultiProtocol());
-  if (subType <= pdef->maxSubtype && pdef->subTypeString != nullptr) {
+  MultiModuleStatus & status = getMultiModuleStatus(moduleIdx);
+  const mm_protocol_definition * pdef = getMultiProtocolDefinition(g_model.moduleData[moduleIdx].getMultiProtocol());
+
+  if (status.protocolName[0] && status.isValid()) {
+    lcdDrawText(x, y, status.protocolSubName, flags);
+  }
+  else if (subType <= pdef->maxSubtype && pdef->subTypeString != nullptr) {
     lcdDrawTextAtIndex(x, y, pdef->subTypeString, subType, flags);
   }
   else {
-    MultiModuleStatus &status = getMultiModuleStatus(moduleIdx);
-    if (status.protocolName[0] && status.isValid())
-      lcdDrawText(x, y, status.protocolSubName, flags);
-    else
-      lcdDrawNumber(x, y, subType, flags);
+    lcdDrawNumber(x, y, subType, flags);
   }
 }
 #endif

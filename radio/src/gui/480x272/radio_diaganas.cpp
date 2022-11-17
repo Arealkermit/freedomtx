@@ -19,15 +19,28 @@
  */
 
 #include "opentx.h"
+#if defined(HARDWARE_TOUCH)
+#include "touch.h"
+#include "tp_gt911.h"
+#include <math.h>
+#endif
 
 constexpr coord_t LEFT_NAME_COLUMN = MENUS_MARGIN_LEFT;
-constexpr coord_t RIGHT_NAME_COLUMN = LCD_W / 2;
 constexpr coord_t ANA_OFFSET = 150;
-constexpr coord_t RAS_TOP_POSITION = LCD_H - 45;
 
 bool menuRadioDiagAnalogs(event_t event)
 {
   SIMPLE_SUBMENU(STR_MENU_RADIO_ANALOGS, ICON_MODEL_SETUP, 0);
+
+#if defined(HARDWARE_TOUCH)
+  if (event == EVT_ENTRY || event == EVT_ENTRY_UP) {
+    touchPanelInit();
+  }
+  else if (menuEvent) {
+    touchPanelDeInit();
+    return false;
+  }
+#endif
 
   for (uint8_t i = 0; i < NUM_ANALOGS; i++) {
     coord_t y = MENU_HEADER_HEIGHT + 1 + (i / 2) * FH;
@@ -49,16 +62,23 @@ bool menuRadioDiagAnalogs(event_t event)
 #endif
   }
 
-  // RAS
-  if ((isModuleXJT(INTERNAL_MODULE) && IS_INTERNAL_MODULE_ON()) || (isModulePXX1(EXTERNAL_MODULE) && !IS_INTERNAL_MODULE_ON())) {
-    lcdDrawText(MENUS_MARGIN_LEFT, RAS_TOP_POSITION, "RAS : ");
-    lcdDrawNumber(lcdNextPos, RAS_TOP_POSITION, telemetryData.swrInternal.value(), 0);
-    lcdDrawText(LCD_W / 2, RAS_TOP_POSITION, "XJTVER : ");
-    lcdDrawNumber(lcdNextPos, RAS_TOP_POSITION, telemetryData.xjtVersion, 0);
+#if defined(SIMU) || NUM_PWMSTICKS > 0
+  lcdDrawText(MENUS_MARGIN_LEFT, MENU_CONTENT_TOP + 8 * FH, STICKS_PWM_ENABLED() ? "Sticks: PWM" : "Sticks: ANA");
+#endif
+
+#if defined(HARDWARE_TOUCH)
+  if (HAS_TOUCH_PANEL()) {
+    lcdDrawText(MENUS_MARGIN_LEFT, MENU_CONTENT_TOP + 7 * FH, STR_TOUCH_PANEL);
   }
 
-#if (NUM_PWMSTICKS > 0) && !defined(SIMU)
-  lcdDrawText(MENUS_MARGIN_LEFT, MENU_CONTENT_TOP + 8 * FH, STICKS_PWM_ENABLED() ? "Sticks: PWM" : "Sticks: ANA");
+  if (touchPanelEventOccured()) {
+    touchPanelRead();
+    lcdDrawNumber(lcdNextPos + 1, MENU_CONTENT_TOP + 7 * FH, touchState.x);
+    lcdDrawText(lcdNextPos, MENU_CONTENT_TOP + 7 * FH, ", ");
+    lcdDrawNumber(lcdNextPos + 1, MENU_CONTENT_TOP + 7 * FH, touchState.y);
+    lcdDrawLine(touchState.x - 10, touchState.y - 8, touchState.x + 10, touchState.y + 8, SOLID);
+    lcdDrawLine(touchState.x - 10, touchState.y + 8, touchState.x + 10, touchState.y - 8, SOLID);
+  }
 #endif
 
   return true;

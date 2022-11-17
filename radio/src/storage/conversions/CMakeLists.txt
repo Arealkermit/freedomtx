@@ -15,13 +15,17 @@ if(PCB STREQUAL X12S OR PCB STREQUAL X10)
 endif()
 
 if (PCB STREQUAL TANGO OR PCB STREQUAL MAMBO)
-#  if (VERSION_MAJOR STREQUAL "1" AND VERSION_MINOR STREQUAL "3")
-#    set(SRC
-#      ${SRC}
-#      storage/conversions/conversions_130_131.cpp
-#      )
-#    add_definitions(-DCONVERT_FREEDOMTX_DATA_V130)
-#  endif()
+ if (VERSION_MAJOR STREQUAL "1" AND VERSION_MINOR STREQUAL "3")
+   set(SRC
+     ${SRC}
+     storage/conversions/conversions_130_137.cpp
+     )
+   add_definitions(-DCONVERT_FREEDOMTX_DATA_V130)
+ endif()
+  set(EEPROM_CONVERSIONS 219)
+endif()
+
+if(PCB STREQUAL X7 AND PCBREV STREQUAL ZORRO)
   set(EEPROM_CONVERSIONS 219)
 endif()
 

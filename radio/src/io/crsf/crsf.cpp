@@ -18,80 +18,77 @@
  * GNU General Public License for more details.
  */
 
-
 #include "crsf.h"
 
 #define LIBCRSF_DEVICE_LIST_ENTRY_EMPTY  0
 
-extern uint8_t libCrsf_MySlaveAddress;
-extern char *libCrsf_MyDeviceName;
-extern uint32_t libCrsf_MySerialNo;
-extern uint32_t libCrsf_MyHwID;
-extern uint32_t libCrsf_MyFwID;
+libCrsfPort   *libCrsfPorts;
+unsigned int  libCrsfPortsSize = 0;
+bool (* libCrsfFilterFunction)(uint8_t inputPort, uint8_t * pArr);
+static bool libCrsfSyncOnBoradcastAddress = false;
 
-_libCrsf_CRSF_Port *libCrsf_CRSF_Ports;
-unsigned int libCrsf_CRSF_Ports_Size = 0;
-bool (*libCrsf_filter_function)( uint8_t Input_Port, uint8_t *pArr );
-static bool libCrsf_sync_on_boradcast_address = false;
-
-
-void libCrsf_Init( uint8_t ThisDeviceAddress, char *ThisDeviceName, uint32_t serial_no, uint32_t hw_id, uint32_t fw_id ) {
-  libCrsf_MySlaveAddress = ThisDeviceAddress;
-  libCrsf_MyDeviceName = ThisDeviceName;
-  libCrsf_MySerialNo = serial_no;
-  libCrsf_MyHwID = hw_id;
-  libCrsf_MyFwID = fw_id;
+void libCrsfInit(uint8_t thisDeviceAddress, char * thisDeviceName, uint32_t serialNumber, uint32_t hwId, uint32_t fwId)
+{
+  libCrsfMySlaveAddress = thisDeviceAddress;
+  libCrsfMyDeviceName = thisDeviceName;
+  libCrsfMySerialNo = serialNumber;
+  libCrsfMyHwID = hwId;
+  libCrsfMyFwID = fwId;
 }
 
-void libCrsf_CRSF_Add_Device_Function_List( _libCrsf_CRSF_Port *functionList, uint8_t listSize ) {
-  libCrsf_CRSF_Ports = functionList;
-  libCrsf_CRSF_Ports_Size = listSize;
+void libCrsfAddDeviceFunctionList(libCrsfPort * functionList, uint8_t listSize)
+{
+  libCrsfPorts = functionList;
+  libCrsfPortsSize = listSize;
 }
 
-void libCrsf_add_router_filter( bool (*p_filter_function)( uint8_t Input_Port, uint8_t *pArr )) {
-  libCrsf_filter_function = p_filter_function;
+void libCrsfAddRouterFilter(bool (* pFilterFunction) (uint8_t inputPort, uint8_t * pArr))
+{
+  libCrsfFilterFunction = pFilterFunction;
 }
 
-void libCrsf_enable_sync_on_boradcast_address( void ) {
-  libCrsf_sync_on_boradcast_address = true;
+void libCrsfEnableSyncOnBoradcastAddress(void)
+{
+  libCrsfSyncOnBoradcastAddress = true;
 }
 
-void libCrsf_CRSF_Routing( uint8_t Input_Port, uint8_t *pArr ) {
-  uint8_t Port_Cnt;
-  uint8_t Device_Buff_Cnt;
-  uint8_t Route_To_Port = 0;
-  bool Device_Found = false;
+void libCrsfRouting(uint8_t inputPort, uint8_t * pArr)
+{
+  uint8_t portCnt;
+  uint8_t deviceBuffCnt;
+  uint8_t routeToPort = 0;
+  bool deviceFound = false;
 
   /* call filter function and return if filter function triggers */
-  if( libCrsf_filter_function != NULL && libCrsf_filter_function( Input_Port, pArr ) ) {
+  if (libCrsfFilterFunction != NULL && libCrsfFilterFunction(inputPort, pArr)) {
     return;
   }
 
-  if( *( pArr + LIBCRSF_TYPE_ADD ) >= LIBCRSF_EXT_HEADER_RANGE_START
-      && *( pArr + LIBCRSF_TYPE_ADD ) < LIBCRSF_EXT_HEADER_RANGE_STOP ) {
-    for( Port_Cnt = 0; Port_Cnt < libCrsf_CRSF_Ports_Size; Port_Cnt++ ) {
-      if( Input_Port == libCrsf_CRSF_Ports[ Port_Cnt ].Port_Name ) {
+  if (*(pArr + LIBCRSF_TYPE_ADD) >= LIBCRSF_EXT_HEADER_RANGE_START
+      && *(pArr + LIBCRSF_TYPE_ADD) < LIBCRSF_EXT_HEADER_RANGE_STOP) {
+    for (portCnt = 0; portCnt < libCrsfPortsSize; portCnt++) {
+      if (inputPort == libCrsfPorts[portCnt].portName) {
         /* store source device address for future routing */
-        for( Device_Buff_Cnt = 0; Device_Buff_Cnt < LIBCRSF_DEVICE_LIST_SIZE; Device_Buff_Cnt++ ) {
-          if( libCrsf_CRSF_Ports[ Port_Cnt ].Device_List[ Device_Buff_Cnt ] == *( pArr + LIBCRSF_EXT_HEAD_ORG_ADD ) ) {
+        for (deviceBuffCnt = 0; deviceBuffCnt < LIBCRSF_DEVICE_LIST_SIZE; deviceBuffCnt++) {
+          if (libCrsfPorts[portCnt].deviceList[deviceBuffCnt] == *(pArr + LIBCRSF_EXT_HEAD_ORG_ADD)) {
             break;   /* device already listed */
           }
 
-          if( libCrsf_CRSF_Ports[ Port_Cnt ].Device_List[ Device_Buff_Cnt ] == LIBCRSF_DEVICE_LIST_ENTRY_EMPTY ) {
-            libCrsf_CRSF_Ports[ Port_Cnt ].Device_List[ Device_Buff_Cnt ] = *( pArr + LIBCRSF_EXT_HEAD_ORG_ADD ); /* new device found */
+          if (libCrsfPorts[portCnt].deviceList[deviceBuffCnt] == LIBCRSF_DEVICE_LIST_ENTRY_EMPTY) {
+            libCrsfPorts[portCnt].deviceList[deviceBuffCnt] = *(pArr + LIBCRSF_EXT_HEAD_ORG_ADD); /* new device found */
             break;
           }
         }
-      } else if( *( pArr + LIBCRSF_EXT_HEAD_DST_ADD ) != LIBCRSF_BROADCAST_ADD ) {
+      } else if (*(pArr + LIBCRSF_EXT_HEAD_DST_ADD) != LIBCRSF_BROADCAST_ADD) {
         /* if frame is not sent to broadcast address try to route it */
-        for( Device_Buff_Cnt = 0; Device_Buff_Cnt < LIBCRSF_DEVICE_LIST_SIZE; Device_Buff_Cnt++ ) {
-          if( libCrsf_CRSF_Ports[ Port_Cnt ].Device_List[ Device_Buff_Cnt ] == LIBCRSF_BROADCAST_ADD ) {
+        for (deviceBuffCnt = 0; deviceBuffCnt < LIBCRSF_DEVICE_LIST_SIZE; deviceBuffCnt++) {
+          if (libCrsfPorts[portCnt].deviceList[deviceBuffCnt] == LIBCRSF_BROADCAST_ADD) {
             /* area we are searching never got written so we abort searching */
             break;
           }
-          if( libCrsf_CRSF_Ports[ Port_Cnt ].Device_List[ Device_Buff_Cnt ] == *( pArr + LIBCRSF_EXT_HEAD_DST_ADD )) {
-            Device_Found = true;
-            Route_To_Port = Port_Cnt;
+          if (libCrsfPorts[portCnt].deviceList[deviceBuffCnt] == *(pArr + LIBCRSF_EXT_HEAD_DST_ADD)) {
+            deviceFound = true;
+            routeToPort = portCnt;
           }
         }
       }
@@ -99,63 +96,67 @@ void libCrsf_CRSF_Routing( uint8_t Input_Port, uint8_t *pArr ) {
   }
 
   /* distribute frame */
-  if( Device_Found ) {
-    if( libCrsf_CRSF_Ports[ Route_To_Port ].Gateway != NULL ) {
-      libCrsf_CRSF_Ports[ Route_To_Port ].Gateway( pArr );
+  if (deviceFound) {
+    if (libCrsfPorts[routeToPort].gateway != NULL) {
+      libCrsfPorts[routeToPort].gateway(pArr);
     }
-  } else {
-    for( Port_Cnt = 0; Port_Cnt < libCrsf_CRSF_Ports_Size; Port_Cnt++ ) {
-      if( Input_Port != libCrsf_CRSF_Ports[ Port_Cnt ].Port_Name
-          && libCrsf_CRSF_Ports[ Port_Cnt ].Gateway != NULL ) {
-        libCrsf_CRSF_Ports[ Port_Cnt ].Gateway( pArr );
+  }
+  else {
+    for (portCnt = 0; portCnt < libCrsfPortsSize; portCnt++) {
+      if (inputPort != libCrsfPorts[portCnt].portName
+          && libCrsfPorts[portCnt].gateway != NULL) {
+        libCrsfPorts[portCnt].gateway(pArr);
       }
     }
   }
 }
 
-bool libCrsf_CRSF_Parse( _libCrsf_CRSF_PARSE_DATA *pParse_Data, uint8_t New_Data ) {
-  switch( pParse_Data->Status ) {
+bool libCrsfParse(libCrsfParseData * pParseData, uint8_t newData)
+{
+  switch (pParseData->status) {
     default:
     case CRSF_PARSE_SYNC:
-      pParse_Data->Payload[ LIBCRSF_ADDRESS_ADD ] = New_Data;
+      pParseData->payload[LIBCRSF_ADDRESS_ADD] = newData;
 #ifdef LIBCRSF_SYNC_PASS_ONLY
       if( pParse_Data->Payload[ LIBCRSF_ADDRESS_ADD ] == LIBCRSF_UART_SYNC ) {
 #else
-      if( ( pParse_Data->Payload[ LIBCRSF_ADDRESS_ADD ] == LIBCRSF_BROADCAST_ADD
-            && libCrsf_sync_on_boradcast_address )
-         || pParse_Data->Payload[ LIBCRSF_ADDRESS_ADD ] == libCrsf_MySlaveAddress
-         || pParse_Data->Payload[ LIBCRSF_ADDRESS_ADD ] == LIBCRSF_UART_SYNC ) {
+      if ((pParseData->payload[LIBCRSF_ADDRESS_ADD] == LIBCRSF_BROADCAST_ADD
+            && libCrsfSyncOnBoradcastAddress)
+         || pParseData->payload[LIBCRSF_ADDRESS_ADD] == libCrsfMySlaveAddress
+         || pParseData->payload[LIBCRSF_ADDRESS_ADD] == LIBCRSF_UART_SYNC) {
 #endif
-        pParse_Data->Cnt = LIBCRSF_HEADER_OFFSET + LIBCRSF_HEADER_OFFSET;
-        pParse_Data->Status = CRSF_PARSE_RD_LENGTH;
+        pParseData->cnt = LIBCRSF_HEADER_OFFSET + LIBCRSF_HEADER_OFFSET;
+        pParseData->status = CRSF_PARSE_RD_LENGTH;
       }
       break;
 
     case CRSF_PARSE_RD_LENGTH:
-      pParse_Data->Payload[ LIBCRSF_LENGTH_ADD ] = New_Data;
-      if( pParse_Data->Payload[ LIBCRSF_LENGTH_ADD ] < LIBCRSF_PAYLOAD_SIZE
-          && pParse_Data->Payload[ LIBCRSF_LENGTH_ADD ] != 0 ) {
-        pParse_Data->Status = CRSF_PARSE_RD_FRAME;
-      } else {
-        pParse_Data->Status = CRSF_PARSE_SYNC;
+      pParseData->payload[LIBCRSF_LENGTH_ADD] = newData;
+      if (pParseData->payload[LIBCRSF_LENGTH_ADD] < LIBCRSF_PAYLOAD_SIZE
+          && pParseData->payload[LIBCRSF_LENGTH_ADD] != 0) {
+        pParseData->status = CRSF_PARSE_RD_FRAME;
+      }
+      else {
+        pParseData->status = CRSF_PARSE_SYNC;
       }
       break;
 
     case CRSF_PARSE_RD_FRAME:
-      if( pParse_Data->Cnt < LIBCRSF_PAYLOAD_SIZE ) {
-        pParse_Data->Payload[ pParse_Data->Cnt++ ] = New_Data;
+      if (pParseData->cnt < LIBCRSF_PAYLOAD_SIZE) {
+        pParseData->payload[pParseData->cnt++] = newData;
 
-        if( pParse_Data->Cnt > pParse_Data->Payload[ LIBCRSF_LENGTH_ADD ] + LIBCRSF_HEADER_OFFSET ) {
-          if( pParse_Data->Payload[ pParse_Data->Payload[ LIBCRSF_LENGTH_ADD ] + LIBCRSF_HEADER_OFFSET ]
-              == libCRC8_Get_CRC_Arr( &pParse_Data->Payload[ LIBCRSF_TYPE_ADD ]
-              , pParse_Data->Payload[ LIBCRSF_LENGTH_ADD ] - LIBCRSF_CRC_SIZE, POLYNOM_1 ) ) {
-            pParse_Data->Status = CRSF_PARSE_SYNC;
+        if (pParseData->cnt > pParseData->payload[LIBCRSF_LENGTH_ADD] + LIBCRSF_HEADER_OFFSET) {
+          if (pParseData->payload[pParseData->payload[LIBCRSF_LENGTH_ADD] + LIBCRSF_HEADER_OFFSET]
+              == libCRC8GetCRCArr(&pParseData->payload[LIBCRSF_TYPE_ADD]
+              ,pParseData->payload[LIBCRSF_LENGTH_ADD] - LIBCRSF_CRC_SIZE, POLYNOM_1)) {
+            pParseData->status = CRSF_PARSE_SYNC;
             return true;
           }
-          pParse_Data->Status = CRSF_PARSE_SYNC;
+          pParseData->status = CRSF_PARSE_SYNC;
         }
-      } else {
-        pParse_Data->Status = CRSF_PARSE_SYNC;
+      }
+      else {
+        pParseData->status = CRSF_PARSE_SYNC;
       }
       break;
   }

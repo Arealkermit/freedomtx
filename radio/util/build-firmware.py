@@ -93,12 +93,12 @@ def main():
         maxsize = 65536 * 8
     elif options[optcount] == "x7":
         cmake_options["PCB"] = "X7"
-        firmware_options = options_taranis_x9dp
+        firmware_options = options_taranis_x7
         maxsize = 65536 * 8
     elif options[optcount] == "x7access":
         cmake_options["PCB"] = "X7"
         cmake_options["PCBREV"] = "ACCESS"
-        firmware_options = options_taranis_x9dp
+        firmware_options = options_taranis_x7
         maxsize = 65536 * 8
     elif board_name == "xlite":
         cmake_options["PCB"] = "XLITE"
@@ -138,20 +138,50 @@ def main():
         cmake_options["PCB"] = "X12S"
         firmware_options = options_horus_x12s
         maxsize = 2 * 1024 * 1024
+    elif board_name == "tlite":
+        cmake_options["PCB"] = "X7"
+        cmake_options["PCBREV"] = "TLITE"
+        firmware_options = options_jumper_tlite
+        maxsize = 65536 * 8
+    elif board_name == "tpro":
+        cmake_options["PCB"] = "X7"
+        cmake_options["PCBREV"] = "TPRO"
+        firmware_options = options_jumper_tpro
+        maxsize = 65536 * 8
     elif board_name == "t12":
         cmake_options["PCB"] = "X7"
         cmake_options["PCBREV"] = "T12"
         firmware_options = options_jumper_t12
+        maxsize = 65536 * 8
+    elif board_name == "tx12":
+        cmake_options["PCB"] = "X7"
+        cmake_options["PCBREV"] = "TX12"
+        firmware_options = options_radiomaster_tx12
+        maxsize = 65536 * 8
+    elif board_name == "zorro":
+        cmake_options["PCB"] = "X7"
+        cmake_options["PCBREV"] = "ZORRO"
+        firmware_options = options_radiomaster_zorro
+        maxsize = 65536 * 8
+    elif board_name == "t8":
+        cmake_options["PCB"] = "X7"
+        cmake_options["PCBREV"] = "T8"
+        firmware_options = options_radiomaster_t8
         maxsize = 65536 * 8
     elif board_name == "t16":
         cmake_options["PCB"] = "X10"
         cmake_options["PCBREV"] = "T16"
         firmware_options = options_jumper_t16
         maxsize = 2 * 1024 * 1024
+    elif board_name == "t18":
+        cmake_options["PCB"] = "X10"
+        cmake_options["PCBREV"] = "T18"
+        firmware_options = options_jumper_t18
+        maxsize = 2 * 1024 * 1024
     elif board_name == "tx16s":
         cmake_options["PCB"] = "X10"
         cmake_options["PCBREV"] = "TX16S"
-        firmware_options = options_jumper_t16
+        firmware_options = options_radiomaster_tx16s
         maxsize = 2 * 1024 * 1024
     else:
         return INVALID_BOARD

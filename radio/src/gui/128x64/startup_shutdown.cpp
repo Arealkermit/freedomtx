@@ -24,7 +24,7 @@
 #define SLEEP_BITMAP_WIDTH             60
 #define SLEEP_BITMAP_HEIGHT            60
 
-#if defined(PCBTANGO) || defined(PCBMAMBO)
+#if defined(TBS_RELEASE)
 const unsigned char bmp_sleep[]  = {
 #include "sleep_tbs.lbm"
 };

@@ -62,7 +62,7 @@ void drawModel(coord_t x, coord_t y, ModelCell * model, bool current, bool selec
   if (selected) {
     lcdDrawSolidRect(x, y, MODELCELL_WIDTH+2, MODELCELL_HEIGHT+2, 1, TITLE_BGCOLOR);
     drawShadow(x, y, MODELCELL_WIDTH+2, MODELCELL_HEIGHT+2);
-    if (selectMode == MODE_MOVE_MODEL) {
+    if (selectMode == MODE_MOVE_MODEL && modelselModelMoveBackground) {
       lcd->drawMask(x+MODELCELL_WIDTH+2-modelselModelMoveBackground->getWidth(), y, modelselModelMoveBackground, TITLE_BGCOLOR);
       lcd->drawMask(x+MODELCELL_WIDTH+2-modelselModelMoveBackground->getWidth()+12, y+5, modelselModelMoveIcon, TEXT_BGCOLOR);
     }
@@ -95,11 +95,10 @@ void setCurrentCategory(unsigned int index)
   if (currentCategory->size() > 0)
     setCurrentModel(0);
   else
-    currentModel = NULL;
+    currentModel = nullptr;
 }
 
 #if defined(LUA)
-
 #define MAX_WIZARD_NAME_LEN            (sizeof(WIZARD_PATH)+20)
 #define WIZARD_SPACING                 40
 #define WIZARD_LEFT_SPACING            30
@@ -192,7 +191,6 @@ bool menuModelWizard(event_t event)
           uint16_t x = WIZARD_LEFT_SPACING + (wizidx - first) * (WIZARD_SPACING + WIZARD_ICON_X);
           strcpy(&wizpath[sizeof(WIZARD_PATH)], fno.fname);
           strcpy(&wizpath[sizeof(WIZARD_PATH) + strlen(fno.fname)], "/icon.png");
-          lcdDrawText(x + 10, WIZARD_TEXT_Y, fno.fname);
           BitmapBuffer * background = BitmapBuffer::load(wizpath);
           lcd->drawBitmap(x, WIZARD_ICON_Y, background);
           if(wizidx == wizardSelected ) {
@@ -243,11 +241,17 @@ void onDeleteModelConfirm(const char * result)
 void onModelSelectMenu(const char * result)
 {
   if (result == STR_SELECT_MODEL) {
+    if (!g_eeGeneral.disableRssiPoweroffAlarm) {
+      if (!confirmModelChange())
+        return;
+    }
+
     // we store the latest changes if any
     storageFlushCurrentModel();
     storageCheck(true);
     memcpy(g_eeGeneral.currModelFilename, currentModel->modelFilename, LEN_MODEL_FILENAME);
     modelslist.setCurrentModel(currentModel);
+    modelslist.setCurrentCategory(currentCategory);
     loadModel(g_eeGeneral.currModelFilename, true);
     storageDirty(EE_GENERAL);
     storageCheck(true);
@@ -259,11 +263,16 @@ void onModelSelectMenu(const char * result)
     deleteMode = MODE_DELETE_MODEL;
   }
   else if (result == STR_CREATE_MODEL) {
+    if (!g_eeGeneral.disableRssiPoweroffAlarm) {
+      if (!confirmModelChange())
+        return;
+    }
     storageCheck(true);
     modelslist.addModel(currentCategory, createModel());
     selectMode = MODE_SELECT_MODEL;
     setCurrentModel(currentCategory->size() - 1);
     modelslist.setCurrentModel(currentModel);
+    modelslist.setCurrentCategory(currentCategory);
     modelslist.onNewModelCreated(currentModel, &g_model);
 #if defined(LUA)
     chainMenu(menuModelWizard);
@@ -274,12 +283,12 @@ void onModelSelectMenu(const char * result)
     memcpy(duplicatedFilename, currentModel->modelFilename, sizeof(duplicatedFilename));
     if (findNextFileIndex(duplicatedFilename, LEN_MODEL_FILENAME, MODELS_PATH)) {
       sdCopyFile(currentModel->modelFilename, MODELS_PATH, duplicatedFilename, MODELS_PATH);
-      ModelCell* dup_model = modelslist.addModel(currentCategory, duplicatedFilename);
+      ModelCell * dup_model = modelslist.addModel(currentCategory, duplicatedFilename);
       dup_model->fetchRfData();
       setCurrentModel(currentCategory->size() - 1);
     }
     else {
-      POPUP_WARNING("Invalid File");
+      POPUP_WARNING(STR_INVALID_FILE);
     }
   }
   else if (result == STR_MOVE_MODEL) {
@@ -344,7 +353,7 @@ void initModelsList()
 bool menuModelSelect(event_t event)
 {
   const std::list<ModelsCategory*>& cats = modelslist.getCategories();
-  switch(event) {
+  switch (event) {
     case 0:
       // no need to refresh the screen
       return false;
@@ -387,7 +396,7 @@ bool menuModelSelect(event_t event)
         categoriesVerticalPosition -= 1;
         setCurrentCategory(categoriesVerticalPosition);
         modelslist.moveModel(model, previous_category, currentCategory);
-        setCurrentModel(currentCategory->size()-1);
+        setCurrentModel(currentCategory->size() - 1);
       }
       killEvents(event);
       break;

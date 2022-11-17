@@ -54,7 +54,8 @@ option(MODULE_PROTOCOL_FLEX "Add support for non certified FLEX modules" OFF)
 option(MODULE_PROTOCOL_D8 "Add support for D8 modules" ON)
 option(FRSKY_RELEASE "Used to build FrSky released firmware" OFF)
 option(TBS_RELEASE "Used to build TBS released firmware" OFF)
-option(ALLOW_TRAINER_MULTI "Allow multi trainer" OFF)
+option(IMRC_RELEASE "Used to build IMRC released firmware" OFF)
+option(HARDWARE_TRAINER_MULTI_MOD "Allow multi trainer" OFF)
 
 # since we reset all default CMAKE compiler flags for firmware builds, provide an alternate way for user to specify additional flags.
 set(FIRMWARE_C_FLAGS "" CACHE STRING "Additional flags for firmware target c compiler (note: all CMAKE_C_FLAGS[_*] are ignored for firmware/bootloader).")
@@ -134,6 +135,7 @@ set(SRC ${SRC} debug.cpp)
 
 if(${EEPROM} STREQUAL SDCARD)
   set(SRC ${SRC} storage/storage_common.cpp storage/sdcard_raw.cpp storage/modelslist.cpp)
+  add_definitions(-DEEPROM_SDCARD)
 elseif(${EEPROM} STREQUAL EEPROM_RLC)
   set(SRC ${SRC} storage/storage_common.cpp storage/eeprom_common.cpp storage/eeprom_rlc.cpp)
   add_definitions(-DEEPROM -DEEPROM_RLC)
@@ -346,8 +348,16 @@ if(RADIOMASTER_RELEASE)
   add_definitions(-DRADIOMASTER_RELEASE)
 endif()
 
+if(RADIOMASTER_RTF_RELEASE)
+  add_definitions(-DRADIOMASTER_RTF_RELEASE)
+endif()
+
 if(TBS_RELEASE)
   add_definitions(-DTBS_RELEASE)
+endif()
+
+if(IMRC_RELEASE)
+  add_definitions(-DIMRC_RELEASE)
 endif()
 
 if(FRSKY_RELEASE)
@@ -355,11 +365,18 @@ if(FRSKY_RELEASE)
   set(POPUP_LEVEL 3)
 endif()
 
-if(ALLOW_TRAINER_MULTI)
-  add_definitions(-DALLOW_TRAINER_MULTI)
+if(HARDWARE_TRAINER_MULTI_MOD)
+  add_definitions(-DHARDWARE_TRAINER_MULTI_MOD)
 endif()
 
 add_definitions(-DPOPUP_LEVEL=${POPUP_LEVEL})
+
+if(INTERNAL_MODULE_MULTI)
+  set(DEFAULT_TEMPLATE_SETUP 21 CACHE STRING "")
+else()
+  set(DEFAULT_TEMPLATE_SETUP 0 CACHE STRING "")
+endif()
+add_definitions(-DDEFAULT_TEMPLATE_SETUP=${DEFAULT_TEMPLATE_SETUP})
 
 set(SRC
   ${SRC}
@@ -420,7 +437,6 @@ if(NOT MSVC)
 endif()
 
 set(SRC ${SRC} ${FIRMWARE_SRC})
-
 
 ##### firmware target #####
 

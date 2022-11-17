@@ -31,34 +31,34 @@
   */
 
 
-/** @defgroup USBD_HID 
+/** @defgroup USBD_HID
   * @brief usbd core module
   * @{
-  */ 
+  */
 
 /** @defgroup USBD_HID_Private_TypesDefinitions
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 
 /** @defgroup USBD_HID_Private_Defines
   * @{
-  */ 
+  */
 
 /**
   * @}
-  */ 
+  */
 
 
 /** @defgroup USBD_HID_Private_Macros
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 
 
 
@@ -68,22 +68,19 @@
   */
 
 
-static uint8_t  USBD_HID_Init (void  *pdev, 
-                               uint8_t cfgidx);
+static uint8_t  USBD_HID_Init (void * pdev, uint8_t cfgidx);
 
-static uint8_t  USBD_HID_DeInit (void  *pdev, 
-                                 uint8_t cfgidx);
+static uint8_t  USBD_HID_DeInit (void * pdev, uint8_t cfgidx);
 
-static uint8_t  USBD_HID_Setup (void  *pdev, 
-                                USB_SETUP_REQ *req);
+static uint8_t  USBD_HID_Setup (void * pdev, USB_SETUP_REQ * req);
 
-static const uint8_t  *USBD_HID_GetCfgDesc (uint8_t speed, uint16_t *length);
+static const uint8_t  *USBD_HID_GetCfgDesc (uint8_t speed, uint16_t * length);
 
-static uint8_t  USBD_HID_DataIn (void  *pdev, uint8_t epnum);
-static uint8_t  USBD_HID_DataOut (void  *pdev, uint8_t epnum);
+static uint8_t  USBD_HID_DataIn (void  * pdev, uint8_t epnum);
+static uint8_t  USBD_HID_DataOut (void  * pdev, uint8_t epnum);
 /**
   * @}
-  */ 
+  */
 
 
 
@@ -94,7 +91,7 @@ static uint8_t  USBD_HID_DataOut (void  *pdev, uint8_t epnum);
 #endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */ 
 /*
   This USB HID endpoint report description defines a device with:
-void AgentHandler(){
+void agentHandler(){
     * 24 digital buttons
     * 8 analog axes with 8bit resolution
 
@@ -245,7 +242,7 @@ __ALIGN_BEGIN static const uint8_t USBD_HID_CfgDesc[USB_AGENT_CONFIG_DESC_SIZ] _
 
 uint8_t ReportSent;
 uint8_t ReportReceived;
-uint8_t HID_Buffer[HID_AGENT_OUT_PACKET];
+uint8_t HidBuffer[HID_AGENT_OUT_PACKET];
 
 /**
   * @}
@@ -262,8 +259,7 @@ uint8_t HID_Buffer[HID_AGENT_OUT_PACKET];
   * @param  cfgidx: Configuration index
   * @retval status
   */
-static uint8_t  USBD_HID_Init (void  *pdev, 
-                               uint8_t cfgidx)
+static uint8_t  USBD_HID_Init (void  * pdev, uint8_t cfgidx)
 {
   
   /* Open EP IN */
@@ -280,7 +276,7 @@ static uint8_t  USBD_HID_Init (void  *pdev,
 
   ReportSent = 1;
   ReportReceived = 0;
-  DCD_EP_PrepareRx(pdev,HID_AGENT_OUT_EP,HID_Buffer,HID_AGENT_OUT_PACKET);
+  DCD_EP_PrepareRx(pdev,HID_AGENT_OUT_EP,HidBuffer,HID_AGENT_OUT_PACKET);
   return USBD_OK;
 }
 
@@ -291,8 +287,7 @@ static uint8_t  USBD_HID_Init (void  *pdev,
   * @param  cfgidx: Configuration index
   * @retval status
   */
-static uint8_t  USBD_HID_DeInit (void  *pdev, 
-                                 uint8_t cfgidx)
+static uint8_t  USBD_HID_DeInit (void  * pdev, uint8_t cfgidx)
 {
   /* Close HID EPs */
   DCD_EP_Close (pdev , HID_AGENT_IN_EP);
@@ -310,11 +305,10 @@ static uint8_t  USBD_HID_DeInit (void  *pdev,
   * @param  req: usb requests
   * @retval status
   */
-static uint8_t  USBD_HID_Setup (void  *pdev, 
-                                USB_SETUP_REQ *req)
+static uint8_t  USBD_HID_Setup (void  * pdev, USB_SETUP_REQ * req)
 {
   uint16_t len = 0;
-  const uint8_t  *pbuf = NULL;
+  const uint8_t  * pbuf = NULL;
   
   switch (req->bmRequest & USB_REQ_TYPE_MASK)
   {
@@ -397,7 +391,7 @@ static uint8_t  USBD_HID_Setup (void  *pdev,
   * @param  buff: pointer to report, if this parameter is NULL then function just test if new buffer can be sent
   * @retval status
   */
-uint8_t USBD_AGENT_SendReport(USB_OTG_CORE_HANDLE  *pdev, uint8_t * report, uint16_t len)
+uint8_t USBD_AGENT_SendReport(USB_OTG_CORE_HANDLE  * pdev, uint8_t * report, uint16_t len)
 {
   if (pdev->dev.device_status == USB_OTG_CONFIGURED) {
     if (ReportSent) {
@@ -418,7 +412,7 @@ uint8_t USBD_AGENT_SendReport(USB_OTG_CORE_HANDLE  *pdev, uint8_t * report, uint
   * @param  length : pointer data length
   * @retval pointer to descriptor buffer
   */
-static const uint8_t  *USBD_HID_GetCfgDesc (uint8_t speed, uint16_t *length)
+static const uint8_t  * USBD_HID_GetCfgDesc (uint8_t speed, uint16_t * length)
 {
   *length = sizeof (USBD_HID_CfgDesc);
   return USBD_HID_CfgDesc;
@@ -434,8 +428,7 @@ static const uint8_t  *USBD_HID_GetCfgDesc (uint8_t speed, uint16_t *length)
     This function is called when buffer has been sent over the USB.
     The TX buffer is now empty and can be filled with new data.
   */
-static uint8_t  USBD_HID_DataIn (void  *pdev, 
-                              uint8_t epnum)
+static uint8_t  USBD_HID_DataIn (void  * pdev, uint8_t epnum)
 {
   ReportSent = 1;
   /* Ensure that the FIFO is empty before a new transfer, this condition could 
@@ -444,31 +437,15 @@ static uint8_t  USBD_HID_DataIn (void  *pdev,
   return USBD_OK;
 }
 
-static uint8_t  USBD_HID_DataOut (void  *pdev,
-                              uint8_t epnum)
+static uint8_t  USBD_HID_DataOut (void  * pdev, uint8_t epnum)
 {
-  // workaround for preventing change of data in the crsf data parsing process, refer to AgentHandler
-  if(ReportReceived < 2){
+  // workaround for preventing change of data in the crsf data parsing process, refer to agentHandler
+  if (ReportReceived < 2) {
     ReportReceived = 1;
-    DCD_EP_PrepareRx(pdev,HID_AGENT_OUT_EP,HID_Buffer,HID_AGENT_OUT_PACKET);
+    DCD_EP_PrepareRx(pdev,HID_AGENT_OUT_EP,HidBuffer,HID_AGENT_OUT_PACKET);
   }
   return USBD_OK;
 }
-
-/**
-  * @}
-  */ 
-
-
-/**
-  * @}
-  */ 
-
-
-/**
-  * @}
-  */
-
 #endif
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

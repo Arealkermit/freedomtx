@@ -39,14 +39,24 @@ void mixerSchedulerStart()
   NVIC_SetPriority(MIXER_SCHEDULER_TIMER_IRQn, 8);
 
   MIXER_SCHEDULER_TIMER->SR   &= TIM_SR_UIF;   // clear interrupt flag
-  MIXER_SCHEDULER_TIMER->DIER |= TIM_DIER_UIE; // enable interrupt
   MIXER_SCHEDULER_TIMER->CR1  |= TIM_CR1_CEN;
+
+  mixerSchedulerClearTrigger();
+  mixerSchedulerEnableTrigger();
 }
 
 void mixerSchedulerStop()
 {
   MIXER_SCHEDULER_TIMER->CR1 &= ~TIM_CR1_CEN;
   NVIC_DisableIRQ(MIXER_SCHEDULER_TIMER_IRQn);
+}
+
+void mixerSchedulerResetTimer()
+{
+  mixerSchedulerDisableTrigger();
+  MIXER_SCHEDULER_TIMER->CNT = 0;
+  mixerSchedulerClearTrigger();
+  mixerSchedulerEnableTrigger();
 }
 
 void mixerSchedulerEnableTrigger()
@@ -62,17 +72,14 @@ void mixerSchedulerDisableTrigger()
 
 extern "C" void MIXER_SCHEDULER_TIMER_IRQHandler(void)
 {
-  if(MIXER_SCHEDULER_TIMER->SR & TIM_SR_UIF)
-  {
-    MIXER_SCHEDULER_TIMER->SR &= ~TIM_SR_UIF; // clear flag
-    mixerSchedulerDisableTrigger();
+  MIXER_SCHEDULER_TIMER->SR &= ~TIM_SR_UIF; // clear flag
+  mixerSchedulerDisableTrigger();
 
-    // set next period
-    MIXER_SCHEDULER_TIMER->ARR = 2 * getMixerSchedulerPeriod() - 1;
+  // set next period
+  MIXER_SCHEDULER_TIMER->ARR = 2 * getMixerSchedulerPeriod() - 1;
 
-    // trigger mixer start
-    mixerSchedulerISRTrigger();
-  }
+  // trigger mixer start
+  mixerSchedulerISRTrigger();
 }
 
 #endif

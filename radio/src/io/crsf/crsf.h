@@ -87,11 +87,11 @@ extern "C" {
 #define LIBCRSF_RC_MAX_NUMBER_OF_CHANNEL    16
 #define LIBCRSF_RC_RESOLUTION               11  /* Resolution in bits */
 #define LIBCRSF_RC_CENTER                   992
-#define LIBCRSF_RC_MAX                      ( 2 * LIBCRSF_RC_CENTER )
+#define LIBCRSF_RC_MAX                      (2 * LIBCRSF_RC_CENTER)
 #define LIBCRSF_RC_MIN                      0
 
-#define LIBCRSF_PPM_TO_CRSF_RC(x)           ( ( x - LIBCRSF_PPM_CENTER ) * 8/5 + LIBCRSF_RC_CENTER )
-#define LIBCRSF_CRSF_TO_PPM_RC(x)           ( ( x - LIBCRSF_RC_CENTER ) * 5/8 + LIBCRSF_PPM_CENTER )
+#define LIBCRSF_PPM_TO_CRSF_RC(x)           (( x - LIBCRSF_PPM_CENTER) * 8 / 5 + LIBCRSF_RC_CENTER)
+#define LIBCRSF_CRSF_TO_PPM_RC(x)           (( x - LIBCRSF_RC_CENTER) * 5 / 8 + LIBCRSF_PPM_CENTER)
 
 /* ************************************************************************** */
 typedef enum {
@@ -138,36 +138,39 @@ typedef enum {
   CRSF_PARSE_SYNC,
   CRSF_PARSE_RD_LENGTH,
   CRSF_PARSE_RD_FRAME
-} _libCrsf_CRSF_PARSER_STATUS;
+} libCrsfParserStatus;
 
 typedef struct {
-  _libCrsf_CRSF_PARSER_STATUS Status;
-  uint8_t Cnt;
-  uint32_t Tmr;
-  uint8_t Payload[ LIBCRSF_PAYLOAD_SIZE ];
-} _libCrsf_CRSF_PARSE_DATA;
+  libCrsfParserStatus status;
+  uint8_t cnt;
+  uint32_t tmr;
+  uint8_t payload[LIBCRSF_PAYLOAD_SIZE];
+} libCrsfParseData;
 
 typedef struct {
-  uint8_t Port_Name;
-  void ( *Gateway )( uint8_t *pArr );
-  uint8_t Device_List[ LIBCRSF_DEVICE_LIST_SIZE ];
-}_libCrsf_CRSF_Port;
+  uint8_t portName;
+  void (* gateway)(uint8_t * pArr);
+  uint8_t deviceList[ LIBCRSF_DEVICE_LIST_SIZE ];
+} libCrsfPort;
 
-  void libCrsf_Init( uint8_t ThisDeviceAddress, char *ThisDeviceName, uint32_t serial_no, uint32_t hw_id, uint32_t fw_id );
-  //void libCrsf_Get_Define_List( uint32_t *list, uint8_t listSize );
-  void libCrsf_CRSF_Add_Device_Function_List( _libCrsf_CRSF_Port *functionList, uint8_t listSize );
+extern uint8_t  libCrsfMySlaveAddress;
+extern char * libCrsfMyDeviceName;
+extern uint32_t libCrsfMySerialNo;
+extern uint32_t libCrsfMyHwID;
+extern uint32_t libCrsfMyFwID;
 
-  void libCrsf_add_router_filter( bool (*p_filter_function)( uint8_t Input_Port, uint8_t *pArr ));
-  
-  void libCrsf_enable_sync_on_boradcast_address( void ); 
+void libCrsfInit(uint8_t thisDeviceAddress, char * thisDeviceName, uint32_t serialNumber, uint32_t hwId, uint32_t fwId);
+void libCrsfAddDeviceFunctionList(libCrsfPort * functionList, uint8_t listSize);
+void libCrsfAddRouterFilter(bool (* p_filter_function) (uint8_t Input_Port, uint8_t * pArr));
+void libCrsfEnableSyncOnBoradcastAddress(void);
 
-  /* ***** Notes ***** */
-  /* uint8_t *pArr for CRSF_Routing need to point to <Device address or Sync Byte>
-   * of the CRSF frame
-   * <Device address or Sync Byte> <Frame length> <Type> <Payload> <CRC> */
-  void libCrsf_CRSF_Routing( uint8_t Input_Port, uint8_t *pArr );
+/* ***** Notes ***** */
+/* uint8_t *pArr for CRSF_Routing need to point to <Device address or Sync Byte>
+ * of the CRSF frame
+ * <Device address or Sync Byte> <Frame length> <Type> <Payload> <CRC> */
+void libCrsfRouting(uint8_t inputPort, uint8_t * pArr);
 
-  bool libCrsf_CRSF_Parse( _libCrsf_CRSF_PARSE_DATA *pParse_Data, uint8_t New_Data );
+bool libCrsfParse(libCrsfParseData * pParseData, uint8_t newData);
 
   /* Provide C++ Compatibility */
 #ifdef __cplusplus

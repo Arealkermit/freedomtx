@@ -44,7 +44,7 @@ const int16_t point_pos[CALIB_POINT_COUNT][2] = {{0,0}, {1024,0}, {1024,1024}, {
 #define BOTHLABEL_CENTERX         (53)
 #define RLABEL_CENTERX            (90)
 #define POINT_CAL_COUNTDOWN       (3)
-#if defined(PCBTANGO)
+#if LCD_H > 64
 #define LABEL_YPOS                MENU_HEADER_HEIGHT+4*FH
 #else
 #define LABEL_YPOS                MENU_HEADER_HEIGHT+4
@@ -102,10 +102,10 @@ void menuCommonCalib(event_t event)
 
     case EVT_ROTARY_LEFT:
       if( reusableBuffer.calib.state == CALIB_START ){
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
         if( gim_select != GIMBAL_RIGHT_SEL )
           gim_select = (( gim_select + 1 ) % 3 );
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
         if( gim_select != GIMBAL_LEFT_SEL )
           gim_select = (( gim_select - 1 ) % 3 );
 #endif
@@ -114,10 +114,10 @@ void menuCommonCalib(event_t event)
 
     case EVT_ROTARY_RIGHT:
       if( reusableBuffer.calib.state == CALIB_START ){
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
         if( gim_select != GIMBAL_LEFT_SEL )
           gim_select = (( gim_select - 1 ) % 3 );
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
         if( gim_select != GIMBAL_RIGHT_SEL )
           gim_select = (( gim_select + 1 ) % 3 );
 #endif
@@ -254,7 +254,7 @@ void menuCommonCalib(event_t event)
   }
 
   if( crossfireSharedData.stick_state >= CALIB_SET_P0 && crossfireSharedData.stick_state <= CALIB_SET_P8 )
-    doMainScreenGraphics( MAINSCREEN_GRAPHICS_STICKS, (uint32_t)force_point_pos );
+    doMainScreenGraphics( MAINSCREEN_GRAPHICS_STICKS, force_point_pos );
   else
     doMainScreenGraphics( MAINSCREEN_GRAPHICS_STICKS, 0 );
 #endif

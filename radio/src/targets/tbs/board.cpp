@@ -71,16 +71,9 @@ void sportUpdatePowerOff()
 }
 #endif
 
-static void chargerInit(void)
+void intmoduleStop()
 {
-  GPIO_InitTypeDef GPIO_InitStructure;
-  GPIO_InitStructure.GPIO_Pin = CHARGER_STATE_GPIO_PIN | CHARGER_FAULT_GPIO_PIN;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(CHARGER_STATE_GPIO, &GPIO_InitStructure);
-  GPIO_ResetBits(CHARGER_STATE_GPIO, CHARGER_STATE_GPIO_PIN);
-  GPIO_ResetBits(CHARGER_STATE_GPIO, CHARGER_FAULT_GPIO_PIN);
+
 }
 
 #define PWR_PRESSED_CNT               3
@@ -89,32 +82,30 @@ static void chargerInit(void)
 #define BATT_ADC_SAMPLING_TIME        10
 #define ANIMATION_UPDATE_TIME         50
 #define KEY_PRESS_UPDATE_TIME         10
-#define CHARGING_TO_CHARGED_DELAY     210000
+#define CHARGING_TO_CHARGED_DELAY     500
 #define NUM_OF_KEY_GROUPS             6
-#define FULLY_CHARGED_VOLTAGE_REF     42
-#define USB_UNPLUGGED_TIMEOUT         20
-
 static void runPwrOffCharging(void)
 {
   tmr10ms_t tmrAdc = 0;
   tmr10ms_t tmrWait = 0;
   tmr10ms_t tmrPressed = 0;
-  tmr10ms_t tmrUsbLastPlugged = g_tmr10ms;
   uint8_t pwrPressedCnt = 0;
-  uint32_t lastChargingTimestamp = g_tmr10ms;
+  uint32_t lastChargingTimestamp = 0;
 #if defined(CHARGING_ANIMATION)
   tmr10ms_t tmrBacklight = 0;
   uint16_t keysState[NUM_OF_KEY_GROUPS];
   GPIO_TypeDef * keysPort[NUM_OF_KEY_GROUPS] = {GPIOA, GPIOB, GPIOC, GPIOD, GPIOE, GPIOF};
   uint16_t keysPin[NUM_OF_KEY_GROUPS] = {KEYS_GPIOA_PINS, KEYS_GPIOB_PINS, KEYS_GPIOC_PINS, KEYS_GPIOD_PINS, KEYS_GPIOE_PINS, KEYS_GPIOF_PINS};
 #endif
+#if defined(CHARGING_LEDS)
+  bool isLedCharging = false;
+  bool isLedCharged = false;
+#endif
 
   // initialize usb state & voltage adc
   usbPlugged();
   getADC();
   checkBattery();
-  chargerInit();
-  WDG_ENABLE(3000);
 
   while (1) {
     // update battery voltage
@@ -124,7 +115,7 @@ static void runPwrOffCharging(void)
       tmrAdc = g_tmr10ms;
     }
 
-    // check if there is a power on event 
+    // check if there is a power on event
     if (g_tmr10ms - tmrPressed >= KEY_PRESS_UPDATE_TIME) {
       tmrPressed = g_tmr10ms;
       if (pwrPressed())
@@ -134,7 +125,7 @@ static void runPwrOffCharging(void)
     }
 
     // quit the power off charging loop
-    if (pwrPressedCnt >= PWR_PRESSED_CNT)
+    if (!usbPlugged() || pwrPressedCnt >= PWR_PRESSED_CNT)
       break;
     else if (pwrPressedCnt)
       continue;
@@ -153,78 +144,56 @@ static void runPwrOffCharging(void)
         tmrBacklight = g_tmr10ms;
       }
     }
-    if ((g_tmr10ms - tmrBacklight) < BACKLIGHT_TIMEOUT)
+    if (g_tmr10ms - tmrBacklight < BACKLIGHT_TIMEOUT || 0)
       BACKLIGHT_ENABLE();
-    else 
+    else
       BACKLIGHT_DISABLE();
 #endif
 
-    if (usbPlugged()) {
-        tmrUsbLastPlugged = g_tmr10ms;
-
-      // charged
-      if ((!IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged()) || (g_vbat100mV >= FULLY_CHARGED_VOLTAGE_REF && (g_tmr10ms - lastChargingTimestamp) >= CHARGING_TO_CHARGED_DELAY)) {
+    // charging
+    if (IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged()) {
+      lastChargingTimestamp = g_tmr10ms;
 #if defined(CHARGING_LEDS)
-        if ((g_tmr10ms % 400) < 200)
-          LED_CHARGING_DONE();
-        else
-          LED_CHARGING_OFF();         
-#endif
-        if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
-#if defined(CHARGING_ANIMATION)
-          lcdClear();
-          drawFullyCharged();
-          lcdRefresh();
-#endif
-          TRACE("charged vbatt: %.1fV, timestamp: %d", (float)g_vbat100mV/10, g_tmr10ms - lastChargingTimestamp);
-          tmrWait = g_tmr10ms;
-        }
+      if (isLedCharging == false) {
+        isLedCharging = true;
+        LED_CHARGING_IN_PROGRESS();
       }
-      else {
-        // charging
-        if (g_vbat100mV < FULLY_CHARGED_VOLTAGE_REF) {
-          lastChargingTimestamp = g_tmr10ms;
-        }
-#if defined(CHARGING_LEDS)
-        if ((g_tmr10ms % 400) < 200)
-          LED_CHARGING_IN_PROGRESS();
-        else
-          LED_CHARGING_OFF();          
 #endif
-        if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
-#if defined(CHARGING_ANIMATION)
-          lcdClear();
-          drawChargingState();
-          lcdRefresh();
-#endif
-          TRACE("charging vbatt: %.1fV, timestamp: %d", (float)g_vbat100mV/10, g_tmr10ms - lastChargingTimestamp);
-          tmrWait = g_tmr10ms;
-        }
-      }
-    }
-    else {
-      if ((g_tmr10ms - tmrUsbLastPlugged) > USB_UNPLUGGED_TIMEOUT) {
-        TRACE("usb un-plugged");
+      if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
 #if defined(CHARGING_ANIMATION)
         lcdClear();
+        drawChargingState();
         lcdRefresh();
 #endif
-
-#if defined(CHARGING_LEDS)
-        LED_CHARGING_OFF();
-#endif
-        break;
+        TRACE("state: charging  vbatt: %.1fV", (float)g_vbat100mV/10);
+        tmrWait = g_tmr10ms;
       }
     }
-    delay_ms(1);
-    WDG_RESET();
+    // charged
+    else if (!IS_CHARGING_STATE() && !IS_CHARGING_FAULT() && usbPlugged() && g_tmr10ms - lastChargingTimestamp >= CHARGING_TO_CHARGED_DELAY) {
+#if defined(CHARGING_LEDS)
+      if (isLedCharged == false) {
+        isLedCharged = true;
+        LED_CHARGING_DONE();
+      }
+#endif
+      if (g_tmr10ms - tmrWait >= ANIMATION_UPDATE_TIME) {
+#if defined(CHARGING_ANIMATION)
+        lcdClear();
+        drawFullyCharged();
+        lcdRefresh();
+#endif
+        TRACE("state: charged  vbatt: %.1fV", (float)g_vbat100mV/10);
+        tmrWait = g_tmr10ms;
+      }
+    }
   }
 }
 
 void boardInit()
 {
   bool skipCharging = false;
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
   if (IS_PCBREV_01()) {
     RCC_AHB1PeriphClockCmd(PWR_RCC_AHB1Periph | KEYS_RCC_AHB1Periph | LCD_RCC_AHB1Periph |
                            AUDIO_RCC_AHB1Periph | ADC_RCC_AHB1Periph | SD_RCC_AHB1Periph | 
@@ -251,7 +220,7 @@ void boardInit()
     RCC_APB2PeriphClockCmd(ADC_RCC_APB2Periph | ROTARY_ENCODER_RCC_APB2Periph | EXTMODULE_RCC_APB2Periph, 
                            ENABLE);
   }
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
   RCC_AHB1PeriphClockCmd(PWR_RCC_AHB1Periph | KEYS_RCC_AHB1Periph | LCD_RCC_AHB1Periph |
                          AUDIO_RCC_AHB1Periph | BACKLIGHT_RCC_AHB1Periph | ADC_RCC_AHB1Periph | 
                          SD_RCC_AHB1Periph | HAPTIC_RCC_AHB1Periph | EXTMODULE_RCC_AHB1Periph | 
@@ -268,48 +237,51 @@ void boardInit()
 #endif
 
   pwrInit();
-  delaysInit();
-   __enable_irq();
-
-#if defined(DEBUG) && defined(AUX_SERIAL_GPIO)
-  auxSerialInit(0, 0); // default serial mode (None if DEBUG not defined)
-#endif
-
-  TRACE("\n%s board started :)", MY_DEVICE_NAME);
-  TRACE("RCC->CSR = %08x\n", RCC->CSR);
-
-  audioInit();
+  keysInit();
 
   // we need to initialize g_FATFS_Obj here, because it is in .ram section (because of DMA access)
   // and this section is un-initialized
   memset(&g_FATFS_Obj, 0, sizeof(g_FATFS_Obj));
 
-  keysInit();
 #if defined(ROTARY_ENCODER_NAVIGATION)
   rotaryEncoderInit();
 #endif
+  delaysInit();
   adcInit();
-  lcdInit();
-#if defined(PCBMAMBO)
+#if defined(RADIO_MAMBO)
   backlightInit();
   BACKLIGHT_ENABLE();
 #endif
-
+  lcdInit(); // delaysInit() must be called before
+  audioInit();
   init2MhzTimer();
   init5msTimer();
-  CRSF_Init();
+  crsfInit();
   usbInit();
   #if defined(CHARGING_LEDS)
     ledInit();
   #endif
-  chargerInit();
+#if defined(USB_CHARGER)
+  usbChargerInit();
+#endif
+  __enable_irq();
 
   hardwareOptions.pcbrev = crsfGetHWID() & ~HW_ID_MASK;
 
-  if(!isDisableBoardOff() && !WAS_RESET_BY_WATCHDOG()){
+#if defined(RTCLOCK) && !defined(COPROCESSOR)
+  rtcInit(); // RTC must be initialized before rambackupRestore() is called
+#endif
+
+#if defined(DEBUG) && defined(AUX_SERIAL_GPIO)
+  auxSerialInit(0, 0); // default serial mode (None if DEBUG not defined)
+  TRACE("\n%s board started :)", MY_DEVICE_NAME);
+  TRACE("RCC->CSR = %08x\n", RCC->CSR);
+#endif
+
+  if (!isDisableBoardOff() && !WAS_RESET_BY_WATCHDOG()) {
     skipCharging = true;
     // clear software reset mark
-    if(WAS_RESET_BY_SOFTWARE()) {
+    if (WAS_RESET_BY_SOFTWARE()) {
       RCC_ClearFlag();
     }
   }
@@ -328,9 +300,8 @@ void boardInit()
   }
 #endif
 
-#if defined(RTCLOCK) && !defined(COPROCESSOR)
-  rtcInit(); // RTC must be initialized before rambackupRestore() is called
-#endif
+  if (!UNEXPECTED_SHUTDOWN())
+    sdInit();
 
   if (skipCharging) {
     runPwrOffCharging();
@@ -339,7 +310,7 @@ void boardInit()
 
 void boardOff()
 {
-  TRACE("board off\n");
+  TRACE("power off\n");
   
 #if defined(AUDIO_MUTE_GPIO_PIN)
   GPIO_SetBits(AUDIO_MUTE_GPIO, AUDIO_MUTE_GPIO_PIN); // mute
@@ -362,9 +333,12 @@ void boardOff()
     WDG_RESET();
   }
 
-
   lcdOff();
   SysTick->CTRL = 0; // turn off systick
+
+  // immediate software reset to do power off charging
+  if (usbPlugged())
+    NVIC_SystemReset();
 
   pwrOff();
 
@@ -373,9 +347,6 @@ void boardOff()
 
   volatile uint32_t tmr = get_tmr10ms();
   while( get_tmr10ms() - tmr <= 100){
-  // immediate software reset to do power off charging
-  if (usbPlugged())
-    NVIC_SystemReset();
     WDG_RESET();
   }
 
@@ -405,13 +376,13 @@ void boardOff()
 uint16_t getBatteryVoltage()
 {
   int32_t instant_vbat = anaIn(TX_VOLTAGE); // using filtered ADC value on purpose
-  float batt_scale;
-#if defined(PCBTANGO)
+  float batt_scale = 0;
+#if defined(RADIO_TANGO)
   if (IS_PCBREV_01())
     batt_scale = BATT_SCALE;
   else 
     batt_scale = BATT_SCALE2;
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
   batt_scale = BATT_SCALE;
 #endif
 
@@ -440,14 +411,14 @@ static uint8_t isDisableBoardOff(){
   boardOffState = bkregGetStatusFlag(DEVICE_RESTART_WITHOUT_WARN_FLAG);
   bkregClrStatusFlag(DEVICE_RESTART_WITHOUT_WARN_FLAG);
   boardOffState |= value;
-  if(!checkDefaultWord()){
+  if (!checkDefaultWord()) {
     boardOffState = 0;
   }
   return boardOffState;
 }
 
 static uint8_t checkDefaultWord(){
-  union{
+  union {
     uint8_t b[4];
     uint32_t word;
   } defaultWord;
@@ -456,16 +427,16 @@ static uint8_t checkDefaultWord(){
   defaultWord.b[2] = (uint8_t)'n';
   defaultWord.b[3] = (uint8_t)'g';
   uint32_t value = (uint32_t)readBackupReg(BKREG_DEFAULT_WORD);
-  if(value != defaultWord.word){
+  if (value != defaultWord.word) {
     writeBackupReg(BKREG_DEFAULT_WORD, defaultWord.word);
     return 0;
   }
   return 1;
 }
 
-void trampolineInit( void )
+void trampolineInit(void)
 {
-  memset( trampoline, 0, sizeof(uint32_t) * TRAMPOLINE_INDEX_COUNT );
+  memset(trampoline, 0, sizeof(uint32_t) * TRAMPOLINE_INDEX_COUNT);
   trampoline[RTOS_WAIT_FLAG_TRAMPOILINE] = (uint32_t)(&CoWaitForSingleFlag);
   trampoline[RTOS_CLEAR_FLAG_TRAMPOILINE] = (uint32_t)(&CoClearFlag);
   crossfireSharedData.trampoline = trampoline;
@@ -474,10 +445,11 @@ void trampolineInit( void )
 void loadDefaultRadioSettings(void)
 {
   // this is to reset incorrect radio settings. should be removed later.
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
   g_eeGeneral.backlightMode = g_eeGeneral.backlightMode < e_backlight_mode_keys ? e_backlight_mode_keys : g_eeGeneral.backlightMode;
 #endif
   g_eeGeneral.lightAutoOff = g_eeGeneral.lightAutoOff < BACKLIGHT_TIMEOUT_MIN ? 6 : g_eeGeneral.lightAutoOff;
+  g_eeGeneral.switchConfig = DEFAULT_SWITCH_CONFIG;
   g_eeGeneral.jitterFilter = 0;
 
   #define MARK_1        0x0000A55A
@@ -572,7 +544,7 @@ void ESP_DMA_Stream_IRQHandler(void)
   if (DMA_GetITStatus(ESP_DMA_Stream_RX, ESP_DMA_RX_FLAG_TC)) {
     DMA_ClearITPendingBit(ESP_DMA_Stream_RX, ESP_DMA_RX_FLAG_TC);
     void (*esp_dma_rx_irq)(void);
-    if ( crossfireSharedData.trampoline[WIFI_UART_IRQ_TRAMPOLINE] ){
+    if (crossfireSharedData.trampoline[WIFI_UART_IRQ_TRAMPOLINE]) {
       esp_dma_rx_irq = (void (*)(void))crossfireSharedData.trampoline[WIFI_UART_IRQ_TRAMPOLINE];
       esp_dma_rx_irq();
     }
@@ -584,12 +556,12 @@ void INTERRUPT_EXTI_IRQHandler(void)
 {
   DEBUG_INTERRUPT(INT_EXTI15_10);
   CoEnterISR();
-  void (*exti_irq)(void);
-  if ( crossfireSharedData.trampoline[DIO_IRQ_TRAMPOLINE] ){
+  void (* exti_irq)(void);
+  if (crossfireSharedData.trampoline[DIO_IRQ_TRAMPOLINE]) {
     exti_irq = (void (*)(void))crossfireSharedData.trampoline[DIO_IRQ_TRAMPOLINE];
     /* call DIOCN handler of crossfire */
     exti_irq();
-    isr_SetFlag( get_task_flag( XF_TASK_FLAG ));
+    isr_SetFlag(get_task_flag(XF_TASK_FLAG));
   }
   CoExitISR();
 }
@@ -598,11 +570,11 @@ void INTERRUPT_TIM13_IRQHandler()
 {
   DEBUG_INTERRUPT(INT_TIM13);
   CoEnterISR();
-  if( INTERRUPT_NOT_TIMER->SR & TIM_SR_UIF )
+  if (INTERRUPT_NOT_TIMER->SR & TIM_SR_UIF)
   {
     INTERRUPT_NOT_TIMER->SR &= ~TIM_SR_UIF;
-    void (*timer_irq)(void);
-    if( crossfireSharedData.trampoline[NOTIFICATION_TIMER_IRQ_TRAMPOLINE] ){
+    void (* timer_irq)(void);
+    if (crossfireSharedData.trampoline[NOTIFICATION_TIMER_IRQ_TRAMPOLINE]) {
       timer_irq = (void (*)(void))crossfireSharedData.trampoline[NOTIFICATION_TIMER_IRQ_TRAMPOLINE];
       /* call notification timer handler of crossfire */
       timer_irq();
@@ -632,7 +604,7 @@ void hf_printf(const char * TxBuf, ...)
   va_end(arglist);
 
   fp = UartBuf;
-  while(*fp)
+  while (*fp)
   {
     uart_tx(*fp);
     fp++;
@@ -663,16 +635,16 @@ void _general_exception_handler (unsigned int * hardfault_args)
   stacked_psr = ((unsigned long) hardfault_args[7]);
 
   // to print all buffered messages before printing the stack
-  while(1)
+  while (1)
   {
     WDG_RESET();
     if (USART_GetFlagStatus(AUX_SERIAL_USART, USART_FLAG_TXE) != RESET)
       xf_active = uart_irq( UART_INT_MODE_TX, 0);
-    if(!xf_active)
+    if (!xf_active)
       break;
   }
 
-  hf_printf ("\r\n\n***FreedomTx Hard Fault Handler Debug Printing***\r\n");
+  hf_printf ("\r\n\n***OpenTX Hard Fault Handler Debug Printing***\r\n");
   hf_printf ("R0\t\t= 0x%.8x\r\n", stacked_r0);
   hf_printf ("R1\t\t= 0x%.8x\r\n", stacked_r1);
   hf_printf ("R2\t\t= 0x%.8x\r\n", stacked_r2);

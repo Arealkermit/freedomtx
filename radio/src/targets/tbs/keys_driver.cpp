@@ -24,19 +24,19 @@
 uint32_t rotencPositionValue;
 #endif
 
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 uint8_t  g_trimState = 0;
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
 #define POT_MULTIPOS_SWITCH_ADC_TOLERANCE   128
 #define POT_3POS_SWITCH_POS1_ADC  0
 #define POT_3POS_SWITCH_POS2_ADC  1024
 #define POT_3POS_SWITCH_POS3_ADC  2048
 
 const uint16_t trimAdcValue[] = {4095/2, 4095/3, 4095/4, 4095/5, 4095/6, 4095/7, 4095/8, 4095/9};
-const int trimAdcBoundary[] = {(4095 + trimAdcValue[0]) >> 1,            (trimAdcValue[0] + trimAdcValue[1]) >> 1, 
-                               (trimAdcValue[1] + trimAdcValue[2]) >> 1, (trimAdcValue[2] + trimAdcValue[3]) >> 1, 
-                               (trimAdcValue[3] + trimAdcValue[4]) >> 1, (trimAdcValue[4] + trimAdcValue[5]) >> 1, 
-                               (trimAdcValue[5] + trimAdcValue[6]) >> 1, (trimAdcValue[6] + trimAdcValue[7]) >> 1, 
+const int trimAdcBoundary[] = {(4095 + trimAdcValue[0]) >> 1,            (trimAdcValue[0] + trimAdcValue[1]) >> 1,
+                               (trimAdcValue[1] + trimAdcValue[2]) >> 1, (trimAdcValue[2] + trimAdcValue[3]) >> 1,
+                               (trimAdcValue[3] + trimAdcValue[4]) >> 1, (trimAdcValue[4] + trimAdcValue[5]) >> 1,
+                               (trimAdcValue[5] + trimAdcValue[6]) >> 1, (trimAdcValue[6] + trimAdcValue[7]) >> 1,
                                (trimAdcValue[7] + 0) >> 1};
 #define IS_TRIM_PRESSED_STATE(x)  (trimAdcBoundary[x] > trimValue && trimValue > trimAdcBoundary[x + 1])
 #endif
@@ -85,21 +85,21 @@ uint32_t readTrims()
 {
   uint32_t result = 0;
 
-#if defined(PCBTANGO)  
+#if defined(RADIO_TANGO)
   // the trim state from the events of per10ms()
   result = g_trimState;
   g_trimState = 0;
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
   uint16_t trimValue = getAnalogValue(SWITCH_TRIM);
   uint8_t x;
   for (x = 0; x < TRM_LAST - TRM_BASE + 1; x++) {
     if (IS_TRIM_PRESSED_STATE(x)) {
       if (x == 4)
-        result |= 1<<5;
+        result |= 1 << 5;
       else if (x == 5)
-        result |= 1<<4;
+        result |= 1 << 4;
       else
-        result |= 1<<x;
+        result |= 1 << x;
       break;
     }
   }
@@ -151,7 +151,7 @@ void readKeysAndTrims()
     xxx = ~SWITCHES_GPIO_REG_ ## x  & SWITCHES_GPIO_PIN_ ## x ; \
     break;
 
-#if defined(PCBTANGO)  
+#if defined(RADIO_TANGO)
 #define ADD_3POS_CASE(x, i) \
   case SW_S ## x ## 0: \
     xxx = (SWITCHES_GPIO_REG_ ## x ## _H & SWITCHES_GPIO_PIN_ ## x ## _H); \
@@ -168,7 +168,7 @@ void readKeysAndTrims()
       xxx = xxx && (SWITCHES_GPIO_REG_ ## x ## _L & SWITCHES_GPIO_PIN_ ## x ## _L); \
     } \
     break
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
 #define ADD_3POS_CASE(x) \
   case SW_S ## x ## 0: \
     xxx = (anaIn(SWITCH_ ## x) < POT_3POS_SWITCH_POS1_ADC + POT_MULTIPOS_SWITCH_ADC_TOLERANCE) ? 1 : 0; \
@@ -193,12 +193,12 @@ uint32_t switchState(uint8_t index)
   uint32_t xxx = 0;
 
   switch (index) {
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
     ADD_2POS_CASE(A);
     ADD_3POS_CASE(B, 1);
     ADD_3POS_CASE(C, 2);
     ADD_2POS_CASE(D);
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
     ADD_3POS_CASE(A);
     ADD_3POS_CASE(B);
     ADD_3POS_CASE(C);

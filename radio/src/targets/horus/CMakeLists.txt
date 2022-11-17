@@ -2,7 +2,10 @@ option(DISK_CACHE "Enable SD card disk cache" ON)
 option(UNEXPECTED_SHUTDOWN "Enable the Unexpected Shutdown screen" ON)
 option(PXX1 "PXX1 protocol support" ON)
 option(PXX2 "PXX2 protocol support" OFF)
+option(AFHDS3 "AFHDS3 TX Module" ON)
 option(MULTIMODULE "DIY Multiprotocol TX Module (https://github.com/pascallanger/DIY-Multiprotocol-TX-Module)" ON)
+option(GHOST "Ghost TX Module" ON)
+option(HARDWARE_EXTERNAL_ACCESS_MOD "Support for R9M 2019 hardware mod" OFF)
 
 set(PWR_BUTTON "PRESS" CACHE STRING "Pwr button type (PRESS/SWITCH)")
 set(CPU_TYPE STM32F4)
@@ -17,7 +20,9 @@ set(LINKER_SCRIPT targets/horus/stm32f4_flash.ld)
 set(RTC_BACKUP_RAM YES)
 set(PPM_LIMITS_SYMETRICAL YES)
 set(USB_SERIAL ON CACHE BOOL "Enable USB serial (CDC)")
+set(ROTARY_ENCODER YES)
 set(EXTERNAL_MODULE YES)
+add_definitions(-DHARDWARE_TRIMS)
 
 # for size report script
 set(CPU_TYPE_FULL STM32F429xI)
@@ -48,6 +53,8 @@ if (PCB STREQUAL X10)
     option(INTERNAL_MODULE_PXX2 "Support for PXX2 internal module" ON)
     set(BLUETOOTH ON)
     add_definitions(-DHARDWARE_POWER_MANAGEMENT_UNIT)
+    add_definitions(-DRADIO_X10E)
+    add_definitions(-DMANUFACTURER_FRSKY)
   elseif (PCBREV STREQUAL T16)
     set(FLAVOUR t16)
     set(LUA_EXPORT lua_export_t16)
@@ -55,6 +62,7 @@ if (PCB STREQUAL X10)
     add_definitions(-DRADIO_FAMILY_T16)
     option(INTERNAL_MODULE_MULTI "Support for MULTI internal module" OFF)
     option(BLUETOOTH "Support for bluetooth module" OFF)
+    add_definitions(-DMANUFACTURER_JUMPER)
   elseif (PCBREV STREQUAL TX16S)
     set(FLAVOUR tx16s)
     set(LUA_EXPORT lua_export_t16)
@@ -62,15 +70,32 @@ if (PCB STREQUAL X10)
     add_definitions(-DRADIO_FAMILY_T16)
     option(INTERNAL_MODULE_MULTI "Support for MULTI internal module" ON)
     option(BLUETOOTH "Support for bluetooth module" OFF)
-    if (NOT BLUETOOTH)
-      set(AUX_SERIAL ON)
-    endif()
+    option(INTERNAL_GPS "Support for internal ublox GPS" OFF)
+    set(HARDWARE_TOUCH YES)
     set(USB_CHARGER YES)
+    set(DEFAULT_THEME "DARKBLUE")
+    set(SBUS_TRAINER ON)
+    set(AUX_SERIAL ON)
+    add_definitions(-DMANUFACTURER_RADIOMASTER)
+    if (NOT BLUETOOTH AND NOT INTERNAL_GPS)
+      set(AUX2_SERIAL ON)
+    endif()
+    set(INTERNAL_GPS_BAUDRATE "9600" CACHE STRING "Baud rate for internal GPS")
+  elseif (PCBREV STREQUAL T18)
+    set(FLAVOUR t18)
+    set(LUA_EXPORT lua_export_t16)
+    add_definitions(-DRADIO_T18)
+    add_definitions(-DRADIO_FAMILY_T16)
+    option(INTERNAL_MODULE_MULTI "Support for MULTI internal module" ON)
+    option(BLUETOOTH "Support for bluetooth module" OFF)
+    add_definitions(-DMANUFACTURER_JUMPER)
+    set(HARDWARE_TOUCH YES)
   else()
     set(FLAVOUR x10)
     option(INTERNAL_MODULE_PXX1 "Support for PXX1 internal module" ON)
     option(INTERNAL_MODULE_PXX2 "Support for PXX2 internal module" OFF)
     set(BLUETOOTH ON)
+    add_definitions(-DMANUFACTURER_FRSKY)
   endif()
 elseif (PCB STREQUAL X12S)
   option(INTERNAL_MODULE_PXX1 "Support for PXX1 internal module" ON)
@@ -92,12 +117,12 @@ elseif (PCB STREQUAL X12S)
     ${TARGET_SRC}
     audio_spi_driver.cpp
     x12s_adc_driver.cpp
-    gps_driver.cpp
     )
   set(BITMAPS_TARGET x12s_bitmaps)
   set(FONTS_TARGET x12s_fonts)
   set(LCD_DRIVER lcd_driver.cpp)
   set(LUA_EXPORT lua_export_x12s)
+  add_definitions(-DMANUFACTURER_FRSKY)
 endif()
 
 add_definitions(-DPCBREV=${PCBREV})
@@ -115,8 +140,20 @@ add_definitions(-DEEPROM_VARIANT=0 -DAUDIO -DVOICE -DRTCLOCK)
 add_definitions(-DGPS_USART_BAUDRATE=${INTERNAL_GPS_BAUDRATE})
 add_definitions(-DPWR_BUTTON_${PWR_BUTTON})
 
+if(DEFAULT_THEME)
+  add_definitions(-DDEFAULT_THEME_${DEFAULT_THEME})
+else()
+  add_definitions(-DDEFAULT_THEME_DEFAULT)
+endif()
+
 if(NOT UNEXPECTED_SHUTDOWN)
   add_definitions(-DNO_UNEXPECTED_SHUTDOWN)
+endif()
+
+if(HARDWARE_EXTERNAL_ACCESS_MOD)
+  set(PXX2 ON)
+  set(AUX_SERIAL OFF)
+  add_definitions(-DHARDWARE_EXTERNAL_ACCESS_MOD)
 endif()
 
 if(INTERNAL_MODULE_PXX1)
@@ -134,9 +171,17 @@ if(INTERNAL_MODULE_PXX2)
   endif()
 endif()
 
+if(INTERNAL_MODULE_ELRS)
+  add_definitions(-DHARDWARE_INTERNAL_MODULE)
+  add_definitions(-DINTERNAL_MODULE_ELRS)
+  add_definitions(-DINTERNAL_MODULE_SERIAL_TELEMETRY)
+  set(INTERNAL_MODULE_MULTI NO)
+endif()
+
 if(INTERNAL_MODULE_MULTI)
   add_definitions(-DHARDWARE_INTERNAL_MODULE)
   add_definitions(-DINTERNAL_MODULE_MULTI)
+  add_definitions(-DTRAINER_SPORT_SBUS)
 endif()
 
 if(EXTERNAL_MODULE)
@@ -188,6 +233,10 @@ if(PXX2)
   set(GUI_SRC ${GUI_SRC} radio_power_meter.cpp)
 endif()
 
+if(GHOST)
+  set(GUI_SRC ${GUI_SRC} radio_ghost_menu.cpp)
+endif()
+
 if(DISK_CACHE)
   set(SRC ${SRC} disk_cache.cpp)
   add_definitions(-DDISK_CACHE)
@@ -195,6 +244,7 @@ endif()
 
 if(INTERNAL_GPS)
   set(SRC ${SRC} gps.cpp)
+  set(TARGET_SRC ${TARGET_SRC} gps_driver.cpp)
   add_definitions(-DINTERNAL_GPS)
   message("Horus: Internal GPS enabled")
 endif()
@@ -213,6 +263,13 @@ set(TARGET_SRC
   ../common/arm/stm32/rotary_encoder_driver.cpp
   )
 
+if(HARDWARE_TOUCH)
+  set(TARGET_SRC ${TARGET_SRC}
+    tp_gt911.cpp
+    )
+  add_definitions(-DHARDWARE_TOUCH)
+endif()
+
 if(USB_CHARGER)
   set(TARGET_SRC ${TARGET_SRC} usb_charger_driver.cpp)
   add_definitions(-DUSB_CHARGER)
@@ -227,6 +284,19 @@ endif()
 if (AUX_SERIAL)
   add_definitions(-DAUX_SERIAL)
   set(AUX_SERIAL_DRIVER ../common/arm/stm32/aux_serial_driver.cpp)
+endif()
+
+if (AUX2_SERIAL)
+  add_definitions(-DAUX2_SERIAL)
+  set(AUX_SERIAL_DRIVER ../common/arm/stm32/aux_serial_driver.cpp)
+endif()
+
+if (SBUS_TRAINER)
+  add_definitions(-DSBUS_TRAINER)
+  set(SRC
+    ${SRC}
+    sbus.cpp
+    )
 endif()
 
 set(FIRMWARE_TARGET_SRC
@@ -254,6 +324,7 @@ set(STM32LIB_SRC
   STM32F4xx_StdPeriph_Driver/src/stm32f4xx_ltdc.c
   STM32F4xx_StdPeriph_Driver/src/stm32f4xx_tim.c
   STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dma2d.c
+  STM32F4xx_StdPeriph_Driver/src/stm32f4xx_flash.c
   )
 
 MACRO(GET_GCC_INCLUDE_PATH gcc_include_path)

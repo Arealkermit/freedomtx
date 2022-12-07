@@ -21,6 +21,7 @@
 #ifndef _CROSSFIRE_H_
 #define _CROSSFIRE_H_
 
+#include <cmath>
 #include <inttypes.h>
 #include "dataconstants.h"
 
@@ -97,7 +98,6 @@ enum CrossfireSensorIndexes {
   BATT_CURRENT_INDEX,
   BATT_CAPACITY_INDEX,
   BATT_REMAINING_INDEX,
-  BARO_VSPEED_INDEX,
   GPS_LATITUDE_INDEX,
   GPS_LONGITUDE_INDEX,
   GPS_GROUND_SPEED_INDEX,
@@ -110,6 +110,7 @@ enum CrossfireSensorIndexes {
   FLIGHT_MODE_INDEX,
   VERTICAL_SPEED_INDEX,
   BARO_ALTITUDE_INDEX,
+  BARO_VSPEED_INDEX,
   UNKNOWN_INDEX,
 };
 

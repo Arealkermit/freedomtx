@@ -105,6 +105,7 @@ typedef struct {
 #define LIBCRSF_MAX_SD_PATH_SIZE                53
 #define LIBCRSF_MAX_SD_PAYLOAD_START            19
 #define LIBCRSF_MAX_SD_PAYLOAD_SIZE             44
+#define LIBCRSF_MAX_SD_LIST_FILENAME_SIZE       51
 
 typedef enum {
   LIBCRSF_REMOTE_SD_OPEN                    = 0x01,
@@ -114,6 +115,8 @@ typedef enum {
   LIBCRSF_REMOTE_SD_WRITE_ACK               = 0x05,
   LIBCRSF_REMOTE_SD_ERASE_FILE              = 0x06,
   LIBCRSF_REMOTE_SD_MOUNT_STATUS            = 0x07,
+  LIBCRSF_REMOTE_SD_LIST_FILES              = 0x08,
+  LIBCRSF_REMOTE_SD_READ_FILE_CONTENT       = 0x09,
   LIBCRSF_REMOTE_CRSF_TIMING_CORRECTION     = 0x10,
 } libCrsfRemoteFrame;
 
@@ -135,6 +138,11 @@ typedef union {
   struct {
     uint8_t isMounted;
   } mountStatus;
+  struct {
+    uint16_t file_num;
+    uint32_t file_size;
+    uint8_t filename[ LIBCRSF_MAX_SD_LIST_FILENAME_SIZE ];
+  } dir_info;
   struct {
     uint32_t interval;
     int32_t offset;

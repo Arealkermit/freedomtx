@@ -163,6 +163,11 @@ void libCrsfPackRemote(uint8_t * pArr, uint32_t * i, uint8_t target_device, uint
     case LIBCRSF_REMOTE_SD_MOUNT_STATUS:
       libUtilWrite8(pArr, i, remoteData->mountStatus.isMounted);
       break;
+    case LIBCRSF_REMOTE_SD_LIST_FILES:
+      libUtilWrite16(pArr, i, remoteData->dir_info.file_num);
+      libUtilWrite32(pArr, i, remoteData->dir_info.file_size);
+      libUtilWriteString(pArr, i, (char*)remoteData->dir_info.filename, true);
+      break;
 #endif
     default:
       break;

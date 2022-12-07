@@ -86,20 +86,30 @@ void usbTX()
   }
 }
 
-void crsfToUsbHid(uint8_t * pArr)
+void crsfToUsbHid(uint8_t *pArr)
 {
   *pArr = LIBCRSF_UART_SYNC;
   if (hidTxFifo == 0 && selectedUsbMode == USB_AGENT_MODE && usbStarted()) {
-    hidTxFifo = (Fifo<uint8_t, USB_HID_FIFO_SIZE> *) malloc(sizeof(Fifo<uint8_t, USB_HID_FIFO_SIZE>));
-    if (hidTxFifo != 0) {
+    hidTxFifo = (Fifo<uint8_t, USB_HID_FIFO_SIZE>*)malloc(sizeof(Fifo<uint8_t, USB_HID_FIFO_SIZE>));
+    if(hidTxFifo != 0){
       memset(hidTxFifo, 0, sizeof(Fifo<uint8_t, USB_HID_FIFO_SIZE>));
     }
   }
 
   // block sending telemetry and opentx related to usb
-  if ((*(pArr + LIBCRSF_TYPE_ADD) != LIBCRSF_BF_LINK_STATISTICS) && (*(pArr + LIBCRSF_TYPE_ADD) != LIBCRSF_OPENTX_RELATED)) {
-    if (hidTxFifo != 0 && hidTxFifo->hasSpace(pArr[LIBCRSF_LENGTH_ADD] + 2)) {
-      for (uint8_t i = 0; i < HID_AGENT_IN_PACKET; i++) {
+  if ((*(pArr + LIBCRSF_TYPE_ADD ) != LIBCRSF_BF_LINK_STATISTICS)) {
+    if ((pArr[LIBCRSF_TYPE_ADD] == LIBCRSF_FW_UPDATE) ||
+      ((pArr[LIBCRSF_TYPE_ADD] == LIBCRSF_OPENTX_RELATED) && 
+          (pArr[LIBCRSF_EXT_PAYLOAD_START_ADD] <= LIBCRSF_REMOTE_SD_READ_FILE_CONTENT))
+    )
+    {
+      while(hidTxFifo != 0 && !hidTxFifo->hasSpace(LIBCRSF_MAX_BUFFER_SIZE))
+      {
+        usbTX();
+      }
+    }
+    if(hidTxFifo != 0 && hidTxFifo->hasSpace(pArr[LIBCRSF_LENGTH_ADD] + 2)){
+      for(uint8_t i = 0; i < HID_AGENT_IN_PACKET; i++){
         hidTxFifo->push(pArr[i]);
       }
     }

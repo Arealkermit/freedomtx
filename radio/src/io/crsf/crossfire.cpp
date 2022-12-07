@@ -22,6 +22,7 @@
 #include "opentx.h"
 #include "crossfire.h"
 #include "stamp.h"
+#include "ff.h"
 
 extern void crsfToUsbHid(uint8_t * pArr);
 extern void usbAgentWrite(uint8_t * pArr);
@@ -152,10 +153,19 @@ void crsfThisDevice(uint8_t * pArr)
   }
 }
 
-void crsfToSharedFIFO(uint8_t * pArr)
+void crsfToSharedFIFO(uint8_t *pArr)
 {
+  if((pArr[LIBCRSF_TYPE_ADD] == LIBCRSF_FW_UPDATE) ||
+    ((pArr[LIBCRSF_TYPE_ADD] == LIBCRSF_OPENTX_RELATED) && 
+            (pArr[LIBCRSF_EXT_PAYLOAD_START_ADD] <= LIBCRSF_REMOTE_SD_READ_FILE_CONTENT))
+  )
+  {
+    while(!crossfireSharedData.crsf_rx.hasSpace(LIBCRSF_MAX_BUFFER_SIZE));
+  }
+
   *pArr = LIBCRSF_UART_SYNC;
-  for (uint8_t i = 0; i < (*(pArr + LIBCRSF_LENGTH_ADD) + LIBCRSF_HEADER_OFFSET + LIBCRSF_CRC_SIZE); i++) {
+  
+  for(uint8_t i = 0; i < (*(pArr + LIBCRSF_LENGTH_ADD) + LIBCRSF_HEADER_OFFSET + LIBCRSF_CRC_SIZE); i++) {
     crossfireSharedData.crsf_rx.push(*(pArr + i));
   }
 }
@@ -164,10 +174,14 @@ void crsfSharedFifoHandler(void)
 {
   uint8_t byte;
   static libCrsfParseData crsfData;
-  if (crossfireSharedData.crsf_tx.pop(byte)) {
-    if (libCrsfParse(&crsfData, byte)) {
-      libCrsfRouting(CRSF_SHARED_FIFO, crsfData.payload);
+  for(uint16_t i = 0; i < CROSSFIRE_FIFO_SIZE; i++) {
+    if (crossfireSharedData.crsf_tx.pop(byte)) {
+      if (libCrsfParse(&crsfData, byte)) {
+        libCrsfRouting(CRSF_SHARED_FIFO, crsfData.payload);
+      }
     }
+    else
+      break;
   }
 }
 
@@ -363,6 +377,15 @@ void libCrsfUnpackRemote(uint8_t * pArr, libCrsfRemoteDataU * remoteData)
     case LIBCRSF_REMOTE_SD_MOUNT_STATUS:
       remoteData->mountStatus.isMounted = libUtilReadInt8(pArr, i);
       break;
+    case LIBCRSF_REMOTE_SD_LIST_FILES:
+      remoteData->dir_info.file_num = libUtilReadInt16(pArr, i);
+      remoteData->dir_info.file_size = libUtilReadInt32(pArr, i);
+      for (uint8_t j = 0; j < LIBCRSF_MAX_SD_LIST_FILENAME_SIZE; j++) {
+          remoteData->dir_info.filename[j] = libUtilReadInt8(pArr, i);
+      }
+      break;
+    case LIBCRSF_REMOTE_SD_READ_FILE_CONTENT:
+      break;
 #endif // LIBCRSF_ENABLE_SD
     default:
       break;
@@ -430,7 +453,7 @@ void crsfRemoteRelatedHandler(uint8_t * pArr)
           libCrsfWrite( LIBCRSF_OPENTX_RELATED, &pArr[LIBCRSF_LENGTH_ADD], pArr[LIBCRSF_EXT_HEAD_ORG_ADD], LIBCRSF_REMOTE_SD_OPEN, &replyData);
           libCrsfRouting(DEVICE_INTERNAL, &pArr[0]);
           offset = 0;
-          CRSF_SD_PRINTF("%s opened, fileLen: %ld\r\n", reply_data.info.path, reply_data.info.size);
+          CRSF_SD_PRINTF("%s opened, fileLen: %ld\r\n", replyData.info.path, replyData.info.size);
         }
       }
       else{
@@ -592,9 +615,67 @@ void crsfRemoteRelatedHandler(uint8_t * pArr)
       break;
     case LIBCRSF_REMOTE_SD_MOUNT_STATUS:
       replyData.mountStatus.isMounted = (uint8_t)sdMounted();
-      libCrsfWrite(LIBCRSF_OPENTX_RELATED, &pArr[LIBCRSF_LENGTH_ADD], pArr[LIBCRSF_EXT_HEAD_ORG_ADD], LIBCRSF_REMOTE_SD_MOUNT_STATUS, &replyData);
-      libCrsfRouting(DEVICE_INTERNAL, &pArr[0]);
-      CRSF_SD_PRINTF("mount:%d\r\n", reply_data.mount_status.is_mounted);
+      libCrsfWrite(LIBCRSF_OPENTX_RELATED, &pArr[ LIBCRSF_LENGTH_ADD ], pArr[ LIBCRSF_EXT_HEAD_ORG_ADD ], LIBCRSF_REMOTE_SD_MOUNT_STATUS, &replyData);
+      libCrsfRouting( DEVICE_INTERNAL, &pArr[0] );
+      CRSF_SD_PRINTF("mount:%d\r\n", replyData.mountStatus.isMounted);
+      break;
+    case LIBCRSF_REMOTE_SD_LIST_FILES:
+    {
+      DIR d;
+      FILINFO fno;
+      FRESULT res;
+      char path[LIBCRSF_MAX_SD_LIST_FILENAME_SIZE] = {};
+      memset(&fno, 0, sizeof(FILINFO));
+      strcpy(path, (char*)data.dir_info.filename);
+      memset(&replyData, 0, sizeof(libCrsfRemoteDataU));
+      if(data.dir_info.file_num == 0)
+      {
+        res = f_opendir(&d, path);
+        if (res == FR_OK) {
+          while (1) 
+          {
+            res = f_readdir(&d, &fno);
+            if((res == FR_OK) && (fno.fname[0] != 0))
+              replyData.dir_info.file_num++;
+            else
+              break;
+          }
+          f_closedir(&d);
+        }
+        memset(replyData.dir_info.filename, 0, LIBCRSF_MAX_SD_LIST_FILENAME_SIZE);
+      }
+      else
+      {
+        res = f_opendir(&d, path);
+        if (res == FR_OK) {
+          for(uint16_t i = 1; i <= data.dir_info.file_num; i++)
+          {
+            res = f_readdir(&d, &fno);
+            if((res == FR_OK) && (fno.fname[0] != 0))
+            {
+              if(i == data.dir_info.file_num)
+              {
+                replyData.dir_info.file_num = i;
+                replyData.dir_info.file_size = fno.fsize;
+                memset(replyData.dir_info.filename, 0, LIBCRSF_MAX_SD_LIST_FILENAME_SIZE);
+                strcpy((char*)(replyData.dir_info.filename), (char*)(fno.fname));
+              }
+            }
+          }
+          f_closedir(&d);
+        }
+        else
+        {
+          replyData.dir_info.file_num = 0;
+          memset(replyData.dir_info.filename, 0, LIBCRSF_MAX_SD_LIST_FILENAME_SIZE);
+        }
+      }
+      libCrsfWrite( LIBCRSF_OPENTX_RELATED, &pArr[ LIBCRSF_LENGTH_ADD ], pArr[ LIBCRSF_EXT_HEAD_ORG_ADD ], LIBCRSF_REMOTE_SD_LIST_FILES, &replyData );
+      libCrsfRouting( DEVICE_INTERNAL, &pArr[0] );
+      break;
+    }
+    case LIBCRSF_REMOTE_SD_READ_FILE_CONTENT:
+      // not implemented
       break;
 #endif
     default:

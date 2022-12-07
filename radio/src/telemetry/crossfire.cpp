@@ -47,8 +47,6 @@ const CrossfireSensor crossfireSensors[] = {
   {BATTERY_ID,     1, ZSTR_CURR,          UNIT_AMPS,                    1},
   {BATTERY_ID,     2, ZSTR_CAPACITY,      UNIT_MAH,                     0},
   {BATTERY_ID,     3, ZSTR_BATT_PERCENT,  UNIT_PERCENT,                 0},
-  {BARO_ID,        0, ZSTR_BARO_ALTITUDE, UNIT_METERS,                  1},
-  {BARO_ID,        1, ZSTR_BARO_VSPEED,   UNIT_CENTIMETER_PER_SECOND,   0},
   {GPS_ID,         0, ZSTR_GPS,           UNIT_GPS_LATITUDE,            0},
   {GPS_ID,         0, ZSTR_GPS,           UNIT_GPS_LONGITUDE,           0},
   {GPS_ID,         2, ZSTR_GSPD,          UNIT_KMH,                     1},
@@ -60,6 +58,8 @@ const CrossfireSensor crossfireSensors[] = {
   {ATTITUDE_ID,    2, ZSTR_YAW,           UNIT_RADIANS,                 3},
   {FLIGHT_MODE_ID, 0, ZSTR_FLIGHT_MODE,   UNIT_TEXT,                    0},
   {CF_VARIO_ID,    0, ZSTR_VSPD,          UNIT_METERS_PER_SECOND,       2},
+  {BARO_ID,        0, ZSTR_BARO_ALTITUDE, UNIT_METERS,                  1},
+  {BARO_ID,        1, ZSTR_BARO_VSPEED,   UNIT_METERS_PER_SECOND,       2},
   {0,              0, "UNKNOWN",          UNIT_RAW,                     0},
 };
 
@@ -124,7 +124,9 @@ bool getCrossfireTelemetryValue(uint8_t index, int32_t & value, uint8_t module)
 void processCrossfireTelemetryFrame(uint8_t module)
 {
   uint8_t * rxBuffer = getTelemetryRxBuffer(module);
+#if defined(LUA)  
   uint8_t &rxBufferCount = getTelemetryRxBufferCount(module);
+#endif
 
   if (!checkCrossfireTelemetryFrameCRC(module)) {
     TRACE("[XF] CRC error");
@@ -162,17 +164,15 @@ void processCrossfireTelemetryFrame(uint8_t module)
       break;
 
     case BARO_ID:
-      if (getCrossfireTelemetryValue<2>(3, value, module)) {
-        if (value & 0x8000) {
-          // Altitude in meters
-          value &= ~(0x8000);
-          value *= 100; // cm
-        } else {
-          // Altitude in decimeters + 10000dm
-          value -= 10000;
-          value *= 10;
-        }
-        processCrossfireTelemetryValue(BARO_ALTITUDE_INDEX, value);
+      if (getCrossfireTelemetryValue<2>(3, value, module))
+        processCrossfireTelemetryValue(BARO_ALTITUDE_INDEX,  (value & 0x8000) ? (value & 0x7fff) * 10 : value - 10000);
+      if (getCrossfireTelemetryValue<1>(5, value, module)) {
+        static const float Kl = 100.0f; //lenearity coefficient
+        static const float Kr = .026f;  // Range coefficient
+        int8_t sign = value < 0 ? -1 : 1;
+
+        value = lrintf((expf(value * sign * Kr) - 1) * Kl) * sign;
+        processCrossfireTelemetryValue(BARO_VSPEED_INDEX,  value);
       }
       break;
 
@@ -374,10 +374,24 @@ void crossfireSetDefault(int index, uint8_t id, uint8_t subId)
 
   const CrossfireSensor & sensor = getCrossfireSensor(id, subId);
   TelemetryUnit unit = sensor.unit;
-  if (unit == UNIT_GPS_LATITUDE || unit == UNIT_GPS_LONGITUDE)
-    unit = UNIT_GPS;
+  
   uint8_t prec = min<uint8_t>(2, sensor.precision);
   telemetrySensor.init(sensor.name, unit, prec);
+
+  if (unit == UNIT_METERS) {
+    if (IS_IMPERIAL_ENABLE()) {
+      telemetrySensor.unit = UNIT_FEET;
+    }
+  }
+  else if (unit == UNIT_KMH) {
+    if (IS_IMPERIAL_ENABLE()) {
+      telemetrySensor.unit = UNIT_MPH;
+    }
+  }
+  else if (unit == UNIT_GPS_LATITUDE || unit == UNIT_GPS_LONGITUDE) {
+    telemetrySensor.unit = UNIT_GPS;
+  }
+
   if (id == LINK_ID) {
     telemetrySensor.logs = true;
   }

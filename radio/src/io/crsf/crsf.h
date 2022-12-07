@@ -123,6 +123,7 @@ typedef enum {
 #ifdef LIBCRSF_ENABLE_COMMAND
   LIBCRSF_CMD_FRAME                         = 0x32,
 #endif
+  LIBCRSF_FW_UPDATE                         = 0x38,
 #ifdef LIBCRSF_ENABLE_OPENTX_RELATED
   LIBCRSF_OPENTX_RELATED						        = 0x3A,
 #endif

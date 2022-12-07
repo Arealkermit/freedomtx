@@ -307,6 +307,11 @@ void convertModelData_130_to_137(Conversion_130::ModelData_v130 &oldModel, Model
   g_model.spare1 = oldModel.spare1;
   g_model.potsWarnMode = oldModel.potsWarnMode;
   memmove(&g_model.moduleData, &oldModel.moduleData, sizeof(oldModel.moduleData));
+  // The internal crossfire was previously used as an external module
+  if (oldModel.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_NONE) {
+    g_model.moduleData[INTERNAL_MODULE].type = MODULE_TYPE_CROSSFIRE;
+    g_model.header.modelId[INTERNAL_MODULE] =  oldModel.header.modelId[EXTERNAL_MODULE];
+  }
 
   memcpy(&g_model.failsafeChannels, &oldModel.failsafeChannels, sizeof(oldModel.failsafeChannels));
   memcpy(&g_model.trainerData, &oldModel.trainerData, sizeof(oldModel.trainerData));

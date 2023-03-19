@@ -157,7 +157,7 @@ enum {
 
   ITEM_RADIO_HARDWARE_BATTERY_CALIB,
 
-#if defined(STM32)
+#if defined(STM32) && !defined(HAVE_NO_RTC_BATTERY)
   ITEM_RADIO_HARDWARE_RTC_BATTERY,
   ITEM_RADIO_HARDWARE_RTC_CHECK,
 #endif
@@ -562,7 +562,7 @@ void menuRadioHardware(event_t event)
         }
         break;
 
-#if defined(STM32)
+#if defined(STM32) && !defined(HAVE_NO_RTC_BATTERY)
       case ITEM_RADIO_HARDWARE_RTC_BATTERY:
         lcdDrawTextAlignedLeft(y, STR_RTC_BATT);
         putsVolts(HW_SETTINGS_COLUMN2, y, getRTCBatteryVoltage(), PREC2|LEFT);

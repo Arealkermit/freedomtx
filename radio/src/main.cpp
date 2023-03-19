@@ -60,7 +60,7 @@ void handleUsbConnection()
 {
 #if defined(STM32) && !defined(SIMU)
 #if defined(RADIO_FAMILY_TBS)
-  static bool additional_popup_trigger = true;
+  bool additional_popup_trigger = getSelectedUsbMode() == USB_AGENT_MODE ? true : false;
 #endif
   if (!usbStarted()) {
     if (usbPlugged()) {
@@ -127,7 +127,7 @@ void handleUsbConnection()
       }
 #if defined(INTERNAL_MODULE_CRSF)
       else if (getSelectedUsbMode() == USB_JOYSTICK_MODE) {
-        if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_NONE)
+        if (g_model.moduleData[EXTERNAL_MODULE].type == MODULE_TYPE_CROSSFIRE)
           crossfireTurnOnRf();
       }
 #endif

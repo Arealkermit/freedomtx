@@ -78,9 +78,9 @@ void rotaryEncoderCheck();
 
 extern uint16_t sessionTimer;
 #if defined(RADIO_TANGO)
-static const uint8_t switchPosition[][2] = {{0,0}, {0,1}, {1,0}, {1,1}, {1,2}, {0,2}};
+static const uint8_t switchPosition[][2] = {{0,0}, {0,1}, {1,1}, {1,0}, {1,2}, {0,2}};
 #elif defined(RADIO_MAMBO)
-static const uint8_t switchPosition[][2] = {{0,1}, {0,0}, {1,0}, {1,1}, {0,2}, {1,2}};
+static const uint8_t switchPosition[][2] = {{0,1}, {0,0}, {1,1}, {1,0}, {0,2}, {1,2}};
 #endif
 
 // Board driver
@@ -130,6 +130,7 @@ DRESULT __disk_write(BYTE drv, const BYTE * buff, DWORD sector, UINT count);
 #define __disk_read                     disk_read
 #define __disk_write                    disk_write
 #define DISK_OPERATION_TIMEOUT          10
+#define SD_MAX_VOLT_TRIAL               ((uint32_t)0x000000FF)
 #endif
 
 #if defined(SIMU)

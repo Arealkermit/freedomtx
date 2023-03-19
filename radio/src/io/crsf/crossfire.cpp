@@ -72,7 +72,7 @@ void crsfInit(void)
 
   memset(&crossfireSharedData, 0, sizeof(CrossfireSharedData));
 
-  fw_id = (VERSION_MAJOR << 8 | (VERSION_MINOR * 16)) + VERSION_REVISION;
+  fw_id = (VERSION_MAJOR << 8 | (VERSION_MINOR * 10)) + VERSION_REVISION;
   hw_id = readBackupReg(BKREG_HW_ID_RADIO);
   serial_num = readBackupReg(BKREG_SERIAL_NO_RADIO);
   writeBackupReg(BKREG_HW_ID_RADIO, 0);

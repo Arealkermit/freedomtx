@@ -57,6 +57,12 @@ uint8_t &getTelemetryRxBufferCount(uint8_t moduleIdx)
   if (moduleIdx == INTERNAL_MODULE)
     return intTelemetryRxBufferCount;
 #endif
+
+#if defined(INTERNAL_MODULE_CRSF)
+  if (moduleIdx == INTERNAL_MODULE)
+    return intTelemetryRxBufferCount;
+#endif
+
   return telemetryRxBufferCount;
 }
 

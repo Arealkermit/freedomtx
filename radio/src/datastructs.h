@@ -782,13 +782,8 @@ PACK(struct TrainerData {
   #define BUZZER_FIELD int8_t spare4:2
 #endif
 
-#if defined(RADIO_FAMILY_TBS)
-  #define POWER_ON_SPEED    (1 + pwrOnSpeed)
-  #define POWER_OFF_SPEED   (1 + pwrOffSpeed)
-#else
   #define POWER_ON_SPEED    (2 - pwrOnSpeed)
   #define POWER_OFF_SPEED   (2 - pwrOffSpeed)
-#endif
 
 PACK(struct RadioData {
   NOBACKUP(uint8_t version);

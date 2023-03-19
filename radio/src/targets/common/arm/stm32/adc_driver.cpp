@@ -51,7 +51,7 @@
 #elif defined(RADIO_TANGO)
   const int8_t adcDirection[NUM_ANALOGS] = {1,1,1,1,  1,1};
 #elif defined(RADIO_MAMBO)
-  const int8_t adcDirection[NUM_ANALOGS] = {1,1,1,1,  1,1,  1,1,1,1,1,  1,1};
+  const int8_t adcDirection[NUM_ANALOGS] = {1,1,1,1,  -1,-1,  1,1,1,1,1,  1,1};
 #elif defined(RADIO_TPRO)
   const int8_t adcDirection[NUM_ANALOGS] = {1,-1,1,-1,  1,1,  1,  1};
 #elif defined(PCBX7)

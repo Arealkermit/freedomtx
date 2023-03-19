@@ -963,7 +963,7 @@ void checkMultiLowPower()
 }
 #endif
 
-#if defined(STM32)
+#if defined(STM32) && !defined(HAVE_NO_RTC_BATTERY)
 static void checkRTCBattery()
 {
   GET_ADC_IF_MIXER_NOT_RUNNING();
@@ -1028,10 +1028,12 @@ void checkAll()
 #endif
 
 #if defined(STM32)
+#if !defined(HAVE_NO_RTC_BATTERY)
   if (isVBatBridgeEnabled() && !g_eeGeneral.disableRtcWarning) {
     // only done once at board start
     checkRTCBattery();
   }
+#endif
   disableVBatBridge();
 #endif
 
@@ -1927,14 +1929,10 @@ void copyMinMaxToOutputs(uint8_t ch)
 
 inline uint32_t PWR_PRESS_DURATION_MIN()
 {
-#if defined(RADIO_TANGO) || defined(RADIO_MAMBO)
-  return (1 + g_eeGeneral.pwrOnSpeed) * 100;
-#else
   if (g_eeGeneral.version != EEPROM_VER)
     return 200;
 
   return (2 - g_eeGeneral.pwrOnSpeed) * 100;
-#endif
 }
 
 constexpr uint32_t PWR_PRESS_DURATION_MAX = 500; // 5s

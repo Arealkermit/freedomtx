@@ -271,6 +271,7 @@ void menuModelSelect(event_t event) {
       switch (modelSelect.selectMode) {
         case MODE_MOVE_MODEL:
           modelSelect.selectMode = MODE_SELECT_MODEL;
+          modelSelect.categorySelectMode = false;
           break;
       }
       break;

@@ -276,7 +276,7 @@ const char * loadRadioSettings(const char * path)
 #endif
     TRACE("loadRadioSettings error=%s", error);
 
-#if defined(SD_CONFIG_PROTECT) && !defined(SIMU)
+#if defined(SD_CONFIG_PROTECTION) && !defined(SIMU)
     uint32_t failedCnt = readBackupReg(BKREG_SD_FAILED_CNT);
     if (failedCnt != SD_FAILED_CNT_MAX - 1) {
       TRACE(" *** loadRadioSettings() failed cnt = %d, reset and try again", failedCnt + 1);
@@ -292,7 +292,7 @@ const char * loadRadioSettings(const char * path)
     return error;
   }
 
-#if defined(SD_CONFIG_PROTECT) && !defined(SIMU)
+#if defined(SD_CONFIG_PROTECTION) && !defined(SIMU)
   TRACE("set sd failed count as default");
   writeBackupReg(BKREG_SD_FAILED_CNT, SD_FAILED_CNT_DEF);
 #endif
@@ -345,7 +345,7 @@ void storageReadAll()
     storageEraseAll(true);
 #if defined(RADIO_FAMILY_TBS)
     bkregSetStatusFlag(STORAGE_ERASE_STATUS);
-#if defined(SD_CONFIG_PROTECT) && !defined(SIMU)
+#if defined(SD_CONFIG_PROTECTION) && !defined(SIMU)
   TRACE("set sd failed count as default");
   writeBackupReg(BKREG_SD_FAILED_CNT, SD_FAILED_CNT_DEF);
 #endif

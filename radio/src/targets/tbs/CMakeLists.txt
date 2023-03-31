@@ -46,6 +46,7 @@ add_definitions(-DLCD_VERTICAL_INVERT -DLCD_HORIZONTAL_INVERT)
 add_definitions(-DPWR_BUTTON_${PWR_BUTTON})
 add_definitions(-DSOFTWARE_VOLUME)
 add_definitions(-DBATT_CRITICAL_SHUTDOWN)
+add_definitions(-DSD_CONFIG_PROTECTION)
 add_definitions(-DMANUFACTURER_TBS)
 
 if(HAVE_NO_TRAINER)

@@ -1,6 +1,6 @@
-#!/usr/bin/env python
-from __future__ import print_function
+#!/usr/bin/env python3
 
+import find_clang
 import sys
 import clang.cindex
 import time
@@ -10,24 +10,8 @@ import os
 structs = []
 extrastructs = []
 
-
-def find_libclang():
-    if sys.platform == "darwin":
-        for path in ("/usr/local/Cellar/llvm/6.0.0/lib/libclang.dylib",
-                     "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libclang.dylib",
-                     "/Library/Developer/CommandLineTools/usr/lib/libclang.dylib"):
-            if os.path.exists(path):
-                return path
-    elif sys.platform.startswith("linux"):
-        for version in ("10", "7", "6.0", "3.8"):
-            path = "/usr/lib/x86_64-linux-gnu/libclang-%s.so.1" % version
-            if os.path.exists(path):
-                return path
-        for path in ("/usr/local/lib/libclang.so",
-                     "/usr/lib/libclang.so"):
-            if os.path.exists(path):
-                return path
-
+def valid_spelling(spelling):
+    return spelling and not spelling.startswith("(")
 
 def build_struct(cursor, anonymousUnion=False):
     if not anonymousUnion:
@@ -36,12 +20,12 @@ def build_struct(cursor, anonymousUnion=False):
 
     for c in cursor.get_children():
         if c.kind == clang.cindex.CursorKind.UNION_DECL:
-            if c.spelling:
+            if valid_spelling(c.spelling):
                 raise Exception("Cannot handle non anonymous unions")
 
             copied_union_member = False
             for uc in c.get_children():
-                if not uc.spelling or uc.kind == clang.cindex.CursorKind.PACKED_ATTR:
+                if not valid_spelling(uc.spelling) or uc.kind == clang.cindex.CursorKind.PACKED_ATTR:
                     # Ignore
                     pass
                 else:
@@ -83,9 +67,9 @@ def copy_decl(c, spelling):
             print("  }")
         else:
             print("  memcpy(dest->%s, src->%s, sizeof(dest->%s));" % (spelling, spelling, spelling))
-    elif len(children) == 1 and children[0].kind == clang.cindex.CursorKind.STRUCT_DECL and not children[0].spelling:
+    elif len(children) == 1 and children[0].kind == clang.cindex.CursorKind.STRUCT_DECL and not valid_spelling(children[0].spelling):
         # inline declared structs
-        if c.semantic_parent.spelling:
+        if valid_spelling(c.semantic_parent.spelling):
             spelling_func = c.semantic_parent.spelling + "_" + spelling
         else:
             spelling_func = c.semantic_parent.semantic_parent.spelling + "_" + spelling
@@ -109,13 +93,16 @@ def print_translation_unit_diags(diags, prefix=''):
 
 
 def main():
-    libclang = find_libclang()
-    if libclang:
-        # print(libclang, file=sys.stderr)
-        clang.cindex.Config.set_library_file(libclang)
 
-    index = clang.cindex.Index.create()
-    translation_unit = index.parse(sys.argv[1], ['-x', 'c++', '-std=c++11'] + sys.argv[2:])
+    if not find_clang.initLibClang():
+        sys.exit(-1)
+
+    index = find_clang.index
+    args = ['-x', 'c++', '-std=c++11'] + sys.argv[2:]
+    if find_clang.builtin_hdr_path:
+        args.append("-I" + find_clang.builtin_hdr_path)
+
+    translation_unit = index.parse(sys.argv[1], args)
 
     if translation_unit.diagnostics:
         print_translation_unit_diags(translation_unit.diagnostics)

@@ -246,6 +246,7 @@ const char * loadModel(const char * filename, bool alarms)
 const char * loadRadioSettings(const char * path)
 {
   uint8_t version;
+  uint8_t convetSuceess = 0;
   const char * error = loadFile(path, (uint8_t *)&g_eeGeneral, sizeof(g_eeGeneral), &version);
 
   if (error) {
@@ -261,6 +262,7 @@ const char * loadRadioSettings(const char * path)
         //re-load
         error = loadFile(path, (uint8_t *) &g_eeGeneral, sizeof(g_eeGeneral), &version);
         if (!error) {
+          convetSuceess = 1;
           TRACE("convert radio data of v1.30 success");
         }
         else {
@@ -269,24 +271,22 @@ const char * loadRadioSettings(const char * path)
         }
       }
     }
-    else {
-      TRACE("loadRadioSettings error=%s", error);
-      return error;
-    }
 #endif
     TRACE("loadRadioSettings error=%s", error);
 
 #if defined(SD_CONFIG_PROTECTION) && !defined(SIMU)
-    uint32_t failedCnt = readBackupReg(BKREG_SD_FAILED_CNT);
-    if (failedCnt != SD_FAILED_CNT_MAX - 1) {
-      TRACE(" *** loadRadioSettings() failed cnt = %d, reset and try again", failedCnt + 1);
-      if (failedCnt > SD_FAILED_CNT_MAX - 1)
-        writeBackupReg(BKREG_SD_FAILED_CNT, SD_FAILED_CNT_DEF + 1);
-      else
-        writeBackupReg(BKREG_SD_FAILED_CNT, failedCnt + 1);
-      delay_ms(88);
-      NVIC_SystemReset();
-      WDG_RESET();
+    if (!convetSuceess) {
+      uint32_t failedCnt = readBackupReg(BKREG_SD_FAILED_CNT);
+      if (failedCnt != SD_FAILED_CNT_MAX) {
+        TRACE(" *** loadRadioSettings() failed cnt = %d, reset and try again", failedCnt + 1);
+        if (failedCnt > SD_FAILED_CNT_MAX)
+          writeBackupReg(BKREG_SD_FAILED_CNT, SD_FAILED_CNT_DEF);
+        else
+          writeBackupReg(BKREG_SD_FAILED_CNT, failedCnt + 1);
+        delay_ms(88);
+        NVIC_SystemReset();
+        WDG_RESET();
+      }
     }
 #endif
     return error;

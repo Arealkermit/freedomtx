@@ -24,33 +24,52 @@
 
 #include "datastructs_130.h"
 
-#define LOG_SOURCE_CH1_130            157
-#define MIX_SOURCE_CH1_130            157
+#define INPUT_SOURCE_POT1_130         78
 #define INPUT_SOURCE_CH1_130          157
+
+#define MIX_SOURCE_POT1_130           78
+#define MIX_SOURCE_CH1_130            157 
+
+#define LOG_SOURCE_POT1_130           78
+#define LOG_SOURCE_CH1_130            157
+
 #define SPE_FUNC_TRAINER_130          1
 #define SPE_FUNC_SET_FAILSAFE_130     7
 
 Conversion_130::RadioData_v130 oldRadio;
 Conversion_130::ModelData_v130 oldModel;
 
-int convertLogicalSource_130_to_137(int source)
+int convertInputSource_130_to_137(int source)
 {
-  if (source >= LOG_SOURCE_CH1_130)
+#if defined(RADIO_TANGO)
+  if (source > INPUT_SOURCE_POT1_130)
+    source += 2;
+#endif
+  if (source >= INPUT_SOURCE_CH1_130)
     source += 16;
+
   return source;
 }
 
-void convertMixSource_130_to_137(int source, int *new_source)
+int convertMixSource_130_to_137(int source)
 {
+#if defined(RADIO_TANGO)
+  if (source > MIX_SOURCE_POT1_130)
+    source += 2;
+#endif
   if (source >= MIX_SOURCE_CH1_130)
     source += 16;
 
-  *new_source = source;
+  return source;
 }
 
-int convertInputSource_130_to_137(int source)
+int convertLogicalSource_130_to_137(int source)
 {
-  if (source >= INPUT_SOURCE_CH1_130)
+#if defined(RADIO_TANGO)
+  if (source > LOG_SOURCE_POT1_130)
+    source += 2;
+#endif
+  if (source >= LOG_SOURCE_CH1_130)
     source += 16;
 
   return source;
@@ -249,11 +268,9 @@ bool ModelsList::forceLoad()
 
 void convertModelData_130_to_137(Conversion_130::ModelData_v130 &oldModel, ModelData &g_model)
 {
-  int new_source;
-
   TRACE("*** old model size = %d", sizeof(Conversion_130::ModelData_v130));
 
-  static_assert(sizeof(Conversion_130::ModelData_v130) >= sizeof(ModelData), "ModelData size has been reduced");
+  static_assert(sizeof(Conversion_130::ModelData_v130) <= sizeof(ModelData), "ModelData size has been reduced");
 
   memcpy(&g_model.header.name, &oldModel.header.name, sizeof(oldModel.header.name));
   memcpy(&g_model.header.modelId, &oldModel.header.modelId, sizeof(oldModel.header.modelId));
@@ -284,13 +301,21 @@ void convertModelData_130_to_137(Conversion_130::ModelData_v130 &oldModel, Model
     RTOS_WAIT_MS(1);
     g_model.customFn[i].swtch = oldModel.customFn[i].swtch;
     g_model.customFn[i].func = oldModel.customFn[i].func;
-    memmove(&g_model.customFn[i].play.name, &oldModel.customFn[i].play.name, sizeof(oldModel.customFn[i].play.name));
-    g_model.customFn[i].all.val = oldModel.customFn[i].all.val;
-    g_model.customFn[i].all.mode = oldModel.customFn[i].all.mode;
-    g_model.customFn[i].all.param = oldModel.customFn[i].all.param;
-    g_model.customFn[i].all.spare = oldModel.customFn[i].all.spare;
-    g_model.customFn[i].clear.val1 = oldModel.customFn[i].clear.val1;
-    g_model.customFn[i].clear.val2 = oldModel.customFn[i].clear.val2;
+
+    uint16_t func = g_model.customFn[i].func;
+    if (func == FUNC_PLAY_TRACK || func == FUNC_BACKGND_MUSIC || func == FUNC_PLAY_SCRIPT) {
+      if (ZEXIST(oldModel.customFn[i].play.name))
+        memmove(&g_model.customFn[i].play.name, &oldModel.customFn[i].play.name, sizeof(oldModel.customFn[i].play.name));
+    }
+    else if (oldModel.customFn[i].all.val)
+      g_model.customFn[i].all.val = convertInputSource_130_to_137(oldModel.customFn[i].all.val);
+    else if (oldModel.customFn[i].all.mode)
+      g_model.customFn[i].all.mode = oldModel.customFn[i].all.mode;
+    else if (oldModel.customFn[i].all.param)
+      g_model.customFn[i].all.param = oldModel.customFn[i].all.param;
+    else if (oldModel.customFn[i].all.spare)
+      g_model.customFn[i].all.spare = oldModel.customFn[i].all.spare;
+
     g_model.customFn[i].active = oldModel.customFn[i].active;
   }
 
@@ -405,7 +430,6 @@ void convertModelData_130_to_137(Conversion_130::ModelData_v130 &oldModel, Model
 
   memcpy(&g_model.modelRegistrationID, &oldModel.modelRegistrationID, sizeof(oldModel.modelRegistrationID));
 
-
   for (int i = 0; i < MAX_EXPOS; i++)
   {
     g_model.expoData[i].srcRaw = convertInputSource_130_to_137(oldModel.expoData[i].srcRaw);
@@ -413,8 +437,7 @@ void convertModelData_130_to_137(Conversion_130::ModelData_v130 &oldModel, Model
 
   for (int i = 0; i < MAX_MIXERS; i++)
   {
-    convertMixSource_130_to_137(g_model.mixData[i].srcRaw, &new_source);
-    g_model.mixData[i].srcRaw = new_source;
+    g_model.mixData[i].srcRaw = convertMixSource_130_to_137(oldModel.mixData[i].srcRaw);
   }
 
   for (int i = 0; i < MAX_LOGICAL_SWITCHES; i++)
@@ -515,13 +538,21 @@ void convertRadio_130_137()
     RTOS_WAIT_MS(1);
     g_eeGeneral.customFn[i].swtch = oldRadio.customFn[i].swtch;
     g_eeGeneral.customFn[i].func = oldRadio.customFn[i].func;
-    memmove(&g_eeGeneral.customFn[i].play.name, &oldRadio.customFn[i].play.name, sizeof(oldRadio.customFn[i].play.name));
-    g_eeGeneral.customFn[i].all.val = oldRadio.customFn[i].all.val;
-    g_eeGeneral.customFn[i].all.mode = oldRadio.customFn[i].all.mode;
-    g_eeGeneral.customFn[i].all.param = oldRadio.customFn[i].all.param;
-    g_eeGeneral.customFn[i].all.spare = oldRadio.customFn[i].all.spare;
-    g_eeGeneral.customFn[i].clear.val1 = oldRadio.customFn[i].clear.val1;
-    g_eeGeneral.customFn[i].clear.val2 = oldRadio.customFn[i].clear.val2;
+
+    uint16_t func = g_eeGeneral.customFn[i].func;
+    if (func == FUNC_PLAY_TRACK || func == FUNC_BACKGND_MUSIC || func == FUNC_PLAY_SCRIPT) {
+      if (ZEXIST(oldRadio.customFn[i].play.name))
+        memmove(&g_eeGeneral.customFn[i].play.name, &oldRadio.customFn[i].play.name, sizeof(oldRadio.customFn[i].play.name));
+    }
+    else if (oldRadio.customFn[i].all.val)
+      g_eeGeneral.customFn[i].all.val = convertInputSource_130_to_137(oldRadio.customFn[i].all.val);
+    else if (oldRadio.customFn[i].all.mode)
+      g_eeGeneral.customFn[i].all.mode = oldRadio.customFn[i].all.mode;
+    else if (oldRadio.customFn[i].all.param)
+      g_eeGeneral.customFn[i].all.param = oldRadio.customFn[i].all.param;
+    else if (oldRadio.customFn[i].all.spare)
+      g_eeGeneral.customFn[i].all.spare = oldRadio.customFn[i].all.spare;
+
     g_eeGeneral.customFn[i].active = oldRadio.customFn[i].active;
   }
 

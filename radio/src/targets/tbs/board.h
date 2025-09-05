@@ -56,14 +56,14 @@ void rotaryEncoderCheck();
 #define PERI1_FREQUENCY                 42000000
 #define PERI2_FREQUENCY                 84000000
 
-#if defined(PCBTANGO)
+#if defined(RADIO_TANGO)
 #define MODEL_DATA_SIZE_130             6253
-#define MODEL_DATA_SIZE_137             6155
+#define MODEL_DATA_SIZE_137             6435
 #define RADIO_DATA_SIZE_130             721
 #define RADIO_DATA_SIZE_137             846
-#elif defined(PCBMAMBO)
+#elif defined(RADIO_MAMBO)
 #define MODEL_DATA_SIZE_130             6255
-#define MODEL_DATA_SIZE_137             6157
+#define MODEL_DATA_SIZE_137             6437
 #define RADIO_DATA_SIZE_130             739
 #define RADIO_DATA_SIZE_137             864
 #endif

@@ -48,6 +48,7 @@ add_definitions(-DSOFTWARE_VOLUME)
 add_definitions(-DBATT_CRITICAL_SHUTDOWN)
 add_definitions(-DSD_CONFIG_PROTECTION)
 add_definitions(-DMANUFACTURER_TBS)
+add_definitions(-DMODELS_IN_POP_UP_MENU)
 
 if(HAVE_NO_TRAINER)
   add_definitions(-DRADIO_HAVE_NO_TRAINER)

@@ -1022,10 +1022,10 @@ static inline void check_struct()
   CHKSIZE(ModelData, 6157);
 #elif defined(RADIO_TANGO)
   CHKSIZE(RadioData, 846);
-  CHKSIZE(ModelData, 6155);
+  CHKSIZE(ModelData, 6435);
 #elif defined(RADIO_MAMBO)
   CHKSIZE(RadioData, 864);
-  CHKSIZE(ModelData, 6157);
+  CHKSIZE(ModelData, 6437);
 #elif defined(RADIO_TPRO)
   CHKSIZE(RadioData, 845);
   CHKSIZE(ModelData, 6185);

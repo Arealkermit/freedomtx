@@ -44,9 +44,6 @@ struct {
   bool modelSelected = false;
   ModelCell * currentModel = nullptr;
   ModelCell * selectedModel = nullptr;
-  tmr10ms_t preEnterTime;
-  bool preEnterValid = false;
-  bool categorySelectMode = false;
   uint16_t categoriesVerticalOffset = 0;
   uint16_t categoriesVerticalPosition = 0;
 } modelSelect;
@@ -199,7 +196,6 @@ void onModelSelectMenu(const char * result)
   else if (result == STR_MOVE_MODEL) {
     setCurrentModel(menuVerticalPosition);
     modelSelect.selectMode = MODE_MOVE_MODEL;
-    modelSelect.categorySelectMode = true;
   }
   else if (result == STR_CREATE_CATEGORY) {
     modelSelect.currentCategory = modelslist.createCategory();
@@ -247,9 +243,6 @@ void menuModelSelect(event_t event) {
 
   const std::list<ModelsCategory*>& cats = modelslist.getCategories();
 
-  title(STR_MENUMODELSEL);
-  drawScreenIndex(MENU_MODEL_SELECT, DIM(menuTabModel), 0);
-
   event_t _event_ = ((event==EVT_KEY_BREAK(KEY_ENTER) || event==EVT_KEY_LONG(KEY_ENTER)) ? 0 : event);
   check_submenu_simple(_event_, modelSelect.currentCategory ? modelSelect.currentCategory->size() : 30);
 
@@ -257,13 +250,10 @@ void menuModelSelect(event_t event) {
     case EVT_ENTRY:
       modelSelect.selectMode = MODE_SELECT_MODEL;
       initModelsList();
-      modelSelect.preEnterValid = false;
-      modelSelect.categorySelectMode = false;
       break;
     case EVT_KEY_BREAK(KEY_ENTER):
       if (modelSelect.selectMode == MODE_MOVE_MODEL) {
         modelSelect.selectMode = MODE_SELECT_MODEL;
-        modelSelect.categorySelectMode = false;
       }
       killEvents(event);
       break;
@@ -271,81 +261,58 @@ void menuModelSelect(event_t event) {
       switch (modelSelect.selectMode) {
         case MODE_MOVE_MODEL:
           modelSelect.selectMode = MODE_SELECT_MODEL;
-          modelSelect.categorySelectMode = false;
           break;
-      }
-      break;
-    case EVT_KEY_FIRST(KEY_ENTER):
-      if (!modelSelect.preEnterValid) {
-        modelSelect.preEnterValid = true;
-        modelSelect.preEnterTime = get_tmr10ms();
-      }
-      else {
-        modelSelect.preEnterValid = false;
-        modelSelect.categorySelectMode = !modelSelect.categorySelectMode;
-        if (modelSelect.categorySelectMode)
-          AUDIO_CATEGORY_ENABLE();
-        else
-          AUDIO_CATEGORY_DISABLE();
+        case MODE_SELECT_MODEL:
+          chainMenu(menuMainView);
+          return;
       }
       break;
     case EVT_KEY_BREAK(KEY_PAGE):
     {
-      if (modelSelect.categorySelectMode) {
-        if (modelSelect.categoriesVerticalPosition >= cats.size() - 1)
-          modelSelect.categoriesVerticalPosition = 0;
-        else
-          modelSelect.categoriesVerticalPosition += 1;
+      if (modelSelect.categoriesVerticalPosition >= cats.size() - 1)
+        modelSelect.categoriesVerticalPosition = 0;
+      else
+        modelSelect.categoriesVerticalPosition += 1;
 
-        if (modelSelect.selectMode == MODE_SELECT_MODEL) {
-          setCurrentCategory(modelSelect.categoriesVerticalPosition);
-          menuVerticalPosition = 0;
-        }
-        if (modelSelect.selectMode == MODE_MOVE_MODEL) {
-          ModelsCategory * previous_category = modelSelect.currentCategory;
-          ModelCell * model = modelSelect.currentModel;
-          setCurrentCategory(modelSelect.categoriesVerticalPosition);
-          modelslist.moveModel(model, previous_category, modelSelect.currentCategory);
-          menuVerticalPosition = modelSelect.currentCategory->size()-1;
-        }
+      if (modelSelect.selectMode == MODE_SELECT_MODEL) {
+        setCurrentCategory(modelSelect.categoriesVerticalPosition);
+        menuVerticalPosition = 0;
+      }
+      if (modelSelect.selectMode == MODE_MOVE_MODEL) {
+        ModelsCategory * previous_category = modelSelect.currentCategory;
+        ModelCell * model = modelSelect.currentModel;
+        setCurrentCategory(modelSelect.categoriesVerticalPosition);
+        modelslist.moveModel(model, previous_category, modelSelect.currentCategory);
+        menuVerticalPosition = modelSelect.currentCategory->size()-1;
+      }
 
-        modelSelect.subModelIndex = -1;
-        modelSelect.modelSelected = false;
-        killEvents(event);
-      }
-      else {
-        chainMenu(menuModelSetup);
-      }
+      modelSelect.subModelIndex = -1;
+      modelSelect.modelSelected = false;
+      killEvents(event);
       break;
     }
 
     case EVT_KEY_LONG(KEY_PAGE):
     {
-      if (modelSelect.categorySelectMode) {
-        if (modelSelect.categoriesVerticalPosition == 0)
-          modelSelect.categoriesVerticalPosition = cats.size() - 1;
-        else
-          modelSelect.categoriesVerticalPosition -= 1;
+      if (modelSelect.categoriesVerticalPosition == 0)
+        modelSelect.categoriesVerticalPosition = cats.size() - 1;
+      else
+        modelSelect.categoriesVerticalPosition -= 1;
 
-        if (modelSelect.selectMode == MODE_SELECT_MODEL) {
-          setCurrentCategory(modelSelect.categoriesVerticalPosition);
-          menuVerticalPosition = 0;
-        }
-        if (modelSelect.selectMode == MODE_MOVE_MODEL) {
-          ModelsCategory * previous_category = modelSelect.currentCategory;
-          ModelCell * model = modelSelect.currentModel;
-          setCurrentCategory(modelSelect.categoriesVerticalPosition);
-          modelslist.moveModel(model, previous_category, modelSelect.currentCategory);
-        }
+      if (modelSelect.selectMode == MODE_SELECT_MODEL) {
+        setCurrentCategory(modelSelect.categoriesVerticalPosition);
+        menuVerticalPosition = 0;
+      }
+      if (modelSelect.selectMode == MODE_MOVE_MODEL) {
+        ModelsCategory * previous_category = modelSelect.currentCategory;
+        ModelCell * model = modelSelect.currentModel;
+        setCurrentCategory(modelSelect.categoriesVerticalPosition);
+        modelslist.moveModel(model, previous_category, modelSelect.currentCategory);
+      }
 
-        modelSelect.subModelIndex = -1;
-        modelSelect.modelSelected = false;
-        killEvents(event);
-      }
-      else {
-        chainMenu(menuTabModel[DIM(menuTabModel)-1]);
-        killEvents(event);
-      }
+      modelSelect.subModelIndex = -1;
+      modelSelect.modelSelected = false;
+      killEvents(event);
       break;
     }
     case EVT_KEY_LONG(KEY_ENTER):
@@ -375,10 +342,6 @@ void menuModelSelect(event_t event) {
       break;
     default:
       break;
-  }
-
-  if (modelSelect.preEnterValid && (get_tmr10ms() - modelSelect.preEnterTime) > 50) {
-    modelSelect.preEnterValid = false;
   }
 
   int index = 0;

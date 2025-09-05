@@ -2020,7 +2020,11 @@ void opentxInit()
 #if defined(GUI)
   menuHandlers[0] = menuMainView;
   #if MENUS_LOCK != 2/*no menus*/
-    menuHandlers[1] = menuModelSelect;
+    #if defined(MODELS_IN_POP_UP_MENU)
+      menuHandlers[1] = menuModelSetup;
+    #else
+      menuHandlers[1] = menuModelSelect;
+    #endif
   #endif
 #endif
 

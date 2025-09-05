@@ -336,6 +336,12 @@ void displayVoltageOrAlarm()
 
 void onMainViewMenu(const char * result)
 {
+#if defined(MODELS_IN_POP_UP_MENU)
+  if (result == STR_MODEL_SELECT) {
+    chainMenu(menuModelSelect);
+  }
+  else
+#endif
   if (result == STR_RESET_TIMER1) {
     timerReset(0);
   }
@@ -438,6 +444,9 @@ void menuMainView(event_t event)
     case EVT_KEY_CONTEXT_MENU:
       killEvents(event);
 
+#if defined(MODELS_IN_POP_UP_MENU)
+      POPUP_MENU_ADD_ITEM(STR_MODEL_SELECT);
+#endif
       if (modelHasNotes()) {
         POPUP_MENU_ADD_ITEM(STR_VIEW_NOTES);
       }
@@ -458,7 +467,11 @@ void menuMainView(event_t event)
 #endif
 
     case EVT_KEY_MODEL_MENU:
+#if defined(MODELS_IN_POP_UP_MENU)
+      pushMenu(menuModelSetup);
+#else
       pushMenu(menuModelSelect);
+#endif
       killEvents(event);
       break;
 

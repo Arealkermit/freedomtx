@@ -40,6 +40,34 @@ jobs:
                 ..
 
               make -j2 firmware
+              echo "===== VERIFY GHOST CMAKE OPTION ====="
+              grep "^GHOST:" CMakeCache.txt || true
+
+              echo "===== VERIFY -DGHOST COMPILER FLAG ====="
+              grep -R --include="flags.make" -- "-DGHOST" . | head -20 || true
+
+              echo "===== GHOST OBJECT FILES ====="
+              find . -type f -iname "*ghost*.o" -print
+
+              echo "===== GHOST OBJECT SYMBOLS ====="
+              find . -type f -iname "*ghost*.o" | while read obj; do
+                echo "--- $obj ---"
+                arm-none-eabi-nm -C "$obj" | grep -Ei "ghost|ghst" || true
+              done
+
+              echo "===== LINKED ELF FILES ====="
+              find . -type f -name "*.elf" -print
+
+              ELF=$(find . -type f -name "*.elf" | head -n 1)
+
+              if [ -n "$ELF" ]; then
+                echo "===== GHOST SYMBOLS IN FINAL ELF ====="
+                arm-none-eabi-nm -C "$ELF" | grep -E \
+                  "setupPulsesGhost|createGhostChannelsFrame|processGhostTelemetryFrame|getGhostModuleAddr" \
+                  || true
+              else
+                echo "No ELF file found"
+              fi
             '
 
       - name: Show firmware information

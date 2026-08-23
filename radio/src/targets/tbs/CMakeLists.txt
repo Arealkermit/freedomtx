@@ -4,6 +4,7 @@ option(LCD_DUAL_BUFFER "Dual LCD Buffer" OFF)
 
 option(PXX1 "PXX1 protocol support" ON)
 option(PXX2 "PXX2 protocol support" OFF)
+option(GHOST "Ghost TX Module" ON)
 option(INTERNAL_MODULE_PXX1 "Support for PXX1 internal module" OFF)
 option(INTERNAL_MODULE_PXX2 "Support for PXX2 internal module" OFF)
 

@@ -10,41 +10,44 @@ jobs:
   build-tango:
     runs-on: ubuntu-latest
 
-    container:
-      image: ghcr.io/raphaelcoeffic/opentx-commit-tests
-
     steps:
       - name: Checkout FreedomTX
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Configure Tango 2
+      - name: Build Tango 2 inside OpenTX toolchain
         run: |
-          mkdir -p build-tango
-          cd build-tango
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src" \
+            -w /src \
+            ghcr.io/raphaelcoeffic/opentx-commit-tests \
+            /bin/bash -lc '
+              set -e
 
-          cmake \
-            -DDISABLE_COMPANION=YES \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DPCB=TANGO \
-            -DHELI=YES \
-            -DLUA=YES \
-            -DGVARS=YES \
-            -DCROSSFIRE=ON \
-            ..
+              rm -rf build-tango
+              mkdir build-tango
+              cd build-tango
 
-      - name: Build Tango 2 firmware
-        run: |
-          cd build-tango
-          make -j2 firmware
+              cmake \
+                -DDISABLE_COMPANION=YES \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DPCB=TANGO \
+                -DHELI=YES \
+                -DLUA=YES \
+                -DGVARS=YES \
+                -DCROSSFIRE=ON \
+                ..
+
+              make -j2 firmware
+            '
 
       - name: Show firmware information
         run: |
           ls -lh build-tango/firmware.bin
           sha256sum build-tango/firmware.bin
 
-      - name: Upload firmware
+      - name: Upload Tango 2 firmware
         uses: actions/upload-artifact@v4
         with:
           name: tango2-stock-firmware

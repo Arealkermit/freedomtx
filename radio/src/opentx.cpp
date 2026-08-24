@@ -134,7 +134,7 @@ void per10ms()
 #endif
 
   if (trimsCheckTimer) trimsCheckTimer--;
-#if defined(TRAINER_GPIO)
+#if defined(TRAINER_GPIO) || defined(RADIO_FAMILY_TBS)
   if (ppmInputValidityTimer) ppmInputValidityTimer--;
 #endif
   if (trimsDisplayTimer)

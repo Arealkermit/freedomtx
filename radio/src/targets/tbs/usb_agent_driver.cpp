@@ -40,6 +40,7 @@ extern usbMode selectedUsbMode;
 #define USB_HID_INEP1_TXFIFO_FREE_WORD          0x80U
 #define USB_HID_INEP1_TXFIFO_FREE_WORD_MASK     0xFFFFU
 #define LIBCRSF_BF_LINK_STATISTICS              0x14
+#define USB_TRAINER_VALID_TIMEOUT               15
 
 static Fifo<uint8_t, USB_HID_FIFO_SIZE> * hidTxFifo = 0;
 
@@ -188,7 +189,7 @@ void agentHandler()
            * This timer is decremented by FreedomTX every 10 ms.
            * If packets stop, trainer control automatically becomes invalid.
            */
-          ppmInputValidityTimer = PPM_IN_VALID_TIMEOUT;
+          ppmInputValidityTimer = USB_TRAINER_VALID_TIMEOUT;
 
           /*
            * Do NOT route computer-generated RC frames elsewhere.

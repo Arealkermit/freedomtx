@@ -132,8 +132,74 @@ void agentHandler()
     ReportReceived = 2;
     memcpy(hidBuffer, HidBuffer, HID_AGENT_OUT_PACKET);
     ReportReceived = 0;
+
     for (uint8_t i = 0; i < HID_AGENT_OUT_PACKET; i++) {
       if (libCrsfParse(&hidCrsfData, hidBuffer[i])) {
+
+        /*
+         * USB TRAINER PROTOTYPE
+         *
+         * CRSF frame type 0x16 = RC_CHANNELS_PACKED.
+         * When Trainer mode is Master/Multi, consume this frame locally
+         * and use its 16 channels as FreedomTX trainer inputs.
+         */
+        if (hidCrsfData.payload[LIBCRSF_TYPE_ADD] ==
+              LIBCRSF_BF_RC_CHANNELS_PACK &&
+            hidCrsfData.payload[LIBCRSF_LENGTH_ADD] == 24 &&
+            g_model.trainerData.mode == TRAINER_MODE_MULTI) {
+
+          uint32_t inputBits = 0;
+          uint8_t bitsAvailable = 0;
+          uint8_t byteIndex = LIBCRSF_PAYLOAD_START_ADD;
+
+          const uint16_t channelMask =
+            (1U << LIBCRSF_RC_RESOLUTION) - 1U;
+
+          const uint8_t channelCount =
+            (MAX_TRAINER_CHANNELS < LIBCRSF_RC_MAX_NUMBER_OF_CHANNEL)
+              ? MAX_TRAINER_CHANNELS
+              : LIBCRSF_RC_MAX_NUMBER_OF_CHANNEL;
+
+          for (uint8_t ch = 0; ch < channelCount; ch++) {
+
+            while (bitsAvailable < LIBCRSF_RC_RESOLUTION) {
+              inputBits |=
+                ((uint32_t)hidCrsfData.payload[byteIndex++])
+                << bitsAvailable;
+
+              bitsAvailable += 8;
+            }
+
+            uint16_t value = inputBits & channelMask;
+
+            /*
+             * CRSF center = 992.
+             * FreedomTX trainer input range is approximately -512..+512.
+             */
+            ppmInput[ch] =
+              ((int32_t)value - LIBCRSF_RC_CENTER) * 5 / 8;
+
+            inputBits >>= LIBCRSF_RC_RESOLUTION;
+            bitsAvailable -= LIBCRSF_RC_RESOLUTION;
+          }
+
+          /*
+           * Mark trainer input valid.
+           * This timer is decremented by FreedomTX every 10 ms.
+           * If packets stop, trainer control automatically becomes invalid.
+           */
+          ppmInputValidityTimer = PPM_IN_VALID_TIMEOUT;
+
+          /*
+           * Do NOT route computer-generated RC frames elsewhere.
+           */
+          break;
+        }
+
+        /*
+         * Everything other than our USB trainer RC frame behaves exactly
+         * like stock TBS Agent.
+         */
         libCrsfRouting(USB_HID, hidCrsfData.payload);
         break;
       }

@@ -62,6 +62,70 @@ static uint8_t isUsbIdle()
   return idle;
 }
 
+static void usbTrainerStatusTX()
+{
+  // Only report trainer status while using our current USB trainer setup.
+  if (selectedUsbMode != USB_AGENT_MODE ||
+      g_model.trainerData.mode != TRAINER_MODE_MULTI ||
+      !usbStarted()) {
+    return;
+  }
+
+  // Send status every 50 ms.
+  static tmr10ms_t lastStatusTime = 0;
+  tmr10ms_t now = get_tmr10ms();
+
+  if ((tmr10ms_t)(now - lastStatusTime) < 5) {
+    return;
+  }
+
+  if (!isUsbIdle()) {
+    return;
+  }
+
+  lastStatusTime = now;
+
+  bool trainerHandoffActive = false;
+
+  // This checks the same trainer-function state the mixer itself uses.
+  for (uint8_t ch = 0; ch < NUM_STICKS; ch++) {
+    if (isFunctionActive(FUNCTION_TRAINER_STICK1 + ch)) {
+      trainerHandoffActive = true;
+      break;
+    }
+  }
+
+  uint8_t report[HID_AGENT_IN_PACKET];
+  memset(report, 0, sizeof(report));
+
+  // Private trainer-status signature:
+  // "T2TR"
+  report[0] = 'T';
+  report[1] = '2';
+  report[2] = 'T';
+  report[3] = 'R';
+
+  // Status protocol version
+  report[4] = 1;
+
+  // Flags:
+  // bit 0 = instructor has enabled trainer handoff
+  // bit 1 = trainer input data is currently valid
+  report[5] = 0;
+
+  if (trainerHandoffActive) {
+    report[5] |= 0x01;
+  }
+
+  if (isTrainerInputValid()) {
+    report[5] |= 0x02;
+  }
+
+  // Useful for debugging the 150 ms failsafe.
+  report[6] = ppmInputValidityTimer;
+
+  usbAgentWrite(report);
+}
 void usbTX()
 {
   static uint8_t isbusy = 0;
@@ -126,6 +190,7 @@ void agentHandler()
   static libCrsfParseData hidCrsfData;
   uint8_t hidBuffer[HID_AGENT_OUT_PACKET];
 
+  usbTrainerStatusTX();
   usbTX();
 
   while (ReportReceived) {

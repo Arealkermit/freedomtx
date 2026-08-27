@@ -1,0 +1,196 @@
+name: Release Tango 2 Racing Trainer
+
+on:
+  push:
+    tags:
+      - "trainer-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Normalize trainer source filename
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:GITHUB_WORKSPACE "tools\tango2-trainer"
+          $canonical = Join-Path $dir "tango_trainer_gui_v1_1.py"
+          $legacy = Join-Path $dir "tango_trainer_gui_v1_1(1).py"
+
+          if (-not (Test-Path $canonical)) {
+              if (Test-Path $legacy) {
+                  Copy-Item $legacy $canonical
+                  Write-Host "Using legacy source filename: tango_trainer_gui_v1_1(1).py"
+              }
+              else {
+                  throw "Trainer Python source was not found."
+              }
+          }
+
+      - name: Build standalone EXE
+        shell: pwsh
+        working-directory: tools/tango2-trainer
+        run: |
+          Set-ExecutionPolicy -Scope Process Bypass
+          .\build_windows.ps1
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build stable-name installer
+        shell: pwsh
+        working-directory: tools/tango2-trainer
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^trainer-v', ''
+          $iss = ".\Tango2RacingTrainer.iss"
+
+          $text = Get-Content $iss -Raw
+          $text = $text -replace '#define MyAppVersion "[^"]+"', "#define MyAppVersion `"$version`""
+          $text = $text -replace 'OutputBaseFilename=.*', 'OutputBaseFilename=Tango2RacingTrainer_Setup'
+          Set-Content -Path $iss -Value $text -Encoding UTF8
+
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" $iss
+
+          if (-not (Test-Path ".\installer\Tango2RacingTrainer_Setup.exe")) {
+              throw "Installer was not created."
+          }
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: tango2-racing-trainer-windows
+          path: tools/tango2-trainer/installer/Tango2RacingTrainer_Setup.exe
+          if-no-files-found: error
+
+  build-firmware:
+    name: Build raw Tango 2 firmware
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout FreedomTX
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build Tango 2 firmware
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/src" \
+            -w /src \
+            ghcr.io/raphaelcoeffic/opentx-commit-tests \
+            /bin/bash -lc '
+              set -e
+
+              rm -rf build-tango
+              mkdir build-tango
+              cd build-tango
+
+              cmake \
+                -DDISABLE_COMPANION=YES \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DPCB=TANGO \
+                -DHELI=YES \
+                -DLUA=YES \
+                -DGVARS=YES \
+                -DCROSSFIRE=ON \
+                ..
+
+              make -j2 firmware
+            '
+
+      - name: Name and hash raw firmware
+        run: |
+          mkdir -p release-firmware
+          cp build-tango/firmware.bin \
+            release-firmware/tango2-ghst-usbtrainer-override-local-RAW.bin
+          sha256sum \
+            release-firmware/tango2-ghst-usbtrainer-override-local-RAW.bin \
+            > release-firmware/FIRMWARE_RAW_SHA256.txt
+
+      - name: Upload raw firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tango2-trainer-raw-firmware
+          path: release-firmware/*
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - build-windows
+      - build-firmware
+
+    steps:
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: tango2-racing-trainer-windows
+          path: release
+
+      - name: Download raw firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: tango2-trainer-raw-firmware
+          path: release
+
+      - name: Create release hashes
+        working-directory: release
+        run: |
+          sha256sum Tango2RacingTrainer_Setup.exe \
+            tango2-ghst-usbtrainer-override-local-RAW.bin \
+            > SHA256SUMS.txt
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#trainer-v}"
+
+          cat > release-notes.md <<EOF
+          ## Tango 2 Racing Trainer v${VERSION}
+
+          ### Windows
+          Download **Tango2RacingTrainer_Setup.exe** for the normal Windows installation.
+
+          No Python, PyInstaller, or development tools are required on the user's computer.
+
+          ### Tango 2 firmware
+          The release also includes:
+
+          `tango2-ghst-usbtrainer-override-local-RAW.bin`
+
+          This is the raw FreedomTX firmware produced from the tagged source commit.
+          It is retained for build traceability and development.
+
+          **Important:** do not assume the RAW file is the same as the tested Agent X
+          local/override package. Continue using the documented TBS Agent X Developer
+          Mode procedure and the tested local build named
+          `tango2-ghst-usbtrainer-override-local` until the Agent-X package-generation
+          step is reproduced and validated in CI.
+
+          SHA-256 hashes are included in `SHA256SUMS.txt`.
+          EOF
+
+          gh release create "$GITHUB_REF_NAME" \
+            release/Tango2RacingTrainer_Setup.exe \
+            release/tango2-ghst-usbtrainer-override-local-RAW.bin \
+            release/SHA256SUMS.txt \
+            release/FIRMWARE_RAW_SHA256.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Tango 2 Racing Trainer v${VERSION}" \
+            --notes-file release-notes.md

@@ -11,6 +11,16 @@ Build and setup instructions can be found [here](https://github.com/opentx/opent
 
 This branch contains the modified Tango 2 firmware used with the Tango 2 USB Racing Trainer setup.
 
+## Download the Windows trainer
+
+### [⬇ Download Tango 2 Racing Trainer for Windows](https://github.com/Arealkermit/freedomtx/releases/latest/download/Tango2RacingTrainer_Setup.exe)
+
+The installer is the recommended option for normal users. **Python, Git, PyInstaller, and the source code are not required.**
+
+All published versions are available from the repository's **Releases** page.
+
+> The permanent download link above begins working after the first `trainer-v*` GitHub Release is published.
+
 ## Current trainer firmware
 
 The current tested build is:
@@ -104,3 +114,28 @@ When a newer tested build replaces it:
 - do not leave several unlabeled `firmware.bin` files in the normal installation/download location.
 
 Before removing an old known-good firmware completely, keep at least one archived recovery copy until the replacement has been successfully flashed and tested on the trainer system.
+
+## Publishing a new trainer release
+
+The release workflow runs whenever a tag matching this pattern is pushed:
+
+```text
+trainer-v*
+```
+
+Example:
+
+```powershell
+git tag trainer-v1.1
+git push origin trainer-v1.1
+```
+
+GitHub Actions then builds the Windows installer and publishes a GitHub Release automatically.
+
+The stable Windows asset name is always:
+
+```text
+Tango2RacingTrainer_Setup.exe
+```
+
+which is why the `/releases/latest/download/` link at the top of this README does not need to change for each version.

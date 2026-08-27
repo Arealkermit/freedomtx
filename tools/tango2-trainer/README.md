@@ -2,6 +2,12 @@
 
 Windows GUI utility for a two-radio Tango 2 trainer setup.
 
+## Download
+
+### [⬇ Download the latest Windows installer](https://github.com/Arealkermit/freedomtx/releases/latest/download/Tango2RacingTrainer_Setup.exe)
+
+Normal users should use the installer above. They do **not** need Python, Git, PyInstaller, or Inno Setup.
+
 ## Runtime behavior
 
 - Student Tango 2 is read as a Windows USB joystick.
@@ -9,7 +15,31 @@ Windows GUI utility for a two-radio Tango 2 trainer setup.
 - Student control is gated by the trainer logic in the modified master firmware.
 - The student arm switch is treated only as a READY signal and is not forwarded as aircraft arming.
 
+## USB modes
+
+Student:
+
+```text
+USB Joystick (HID)
+```
+
+Master / Instructor:
+
+```text
+USB Agent (HID)
+```
+
+## Current tested firmware build
+
+```text
+tango2-ghst-usbtrainer-override-local
+```
+
+See the repository's main README for the Switch E + TBS Agent X Developer Mode firmware installation procedure.
+
 ## Build prerequisites
+
+The following are only needed by developers building the application from source:
 
 - Windows 10/11
 - Python 3.14+ recommended
@@ -18,43 +48,42 @@ Windows GUI utility for a two-radio Tango 2 trainer setup.
 
 ## Build the standalone EXE
 
-From PowerShell:
-
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\build_windows.ps1
+.\\build_windows.ps1
 ```
 
 Output:
 
 ```text
-dist\Tango2RacingTrainer.exe
+dist\\Tango2RacingTrainer.exe
 ```
 
-The build script adds Windows version metadata and automatically uses
-`Tango2RacingTrainer.ico` if that file is present in this directory.
+## Build the installer manually
 
-## Build the installer
-
-Install Inno Setup 6, then build `Tango2RacingTrainer.iss`.
-
-From a typical Inno Setup installation:
+Install Inno Setup 6, then:
 
 ```powershell
-& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" ".\Tango2RacingTrainer.iss"
+& "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe" ".\\Tango2RacingTrainer.iss"
 ```
 
-Output:
+## Automated releases
+
+Pushing a tag such as:
+
+```powershell
+git tag trainer-v1.1
+git push origin trainer-v1.1
+```
+
+runs `.github/workflows/release-trainer.yml`.
+
+The workflow builds and publishes the stable Windows release asset:
 
 ```text
-installer\Tango2RacingTrainer_Setup_v1.1.exe
+Tango2RacingTrainer_Setup.exe
 ```
 
 ## Distribution note
 
-This is an independent utility and should not be represented as an official
-Team BlackSheep/TBS product unless explicit authorization is obtained.
-
-## Source
-
-The application currently identifies itself as version 1.1.
+This is an independent utility and should not be represented as an official Team BlackSheep/TBS product unless explicit authorization is obtained.

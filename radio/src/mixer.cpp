@@ -37,6 +37,12 @@ int16_t calibratedAnalogs[NUM_CALIBRATED_ANALOGS];
 int16_t channelOutputs[MAX_OUTPUT_CHANNELS] = {0};
 int16_t ex_chans[MAX_OUTPUT_CHANNELS] = {0}; // Outputs (before LIMITS) of the last perMain;
 
+#if defined(RADIO_FAMILY_TBS)
+bool usbTrainerInstructorOverride = false;
+
+// Instructor must deliberately move Roll/Pitch/Yaw more than 25%.
+static const int16_t USB_TRAINER_OVERRIDE_THRESHOLD = RESX / 4;
+#endif
 #if defined(HELI)
 int16_t cyc_anas[3] = {0};
 #endif
@@ -443,6 +449,34 @@ void evalInputs(uint8_t mode)
 {
   BeepANACenter anaCenter = 0;
 
+#if defined(RADIO_FAMILY_TBS)
+  bool usbTrainerHandoffActive = false;
+
+  const bool usbTrainerSessionActive =
+    g_model.trainerData.mode == TRAINER_MODE_MULTI &&
+    usbStarted() &&
+    getSelectedUsbMode() == USB_AGENT_MODE;
+
+  // Determine whether the instructor is currently requesting
+  // trainer control through the Trainer special function.
+  if (usbTrainerSessionActive) {
+    for (uint8_t ch = 0; ch < NUM_STICKS; ch++) {
+      if (isFunctionActive(FUNCTION_TRAINER_STICK1 + ch)) {
+        usbTrainerHandoffActive = true;
+        break;
+      }
+    }
+  }
+
+  // Releasing the handoff, leaving USB Agent mode, or losing
+  // valid student input clears the instructor override latch.
+  if (!usbTrainerSessionActive ||
+      !usbTrainerHandoffActive ||
+      !isTrainerInputValid()) {
+    usbTrainerInstructorOverride = false;
+  }
+#endif
+
   for (uint8_t i = 0; i < NUM_STICKS + NUM_POTS + NUM_SLIDERS; i++) {
     // normalization [0..2048] -> [-1024..1024]
     uint8_t ch = (i < NUM_STICKS ? CONVERT_MODE(i) : i);
@@ -495,20 +529,44 @@ void evalInputs(uint8_t mode)
       if (mode & e_perout_mode_nosticks) {
         v = 0;
       }
+#if defined(RADIO_FAMILY_TBS)
+      // While the USB student is active, a deliberate instructor
+      // Roll/Pitch/Yaw deflection beyond 25% latches full takeover.
+      //
+      // Throttle is intentionally excluded as a trigger.
+      if (mode <= e_perout_mode_inactive_flight_mode &&
+          usbTrainerSessionActive &&
+          usbTrainerHandoffActive &&
+          isTrainerInputValid() &&
+          !usbTrainerInstructorOverride &&
+          ch != THR_STICK &&
+          abs(v) > USB_TRAINER_OVERRIDE_THRESHOLD) {
+        usbTrainerInstructorOverride = true;
+      }
+#endif
 
-      if (mode <= e_perout_mode_inactive_flight_mode && isFunctionActive(FUNCTION_TRAINER_STICK1+ch) && isTrainerInputValid()) {
+      if (mode <= e_perout_mode_inactive_flight_mode &&
+          isFunctionActive(FUNCTION_TRAINER_STICK1 + ch) &&
+          isTrainerInputValid()
+#if defined(RADIO_FAMILY_TBS)
+          && !(usbTrainerSessionActive &&
+               usbTrainerInstructorOverride)
+#endif
+      ) {
         // trainer mode
         TrainerMix* td = &g_eeGeneral.trainer.mix[ch];
         if (td->mode) {
           uint8_t chStud = td->srcChn;
-          int32_t vStud  = (ppmInput[chStud] - g_eeGeneral.trainer.calib[chStud]);
+          int32_t vStud = (ppmInput[chStud] - g_eeGeneral.trainer.calib[chStud]);
           vStud *= td->studWeight;
           vStud /= 50;
+
           switch (td->mode) {
             case 1:
               // add-mode
-              v = limit<int16_t>(-RESX, v+vStud, RESX);
+              v = limit<int16_t>(-RESX, v + vStud, RESX);
               break;
+
             case 2:
               // subst-mode
               v = vStud;
@@ -516,6 +574,7 @@ void evalInputs(uint8_t mode)
           }
         }
       }
+
       calibratedAnalogs[ch] = v;
     }
   }

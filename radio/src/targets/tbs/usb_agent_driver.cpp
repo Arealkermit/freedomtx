@@ -19,6 +19,8 @@
  */
 
 #if defined(__cplusplus)
+extern bool usbTrainerInstructorOverride;
+
 extern "C" {
 #endif
 #include "usb_dcd_int.h"
@@ -111,6 +113,7 @@ static void usbTrainerStatusTX()
   // Flags:
   // bit 0 = instructor has enabled trainer handoff
   // bit 1 = trainer input data is currently valid
+  // bit 2 = instructor stick override is latched
   report[5] = 0;
 
   if (trainerHandoffActive) {
@@ -119,6 +122,10 @@ static void usbTrainerStatusTX()
 
   if (isTrainerInputValid()) {
     report[5] |= 0x02;
+  }
+
+  if (usbTrainerInstructorOverride) {
+    report[5] |= 0x04;
   }
 
   // Useful for debugging the 150 ms failsafe.

@@ -1,0 +1,31 @@
+# UTF-8
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 1, 0, 0),
+    prodvers=(1, 1, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',
+        [
+          StringStruct('CompanyName', 'Independent FPV Utility'),
+          StringStruct('FileDescription', 'Tango 2 Racing Trainer'),
+          StringStruct('FileVersion', '1.1.0.0'),
+          StringStruct('InternalName', 'Tango2RacingTrainer'),
+          StringStruct('LegalCopyright', 'Copyright 2026'),
+          StringStruct('OriginalFilename', 'Tango2RacingTrainer.exe'),
+          StringStruct('ProductName', 'Tango 2 Racing Trainer'),
+          StringStruct('ProductVersion', '1.1.0.0')
+        ]
+      )
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)
